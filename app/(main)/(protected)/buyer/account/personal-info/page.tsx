@@ -7,13 +7,38 @@ import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useAuth } from "@/components/AuthProvider";
+import { updateUserName } from "../actions";
+import { toast } from "sonner";
 
 export default function PersonalInfoPage() {
     const { user, loading } = useAuth();
+    const [fullName, setFullName] = useState("");
+    const [isSaving, setIsSaving] = useState(false);
 
     const user_avatar = user?.user_metadata?.avatar_url ?? "";
-    const user_name = user?.user_metadata?.full_name ?? user?.email?.split('@')[0] ?? "User";
+    const initial_user_name = user?.user_metadata?.full_name ?? user?.email?.split('@')[0] ?? "User";
     const user_email = user?.email ?? "No email provided";
+
+    const handleSave = async () => {
+        if (!fullName.trim()) {
+            toast.error("Please enter your full name");
+            return;
+        }
+
+        setIsSaving(true);
+        try {
+            const result = await updateUserName(fullName);
+            if (result.success) {
+                toast.success("Name updated successfully");
+            } else {
+                toast.error(result.error || "Failed to update name");
+            }
+        } catch (error) {
+            toast.error("An error occurred while updating your name");
+        } finally {
+            setIsSaving(false);
+        }
+    };
 
     return (
         <div className='flex flex-col p-4 bg-background w-full gap-8 overflow-y-auto'> 
@@ -64,7 +89,12 @@ export default function PersonalInfoPage() {
                     <Card className='w-full p-6 flex flex-col gap-6 bg-primary-foreground border-muted'>
                         <div className='flex flex-col gap-2'>
                             <Label htmlFor='full-name'>Full Name</Label>
-                            <Input id='full-name' placeholder='Your full name' defaultValue={user_name} />
+                            <Input 
+                                id='full-name' 
+                                placeholder='Your full name' 
+                                defaultValue={initial_user_name}
+                                onChange={(e) => setFullName(e.target.value)}
+                            />
                         </div>
                         
                         <div className='flex flex-col gap-2'>
@@ -73,7 +103,9 @@ export default function PersonalInfoPage() {
                         </div>  
 
                         <div className='flex justify-end'>
-                            <Button variant='red_default'>Save Changes</Button>
+                            <Button variant='red_default' onClick={handleSave} disabled={isSaving}>
+                                {isSaving ? "Saving..." : "Save Changes"}
+                            </Button>
                         </div>
                     </Card>
                 </div>
