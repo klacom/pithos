@@ -77,7 +77,7 @@ export function DataTable<T>({
 
         const res = await fetch("/api/fetch-distinct-values", {
             method: "POST",
-            body: JSON.stringify({ column_name: key, table_name : entity })
+            body: JSON.stringify({ column_name: key, table_name: entity })
         });
 
         const json = await res.json();
@@ -104,7 +104,7 @@ export function DataTable<T>({
 
     useEffect(() => {
         const loadOptions = async () => {
-            const newOptions: Record<string, {value : string}[]> = {};
+            const newOptions: Record<string, { value: string }[]> = {};
 
             for (const headerGroup of table.getHeaderGroups()) {
                 for (const header of headerGroup.headers) {
@@ -120,7 +120,7 @@ export function DataTable<T>({
         };
 
         loadOptions();
-    }, [columns]); 
+    }, [columns]);
 
     const sortFunction = (header: Header<T, unknown>) => {
         if (!header.column.columnDef.enableSorting) return;
@@ -191,7 +191,7 @@ export function DataTable<T>({
                         className={`border-muted outline-none focus:border-foreground focus:ring-foreground w-full hover:border hover:border-foreground bg-primary-foreground px-5 rounded-md ${doesSearchableColumnsExist ? 'block' : 'hidden'}`}
                     />
                     <Button
-                    className="h-full"
+                        className="h-full"
                         variant="outline"
                         onClick={() => {
                             setFilter({});
@@ -204,99 +204,98 @@ export function DataTable<T>({
                 </div>
 
                 {/* Table wrapper */}
-                <div className="w-full border border-muted rounded-lg overflow-hidden">
-                    <div className="p-4">
+                <div className="w-full border border-muted rounded-lg overflow-y-hidden overflow-x-auto p-4">
 
-                        <table className="min-w-full border-collapse *:*:*:border *:*:*:border-muted w-full">
+                    <table className="min-w-full border-collapse *:*:*:border *:*:*:border-muted w-full">
 
-                            <thead className="">
-                                {table.getHeaderGroups().map((hg) => (
-                                    <tr key={hg.id} className="bg-primary-foreground">
-                                        {hg.headers.map((header) => {
-                                            return (
-                                                <th
-                                                    key={header.id}
-                                                    onClick={() => (header.column.columnDef.enableColumnFilter ? filterFunction(header) : sortFunction(header))}
-                                                    className={`${header.column.columnDef.enableSorting || header.column.columnDef.enableColumnFilter
-                                                        ? "cursor-pointer hover:bg-secondary active:bg-primary-foreground"
-                                                        : "cursor-default opacity-50"
-                                                        }`}
-                                                >
-                                                    {
-                                                        header.column.columnDef.enableColumnFilter
-                                                            // Filter Div 
-                                                            ? <select
-                                                                defaultValue=""
-                                                                className="border-0 outline-none focus:bg-secondary focus:ring-0 h-full w-full m-0 bg-primary-foreground hover:bg-secondary active:bg-primary-foreground p-4"
-                                                                onChange={(e) =>
-                                                                    setFilter((prev : any) => ({
-                                                                        ...prev,
-                                                                        [header.column.id]: e.target.value
-                                                                    }))
-                                                                }
-                                                            >
-                                                                {/* Parang Placeholder - initial value na makikita ng user */}
-                                                                <option value="">
-                                                                    All {flexRender(header.column.columnDef.header, header.getContext())}
-                                                                </option>
+                        <thead className="">
+                            {table.getHeaderGroups().map((hg) => (
+                                <tr key={hg.id} className="bg-primary-foreground">
+                                    {hg.headers.map((header) => {
+                                        return (
+                                            <th
+                                                key={header.id}
+                                                onClick={() => (header.column.columnDef.enableColumnFilter ? filterFunction(header) : sortFunction(header))}
+                                                className={`${header.column.columnDef.enableSorting || header.column.columnDef.enableColumnFilter
+                                                    ? "cursor-pointer hover:bg-secondary active:bg-primary-foreground"
+                                                    : "cursor-default opacity-50"
+                                                    }`}
+                                            >
+                                                {
+                                                    header.column.columnDef.enableColumnFilter
+                                                        // Filter Div 
+                                                        ? <select
+                                                            defaultValue=""
+                                                            className="border-0 outline-none focus:bg-secondary focus:ring-0 h-full w-full m-0 bg-primary-foreground hover:bg-secondary active:bg-primary-foreground p-4"
+                                                            onChange={(e) =>
+                                                                setFilter((prev: any) => ({
+                                                                    ...prev,
+                                                                    [header.column.id]: e.target.value
+                                                                }))
+                                                            }
+                                                        >
+                                                            {/* Parang Placeholder - initial value na makikita ng user */}
+                                                            <option value="">
+                                                                All {flexRender(header.column.columnDef.header, header.getContext())}
+                                                            </option>
 
-                                                                {/* Options */}
-                                                                {
-                                                                    (filterOptions[header.column.id as string] || []).map((opt) => (
-                                                                        <option key={opt.value} value={opt.value}>
-                                                                            {opt.value}
-                                                                        </option>
-                                                                    ))
-                                                                }
-                                                            </select>
-                                                            // Sorting Div
-                                                            : <div className="flex flex-row gap-2 justify-center items-center p-4">
-                                                                {
-                                                                    flexRender(
-                                                                        header.column.columnDef.header,
-                                                                        header.getContext()
-                                                                    )
-                                                                }
-                                                                {header.column.columnDef.enableSorting ? (order === "asc" ? <IoIosArrowUp /> : <IoIosArrowDown />) : ""}
-                                                            </div>
-                                                    }
-                                                </th>
-                                            )
-                                        })}
+                                                            {/* Options */}
+                                                            {
+                                                                (filterOptions[header.column.id as string] || []).map((opt) => (
+                                                                    <option key={opt.value} value={opt.value}>
+                                                                        {opt.value}
+                                                                    </option>
+                                                                ))
+                                                            }
+                                                        </select>
+                                                        // Sorting Div
+                                                        : <div className="flex flex-row gap-2 justify-center items-center p-4">
+                                                            {
+                                                                flexRender(
+                                                                    header.column.columnDef.header,
+                                                                    header.getContext()
+                                                                )
+                                                            }
+                                                            {header.column.columnDef.enableSorting ? (order === "asc" ? <IoIosArrowUp /> : <IoIosArrowDown />) : ""}
+                                                        </div>
+                                                }
+                                            </th>
+                                        )
+                                    })}
+                                </tr>
+                            ))}
+                        </thead>
+
+                        <tbody className="*:*:p-4">
+                            {loading ? (
+                                <tr>
+                                    <td colSpan={columns.length} className="text-center py-10 text-muted-foreground">
+                                        Loading...
+                                    </td>
+                                </tr>
+                            ) : rows.length === 0 ? (
+                                <tr>
+                                    <td colSpan={columns.length} className="text-center py-10 text-muted-foreground">
+                                        No records found.
+                                    </td>
+                                </tr>
+                            ) : (
+                                table.getRowModel().rows.map((row) => (
+                                    <tr key={row.id}>
+                                        {row.getVisibleCells().map((cell) => (
+                                            <td key={cell.id}>
+                                                {flexRender(
+                                                    cell.column.columnDef.cell,
+                                                    cell.getContext()
+                                                )}
+                                            </td>
+                                        ))}
                                     </tr>
-                                ))}
-                            </thead>
+                                ))
+                            )}
+                        </tbody>
+                    </table>
 
-                            <tbody className="*:*:p-4">
-                                {loading ? (
-                                    <tr>
-                                        <td colSpan={columns.length} className="text-center py-10 text-muted-foreground">
-                                            Loading...
-                                        </td>
-                                    </tr>
-                                ) : rows.length === 0 ? (
-                                    <tr>
-                                        <td colSpan={columns.length} className="text-center py-10 text-muted-foreground">
-                                            No records found.
-                                        </td>
-                                    </tr>
-                                ) : (
-                                    table.getRowModel().rows.map((row) => (
-                                        <tr key={row.id}>
-                                            {row.getVisibleCells().map((cell) => (
-                                                <td key={cell.id}>
-                                                    {flexRender(
-                                                        cell.column.columnDef.cell,
-                                                        cell.getContext()
-                                                    )}
-                                                </td>
-                                            ))}
-                                        </tr>
-                                    ))
-                                )}
-                            </tbody>
-                        </table>
-                    </div>
                 </div>
 
             </div>

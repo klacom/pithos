@@ -11,7 +11,7 @@ const Tabs = ({ items }: { items: TabItem[] }) => {
     const [activeTab, setActiveTab] = useState(0); // ✅ 0-based
 
     return (
-        <div className="flex flex-col gap-4">
+        <div className="flex flex-col gap-4 h-full">
 
             {/* Tab Headers */}
             <div className="flex w-full gap-8 font-medium text-lg border-b">
@@ -32,7 +32,7 @@ const Tabs = ({ items }: { items: TabItem[] }) => {
             </div>
 
             {/* Tab Content */}
-            <div className="w-full">
+            <div className="w-full h-full">
                 {items[activeTab]?.content}
             </div>
         </div>
