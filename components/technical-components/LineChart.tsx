@@ -1,14 +1,44 @@
 "use client";
 
-import React from 'react'
+import { useEffect, useRef } from "react";
 import { Line } from "react-chartjs-2";
-import { ChartOptions } from 'chart.js';
-import { Chart as ChartJS, CategoryScale, LinearScale, PointElement, LineElement, Title, Tooltip, Legend } from "chart.js";
+import {
+    Chart as ChartJS,
+    CategoryScale,
+    LinearScale,
+    PointElement,
+    LineElement,
+    Title,
+    Tooltip,
+    Legend,
+} from "chart.js";
 
-ChartJS.register(CategoryScale, LinearScale, PointElement, LineElement, Title, Tooltip, Legend);
+ChartJS.register(
+    CategoryScale,
+    LinearScale,
+    PointElement,
+    LineElement,
+    Title,
+    Tooltip,
+    Legend
+);
 
 const LineChart = () => {
-    
+    const chartRef = useRef<any>(null);
+
+    useEffect(() => {
+        const resizeObserver = new ResizeObserver(() => {
+            if (chartRef.current) {
+                chartRef.current.resize();
+            }
+        });
+
+        const canvasParent = chartRef.current?.canvas?.parentElement;
+        if (canvasParent) resizeObserver.observe(canvasParent);
+
+        return () => resizeObserver.disconnect();
+    }, []);
+
     const data = {
         labels: ["January", "February", "March", "April", "May"],
         datasets: [
@@ -21,16 +51,15 @@ const LineChart = () => {
         ],
     };
 
-    const options = {};
-
-    return <Line data={data} options={{
-        responsive: true,
+    const options = {
+        maintainAspectRatio: false,
         plugins: {
-            legend: { position: "top" },
+            legend: { position: "top" as const },
             title: { display: true, text: "Monthly Sales" },
         },
-        maintainAspectRatio: false
-    }}/>;
-}
+    };
 
-export default LineChart
+    return <Line ref={chartRef} data={data} options={options} />;
+};
+
+export default LineChart;

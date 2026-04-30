@@ -17,7 +17,6 @@ import { useRouter } from "next/navigation";
 import { useState, useEffect } from "react";
 import PithosLogo from "./PithosLogo";
 import { getSystemConfig } from "@/app/(main)/(protected)/admin/system-config/system-config-settings";
-import { createAudit } from "@/lib/supabase/create-audit";
 
 type LoginFormProps = React.HTMLAttributes<HTMLDivElement> & {
     createAudit: (params: {
@@ -170,11 +169,15 @@ export function LoginForm({
             setError(error instanceof Error ? error.message : "An error occurred");
         } finally {
             setIsLoading(false);
-            await createAudit({
-                action_name: "LOGIN_ATTEMPT",
-                action_description: "User tried logging in",
-                affected_resources: "auth",
-            });
+            try {
+                await createAudit({
+                    action_name: "LOGIN_ATTEMPT",
+                    action_description: "User tried logging in",
+                    affected_resources: "auth",
+                });
+            } catch (error) {
+                console.log(error);
+            }
         }
     };
 
