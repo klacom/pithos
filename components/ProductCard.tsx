@@ -29,7 +29,7 @@ export function ProductCard({
     }: AssetCardProps) {
     return (
         <Link href={link} className="w-full even:translate-y-16 lg:even:translate-y-0">
-            <Card className="group relative w-full overflow-hidden shadow-sm transition-all hover:shadow-md hover:-translate-y-0.5 hover:cursor-pointer">
+            <Card className="group relative w-full overflow-hidden shadow-sm transition-all hover:shadow-md hover:-translate-y-0.5 hover:cursor-pointer h-full">
                 {/* Image container with overlay badge at bottom */}
                 <div className="relative aspect-[4/3] w-full">
                     <Image

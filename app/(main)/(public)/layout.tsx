@@ -8,7 +8,11 @@ const layout = ({ children }: { children: ReactNode }) => {
             <Suspense>
                 <NavBar />
             </Suspense>
-            <main>{children}</main>
+            <main>
+                <Suspense>
+                    {children}
+                </Suspense>
+            </main>
         </div>
     )
 }

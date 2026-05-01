@@ -1,4 +1,4 @@
-import { Hero } from "@/components/hero";
+import { Hero } from "@/components/BigBanner";
 
 export default function MainPage() {
     return (

@@ -3,7 +3,7 @@ import { DiamondPercent, UserRoundPen, PackageOpen, UserRound, Eye, Home, Users,
 import LineChart from "@/components/technical-components/LineChart"
 import { Button } from "@/components/ui/button"
 import Link from "next/link"
-import { MdDashboard } from "react-icons/md"
+import { MdDashboard, MdPayments } from "react-icons/md"
 import { FaUsers, FaWrench } from "react-icons/fa"
 import { RiComputerFill } from "react-icons/ri"
 import { HiDocument } from "react-icons/hi2"
@@ -146,11 +146,6 @@ const page = () => {
                             </Link>
                             <Link
                                 className="hover:bg-accent hover:text-white p-2 rounded-md items-center flex gap-4"
-                                href={'/admin/manage-products'}>
-                                <Boxes size={qlIconSize} />
-                            </Link>
-                            <Link
-                                className="hover:bg-accent hover:text-white p-2 rounded-md items-center flex gap-4"
                                 href={'/admin/site-content'}>
                                 <RiComputerFill size={iconSize} />
                             </Link>
@@ -162,7 +157,7 @@ const page = () => {
                             <Link
                                 className="hover:bg-accent hover:text-white p-2 rounded-md items-center flex gap-4"
                                 href={'/admin/payment-gateways'}>
-                                <HandCoins size={qlIconSize} />
+                                <MdPayments size={iconSize} />
                             </Link>
                             <Link
                                 className="hover:bg-accent hover:text-white p-2 rounded-md items-center flex gap-4"
