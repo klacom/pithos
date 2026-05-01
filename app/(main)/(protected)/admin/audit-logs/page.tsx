@@ -25,7 +25,8 @@ const page = () => {
     const table = useDataTable("audit_logs", {
         searchableColumns: [
             "action_description",
-        ]
+        ],
+        enabled: true
     })
 
     // Tabs to cycle between in buyers

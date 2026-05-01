@@ -8,7 +8,8 @@ const roleRoutes : Record<string, Array<string>> = {
 
 const publicRoutes = [
     '/product-detail',
-    '/product-listing'
+    '/product-listing',
+    '/unauthorized'
 ];
 
 // protected routes for all users

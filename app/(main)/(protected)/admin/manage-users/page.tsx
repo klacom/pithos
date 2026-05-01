@@ -31,6 +31,7 @@ type Transaction = {
     product_id: string
     created_at: string
     status: string
+    seller_id : string
 }
 
 type Reviews = {
@@ -40,6 +41,15 @@ type Reviews = {
     created_at : string
     product_id : string
     rating : number
+}
+
+type Products = {
+    product_id : string
+    product_name : string
+    product_description : string
+    price : number
+    created_at : string
+    seller_owner_id : string
 }
 
 const ActionButtons = (
@@ -128,6 +138,7 @@ const Page = () => {
         enabled: !!selectedUser?.id,
     })
 
+    // Memoization Revierws
     const bRvwsBaseFilters = useMemo(() => {
         if (!selectedUser?.id) return undefined;
         return { reviewer_id: selectedUser.id };
@@ -142,7 +153,31 @@ const Page = () => {
         enabled: !!selectedUser?.id,
     })
 
-    // Table for Buyer Reviews
+    // memoized
+    const sTxBaseFilters = useMemo(() => {
+        if (!selectedUser?.id) return undefined;
+        return { seller_id: selectedUser.id };
+    }, [selectedUser?.id]);
+
+    // Table for Seller Tranasctions
+    const sTxTable = useDataTable("transactions", {
+        baseFilters: sTxBaseFilters,
+        enabled: !!selectedUser?.id,
+    })
+
+    // memoized
+    const prodBaseFilters = useMemo(() => {
+        if (!selectedUser?.id) return undefined;
+        return { seller_owner_id: selectedUser.id };
+    }, [selectedUser?.id]);
+
+    // Table for Seller Tranasctions
+    const prodTable = useDataTable("products", {
+        baseFilters: prodBaseFilters,
+        enabled: !!selectedUser?.id,
+    })
+
+
 
 // ===============================================================================================================================
 
@@ -280,6 +315,11 @@ const Page = () => {
                                                             )
                                                         },
                                                         {
+                                                            key: "seller_id", label: "Seller ID", sortable: true, render: (_: any, row: any) => (
+                                                                <p className="font-mono text-xs">{row.seller_id}</p>
+                                                            )
+                                                        },
+                                                        {
                                                             key: "product_id", label: "Product ID", sortable: true, render: (_: any, row: any) => (
                                                                 <p className="font-mono text-xs">{row.product_id}</p>
                                                             )
@@ -351,7 +391,115 @@ const Page = () => {
 
                             {/* Seller Content */}
                             {selectedUser.user_role === "seller" && (
-                                <div>Seller content here</div>
+                                <Tabs items={[
+                                    {
+                                        label: "Products",
+                                        content: (
+                                            <Suspense fallback={<div className="animate-pulse w-full h-full">Loading...</div>}>
+
+                                                <DataTable<Products>
+                                                    {...prodTable}
+                                                    columns={[
+                                                        {
+                                                            key: "product_id",
+                                                            label: "Product ID",
+                                                            sortable: true,
+                                                            render: (_: any, row: any) => (
+                                                                <p className="font-mono text-xs">{row.product_id}</p>
+                                                            )
+                                                        },
+                                                        {
+                                                            key: "product_name",
+                                                            label: "Name",
+                                                            sortable: true,
+                                                            searchable: true,
+                                                        },
+                                                        {
+                                                            key: "product_description",
+                                                            label: "Description",
+                                                            searchable: true,
+                                                        },
+                                                        {
+                                                            key: "price",
+                                                            label: "Price",
+                                                            sortable: true,
+                                                            render: (_: any, row: any) => (
+                                                                <p>₱{row.price.toLocaleString()}</p>
+                                                            )
+                                                        },
+                                                        {
+                                                            key: "seller_owner_id",
+                                                            label: "Seller ID",
+                                                            sortable: true,
+                                                            render: (_: any, row: any) => (
+                                                                <p className="font-mono text-xs">{row.seller_owner_id}</p>
+                                                            )
+                                                        },
+                                                        {
+                                                            key: "created_at",
+                                                            label: "Created At",
+                                                            sortable: true,
+                                                            render: (_: any, row: any) => (
+                                                                <p>{formatDate(row.created_at)}</p>
+                                                            )
+                                                        },
+                                                    ]}
+                                                />
+
+                                            </Suspense>
+                                        )
+                                    },
+                                    {
+                                        label: "Transactions",
+                                        content: (
+                                            <Suspense fallback={<div className="animate-pulse w-full h-full">Loading...</div>}>
+
+                                                <DataTable<Transaction>
+                                                    {...sTxTable}
+                                                    columns={[
+                                                        {
+                                                            key: "transaction_id", label: "TX ID", sortable: true, render: (_: any, row: any) => (
+                                                                <p className="font-mono text-xs">{row.transaction_id}</p>
+                                                            )
+                                                        },
+                                                        {
+                                                            key: "buyer_id", label: "Buyer ID", sortable: true, render: (_: any, row: any) => (
+                                                                <p className="font-mono text-xs">{row.buyer_id}</p>
+                                                            )
+                                                        },
+                                                        {
+                                                            key: "seller_id", label: "Seller ID", sortable: true, render: (_: any, row: any) => (
+                                                                <p className="font-mono text-xs">{row.seller_id}</p>
+                                                            )
+                                                        },
+                                                        {
+                                                            key: "product_id", label: "Product ID", sortable: true, render: (_: any, row: any) => (
+                                                                <p className="font-mono text-xs">{row.product_id}</p>
+                                                            )
+                                                        },
+                                                        {
+                                                            key: "created_at", label: "Date", sortable: true, render: (_: any, row: any) => (
+                                                                <p>{formatDate(row.created_at)}</p>
+                                                            )
+                                                        },
+                                                        {
+                                                            key: "status", label: "Status", filterable: true, render: (_: any, row: any) => (
+                                                                <span className={`px-3 py-1 rounded-full text-xs font-medium 
+                                                                ${row.status === "pending"
+                                                                        ? "text-yellow-600"
+                                                                        : row.status === "completed" ? "text-green-600" : "text-red-600"
+                                                                    }`}>
+                                                                    {capitalizeFirstLetter(row.status)}
+                                                                </span>
+                                                            )
+                                                        },
+                                                    ]}
+                                                />
+
+                                            </Suspense>
+                                        )
+                                    }
+                                ]} />
                             )}
 
                         </div>

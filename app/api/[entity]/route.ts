@@ -19,6 +19,15 @@ export async function GET(
     const filters: Record<string, string[]> = {};
     const baseFilters: Record<string, string> = {};
 
+    const limit = 9
+    const from = (page - 1) * limit
+    const to = from + limit - 1
+
+    let query = supabase
+        .from(entity)
+        .select("*", { count: "exact" })
+
+    // Parse Filters
     searchParams.forEach((value, key) => {
         const match = key.match(/^filter\[(.+)\]$/);
         if (match) {
@@ -28,16 +37,25 @@ export async function GET(
         }
     });
 
-    const limit = 9
-    const from = (page - 1) * limit
-    const to = from + limit - 1
+    // Parse Base Filters
+    searchParams.forEach((value, key) => {
+        const match = key.match(/^base\[(.+)\]$/);
+        if (match) {
+            const column = match[1];
+            baseFilters[column] = value;
+        }
+    });
 
-    let query = supabase
-        .from(entity)
-        .select("*", { count: "exact" })
+    console.log("Base Filters:", baseFilters);
+
+    // Apply Base Filters
+    if (Object.keys(baseFilters).length > 0) {
+        Object.entries(baseFilters).forEach(([column, value]) => {
+            query = query.eq(column, value);
+        });
+    }
 
     // Search across fields
-    // TODO: Pass searchable columns later on frontend
     const searchColumns = searchParams.getAll("search");
 
     if (q && searchColumns.length > 0) {
@@ -48,14 +66,7 @@ export async function GET(
         query = query.or(orQuery);
     }
 
-    // Base Filters - if table requires to be specific
-    if (baseFilters) {
-        Object.entries(baseFilters).forEach(([column, value]) => {
-            query = query.eq(column, value);
-        });
-    }
-
-    // Filters for application
+    // Apply Filters
     if (filters) {
         Object.entries(filters).forEach(([column, values]) => {
             if (values.length === 1) {
