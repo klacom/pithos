@@ -14,7 +14,7 @@ const NavBar = async () => {
     const claims = claimsData?.claims;
     const uid = claims?.sub;   // This can still be undefined
 
-    // console.log("UID from claims:", uid);
+    // console.log("UID from navbar claims:", uid);
 
     let role: string | null = null;
 
@@ -35,7 +35,7 @@ const NavBar = async () => {
             // console.log("User role:", role);
         }
     } else {
-        console.log("No UID found — unauthenticated or invalid token");
+        console.log("Navbar No UID found — unauthenticated or invalid token");
     }
 
     if (claimsError) throw claimsError;

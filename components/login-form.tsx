@@ -23,6 +23,8 @@ type LoginFormProps = React.HTMLAttributes<HTMLDivElement> & {
         action_name: string;
         action_description?: string;
         affected_resources?: string;
+        actor?: string;
+        email?: string;
     }) => Promise<void>;
 };
 
@@ -42,10 +44,10 @@ export function LoginForm({
     const router = useRouter();
 
     // Force sign out if they hit the login page (prevents lingering AAL1 sessions)
-    useEffect(() => {
-        const supabase = createClient();
-        supabase.auth.signOut({ scope: 'local' });
-    }, []);
+    // useEffect(() => {
+    //     const supabase = createClient();
+    //     supabase.auth.signOut({ scope: 'local' });
+    // }, []);
 
     // Handle TOTP timer countdown
     useEffect(() => {
@@ -67,6 +69,13 @@ export function LoginForm({
         setPassword("");
         setError(null);
     };
+
+    type AuthData = {
+        user: any;
+        session: any;
+    } | null;
+
+    const [userData, setUserData] = useState<AuthData>(null);
 
     const [maxAttempts, setMaxAttempts] = useState(3);
 
@@ -91,6 +100,7 @@ export function LoginForm({
         setError(null);
 
         try {
+            // console.log("Before check showMFA and factorID =====");
             if (showMfa && factorId) {
                 // Verify MFA code
                 const challenge = await supabase.auth.mfa.challenge({ factorId });
@@ -106,8 +116,33 @@ export function LoginForm({
 
                 // Reset login attempts and redirect on success
                 await supabase.rpc("reset_login_attempts", { login_email: email });
+                // console.log("Before Create Audit =====");
+                
+                // Success Audit
+                try {
+                    await createAudit({
+                        action_name: "LOGIN_SUCCESS",
+                        action_description: "User logged in successfully with MFA",
+                        affected_resources: "auth",
+                    });
+                } catch (error) {
+                    console.log("Audit Failed: ", error);
+                }
+               
+                // console.log("After Create Audit =====");
+
                 router.push("/");
                 return;
+            }
+
+            // 3. Even if password is correct, we must check if account was ALREADY locked 
+            // from previous attempts before we let them in.
+            const { data: isLocked } = await supabase.rpc("check_account_locked", { login_email: email });
+            if (isLocked) {
+                // If they managed to guess the password AFTER getting locked, we still block them
+                // and we immediately sign them back out
+                await supabase.auth.signOut();
+                throw new Error("Account is locked. Even with the correct password, you must contact support to unlock it.");
             }
 
             // 1. Attempt login via Supabase first so we can track the attempt
@@ -116,8 +151,23 @@ export function LoginForm({
                 password,
             });
 
+            // console.log("Login Data: ",data)
+
             // 2. Handle failure (increment attempts unconditionally)
             if (error) {
+                const message = error instanceof Error ? error.message : "Unknown error";
+
+                try {
+                    await createAudit({
+                        action_name: "LOGIN_FAILED",
+                        action_description: message,
+                        affected_resources: "auth",
+                        email: email,
+                    });
+                } catch (error) {
+                    console.log("Audit Failed: ", error);
+                }
+
                 if (error.message.includes("Invalid login credentials") || error.message.includes("Email not confirmed")) {
                     // don't increment for unconfirmed email, but we might want to check the error message
                     if (error.message.includes("Email not confirmed")) {
@@ -132,18 +182,11 @@ export function LoginForm({
                         throw new Error(`Invalid credentials. You have ${attemptsLeft} attempt(s) left.`);
                     }
                 }
+                
                 throw error;
             }
 
-            // 3. Even if password is correct, we must check if account was ALREADY locked 
-            // from previous attempts before we let them in.
-            const { data: isLocked } = await supabase.rpc("check_account_locked", { login_email: email });
-            if (isLocked) {
-                // If they managed to guess the password AFTER getting locked, we still block them
-                // and we immediately sign them back out
-                await supabase.auth.signOut();
-                throw new Error("Account is locked. Even with the correct password, you must contact support to unlock it.");
-            }
+            setUserData(data);
 
             // Check if MFA is required
             const { data: mfaData, error: mfaError } = await supabase.auth.mfa.getAuthenticatorAssuranceLevel();
@@ -164,20 +207,23 @@ export function LoginForm({
             // 4. Handle true success (correct password AND not locked AND no MFA required)
             await supabase.rpc("reset_login_attempts", { login_email: email });
 
+            // Audit Login Success no MFA
+            try {
+                await createAudit({
+                    action_name: "LOGIN_SUCCESS",
+                    action_description: "User logged in successfully (No MFA)",
+                    affected_resources: "auth",
+                    // actor: userData?.user.id,
+                });
+            } catch (error) {
+                console.log("Audit Failed: ", error);
+            }
+
             router.push("/");
         } catch (error: unknown) {
             setError(error instanceof Error ? error.message : "An error occurred");
         } finally {
             setIsLoading(false);
-            try {
-                await createAudit({
-                    action_name: "LOGIN_ATTEMPT",
-                    action_description: "User tried logging in",
-                    affected_resources: "auth",
-                });
-            } catch (error) {
-                console.log(error);
-            }
         }
     };
 

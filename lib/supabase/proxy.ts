@@ -15,10 +15,8 @@ export async function updateSession(request: NextRequest) {
                     return request.cookies.getAll();
                 },
                 setAll(cookiesToSet) {
-                    cookiesToSet.forEach(({ name, value }) =>
-                        request.cookies.set(name, value)
-                    );
                     supabaseResponse = NextResponse.next({ request });
+                    
                     cookiesToSet.forEach(({ name, value, options }) =>
                         supabaseResponse.cookies.set(name, value, options)
                     );
@@ -29,36 +27,42 @@ export async function updateSession(request: NextRequest) {
 
     const supabaseAdmin = createAdminClient();
 
-    // Get claims safely
-    const { data: claimsData } = await supabase.auth.getClaims();
-    const claims = claimsData?.claims;
-    const uid = claims?.sub;   // This can still be undefined
+    // Get user safely, not using claims
+    const { data: { user } } = await supabase.auth.getUser();
+    const uid = user?.id;
+    
+    // console.log("UID from proxy getUser:", uid);
+    // console.log("Data of User from proxy getUser:", user);
 
-    // console.log("UID from claims:", uid);
+    const pathname = request.nextUrl.pathname;
+
+    if (!uid && isProtectedRoute(pathname)) {
+        return NextResponse.redirect(new URL("/auth/login", request.url));
+    }
 
     let role: string | null = null;
 
-    // Only query the users table if we actually have a valid uid
     if (uid) {
-        const { data: roleRes, error } = await supabaseAdmin
-            .from('users')
-            .select('user_role')
-            .eq('id', uid)
+        const { data } = await supabaseAdmin
+            .from("users")
+            .select("user_role")
+            .eq("id", uid)
             .single();
 
-        if (error) {
-            console.error("Error fetching user role:", error);
-            // Don't throw here in middleware — it can break navigation
-            // Just continue with role = null (treat as no special role)
-        } else {
-            role = roleRes?.user_role || null;
-            // console.log("User role:", role);
-        }
-    } else {
-        console.log("No UID found — unauthenticated or invalid token");
+        role = data?.user_role ?? null;
     }
 
-    const pathname = request.nextUrl.pathname;
+    // console.log("Role from proxy getUser:", role);
+
+    // exclude server actions
+    if (request.nextUrl.pathname.startsWith('/_next')) {
+        return NextResponse.next();
+    }
+
+    if (uid && !role) {
+        // return NextResponse.redirect(new URL("/unauthorized", request.url));
+        return;
+    }
 
     // Skip Api routes
     if (pathname.startsWith("/api")) {
@@ -84,7 +88,8 @@ export async function updateSession(request: NextRequest) {
         );
 
         if (!hasAccess) {
-            return NextResponse.redirect(new URL("/unauthorized", request.url));
+            // return NextResponse.redirect(new URL("/unauthorized", request.url));
+            return;
         }
     }
 

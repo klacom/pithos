@@ -8,7 +8,6 @@ import { Pencil, Check } from "lucide-react";
 import Link from "next/link";
 import { useAuth } from "@/components/AuthProvider";
 import MfaSetup from "@/components/MfaSetup";
-import { LogoutButton } from "@/components/logout-button";
 
 export default function AccountPage() {
     const [selectedPayment, setSelectedPayment] = useState<string | null>(null);

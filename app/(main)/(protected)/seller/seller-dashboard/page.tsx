@@ -98,13 +98,14 @@ const SellerDashboard = () => {
         {/* CHART */}
         <div className="flex-1 min-w-0 bg-primary-foreground border border-muted rounded-xl p-4 flex flex-col gap-4">
           <div className="flex justify-between items-center">
-            <h2 className="font-bold text-xl">Revenue Overview</h2>
+            <h2 className="font-bold text-xl">Revenue Summary</h2>
             <Button size="sm" variant="outline">Export</Button>
           </div>
 
           <div className="h-full overflow-hidden">
             <LineChart />
           </div>
+
         </div>
 
         {/* SIDE INFO */}

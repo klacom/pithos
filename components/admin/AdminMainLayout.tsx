@@ -4,6 +4,7 @@ import { FaUsers, FaWrench } from "react-icons/fa";
 import { HiDocument } from "react-icons/hi2";
 import { RiComputerFill } from "react-icons/ri";
 import { MdPayments, MdDashboard } from "react-icons/md";
+import { createAudit } from "@/lib/supabase/create-audit";
 
 const AdminMainLayout = ({ children }: { children: ReactNode }) => {
     const iconSize = 18;
@@ -43,7 +44,10 @@ const AdminMainLayout = ({ children }: { children: ReactNode }) => {
 
     return (
         <main className="flex w-full h-full min-h-0">
-            <SideBar links={links} />
+            <SideBar 
+                links={links} 
+                createAudit={createAudit} 
+            />
             {children}
         </main>
     );
