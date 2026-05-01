@@ -1,23 +1,31 @@
-import { JSX, ReactNode } from "react"
+import { ReactNode } from "react"
 import SideBar from "./SideBar"
-import Link from "next/link";
 import { User, Shield, ShoppingBag, Settings } from "lucide-react";
+
+type LinkItem = {
+    href: string;
+    label: string;
+    icon: React.ReactNode;
+};
 
 const BuyerMainLayout = ({children} : {children : ReactNode}) => {
   const iconSize = 18;
-  const links: JSX.Element[] = [
-    <Link key={'1'} className="hover:bg-accent hover:text-white p-2 rounded-md items-center flex gap-4" href={'/buyer/account/personal-info'}>
-      <User size={iconSize}/>
-      Personal Info
-    </Link>,
-    <Link key={'2'} className="hover:bg-accent hover:text-white p-2 rounded-md items-center flex gap-4" href={'/buyer/account/security'}>
-      <Shield size={iconSize}/>
-      Security
-    </Link>,
-    <Link key={'3'} className="hover:bg-accent hover:text-white p-2 rounded-md items-center flex gap-4" href={'/buyer/account/purchase-history'}>
-      <ShoppingBag size={iconSize}/>
-      Purchase History
-    </Link>,
+  const links: LinkItem[] = [
+    {
+      href: '/buyer/account/personal-info',
+      label: 'Personal Info',
+      icon: <User size={iconSize}/>,
+    },
+    {
+      href: '/buyer/account/security',
+      label: 'Security',
+      icon: <Shield size={iconSize}/>,
+    },
+    {
+      href: '/buyer/account/purchase-history',
+      label: 'Purchase History',
+      icon: <ShoppingBag size={iconSize}/>,
+    },
   ];
 
   return (
