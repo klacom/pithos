@@ -23,9 +23,11 @@ export async function GET(
     const from = (page - 1) * limit
     const to = from + limit - 1
 
+    const select = searchParams.get("select") || "*";
+
     let query = supabase
         .from(entity)
-        .select("*", { count: "exact" })
+        .select(select, { count: "exact" })
 
     // Parse Filters
     searchParams.forEach((value, key) => {
@@ -59,29 +61,78 @@ export async function GET(
     const searchColumns = searchParams.getAll("search");
 
     if (q && searchColumns.length > 0) {
-        const orQuery = searchColumns
-            .map(col => `${col}.ilike.%${q}%`)
-            .join(",");
+        const baseCols: string[] = [];
+        const relationCols: Record<string, string[]> = {};
 
-        query = query.or(orQuery);
+        // Separate base vs relation columns
+        searchColumns.forEach(col => {
+            if (!col.includes(".")) {
+                baseCols.push(col);
+            } else {
+                const parts = col.split(".");
+                const relation = parts[0];
+                const field = parts.slice(1).join(".");
+                if (!relationCols[relation]) relationCols[relation] = [];
+                relationCols[relation].push(field);
+            }
+        });
+
+        // Apply base table OR
+        if (baseCols.length > 0) {
+            const baseQuery = baseCols
+                .map(col => `${col}.ilike.%${q}%`)
+                .join(",");
+
+            query = query.or(baseQuery);
+        }
+
+        // Apply relation filters separately (AND, not OR)
+        Object.entries(relationCols).forEach(([relation, fields]) => {
+            fields.forEach(field => {
+                query = query.ilike(`${relation}.${field}`, `%${q}%`);
+            });
+        });
     }
 
     // Apply Filters
     if (filters) {
         Object.entries(filters).forEach(([column, values]) => {
-            if (values.length === 1) {
-                query = query.eq(column, values[0]);
+            if (column.includes(".")) {
+                const [foreignTable, col] = column.split(".");
+                if (values.length === 1) {
+                    query = query.eq(`${foreignTable}.${col}`, values[0]);
+                } else {
+                    query = query.in(`${foreignTable}.${col}`, values);
+                }
             } else {
-                query = query.in(column, values);
+                if (values.length === 1) {
+                    query = query.eq(column, values[0]);
+                } else {
+                    query = query.in(column, values);
+                }
             }
         });
     }
 
     // Sort/Order
-    if (sort) query = query.order(sort, { ascending: order === "asc" })
+    if (sort) {
+        if (sort.includes(".")) {
+            const [foreignTable, column] = sort.split(".");
+            query = query.order(column, {
+                foreignTable,
+                ascending: order === "asc"
+            });
+        } else {
+            query = query.order(sort, { ascending: order === "asc" });
+        }
+    }
+
+    console.log("Supabase Query : ", query);
 
     // Do the query, destructure the following return values.
     const { data, count, error } = await query.range(from, to)
+
+    console.log("Supabase Query Data: ", data);
 
     // Log Supabase errors
     if (error) {

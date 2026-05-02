@@ -2,7 +2,7 @@
 
 import { createClient } from "@/lib/supabase/client";
 import type { Session, User } from "@supabase/supabase-js";
-import { ReactNode, useContext, useEffect, useState } from "react";
+import { ReactNode, Suspense, useContext, useEffect, useState } from "react";
 import { createContext } from "react";
 
 type AuthContextType = {
