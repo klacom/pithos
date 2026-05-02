@@ -20,7 +20,7 @@ const page = () => {
       <div className='flex flex-col lg:flex-row gap-8'>
           <div className='flex flex-col gap-4 w-full lg:w-1/4'>
             <h1 className='font-bold text-2xl'>Store Profile</h1>
-            <p className='text-muted-foreground'>Update your store's public information and how buyers see you.</p>
+            <p className='text-muted-foreground'>Update your stores public information and how buyers see you.</p>
           </div>
           <div className='flex flex-col gap-4 w-full lg:w-3/4'>
             <Card className='w-full p-6 flex flex-col gap-6 bg-primary-foreground border-muted'>

@@ -9,8 +9,8 @@ export default async function Page() {
   const { rows, error } = await listSellerProductRows();
   const initialAssets = rows.map(productRowToAssetItem);
   return (
-   
+    <Suspense>
       <AssetsPageClient initialAssets={initialAssets} loadError={error} />
-    
+    </Suspense>
   );
 }
