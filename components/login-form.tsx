@@ -47,10 +47,10 @@ export function LoginForm({
     const router = useRouter();
 
     // Force sign out if they hit the login page (prevents lingering AAL1 sessions)
-    // useEffect(() => {
-    //     const supabase = createClient();
-    //     supabase.auth.signOut({ scope: 'local' });
-    // }, []);
+    useEffect(() => {
+        const supabase = createClient();
+        supabase.auth.signOut({ scope: 'local' });
+    }, []);
 
     // Handle TOTP timer countdown
     useEffect(() => {
@@ -240,35 +240,31 @@ export function LoginForm({
 
             setUserData(data);
 
-            // Always require MFA for all users
-            const { data: factorsData, error: factorsError } = await supabase.auth.mfa.listFactors();
-            if (factorsError) throw factorsError;
-
-            const totpFactor = factorsData.totp.find((factor) => factor.status === 'verified');
-            if (totpFactor) {
-                setFactorId(totpFactor.id);
-                setShowMfa(true);
-                return;
-            } else {
-                // If no verified factor, enroll one and show setup
-                // First clean up any unverified factors
-                const unverifiedFactors = factorsData.all.filter(f => f.status !== 'verified');
-                for (const factor of unverifiedFactors) {
-                    await supabase.auth.mfa.unenroll({ factorId: factor.id });
-                }
-
-                // Enroll new TOTP factor
-                const { data: enrollData, error: enrollError } = await supabase.auth.mfa.enroll({
-                    factorType: "totp",
+            // Always require MFA for all users - clean up ALL factors first using admin API!
+            try {
+                await fetch("/api/cleanup-mfa-factors", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ userId: data.user.id })
                 });
-                if (enrollError) throw enrollError;
-
-                setFactorId(enrollData.id);
-                setQrCode(enrollData.totp.qr_code);
-                setSecret(enrollData.totp.secret);
-                setShowMfaSetup(true);
-                return;
+            } catch (cleanupErr) {
+                console.error("Error calling cleanup API:", cleanupErr);
             }
+
+            // Now enroll a completely new TOTP factor with unique friendly name
+            const uniqueName = `login-${Date.now()}`
+            const { data: enrollData, error: enrollError } = await supabase.auth.mfa.enroll({
+                factorType: "totp",
+                friendlyName: uniqueName
+            });
+            if (enrollError) throw enrollError;
+
+            setFactorId(enrollData.id);
+            setQrCode(enrollData.totp.qr_code);
+            setSecret(enrollData.totp.secret);
+            setShowMfaSetup(true);
+            setShowMfa(false);
+            return;
         } catch (error: unknown) {
             setError(error instanceof Error ? error.message : "An error occurred");
         } finally {
@@ -286,10 +282,12 @@ export function LoginForm({
 
             <Card className="w-full">
                 <CardHeader>
-                    <div className="text-xs text-muted-foreground hover:underline w-fit mb-4 block cursor-pointer" onClick={() => {
-                        if (showMfa) {
-                            handleCancelMfa();
+                    <div className="text-xs text-muted-foreground hover:underline w-fit mb-4 block cursor-pointer" onClick={async () => {
+                        const supabase = createClient();
+                        if (showMfa || showMfaSetup) {
+                            await handleCancelMfa();
                         } else {
+                            await supabase.auth.signOut({ scope: 'local' });
                             window.location.href = "/";
                         }
                     }}>
