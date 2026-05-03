@@ -25,6 +25,28 @@ export async function updateUserName(fullName: string) {
     }
 }
 
+export async function updateUserAvatar(avatarUrl: string) {
+    const supabase = await createClient();
+
+    try {
+        const { data: { user }, error: userError } = await supabase.auth.getUser();
+        
+        if (userError) throw userError;
+        if (!user) throw new Error("User not authenticated");
+
+        const { error } = await supabase.auth.updateUser({
+            data: { avatar_url: avatarUrl }
+        });
+
+        if (error) throw error;
+
+        return { success: true };
+    } catch (error: any) {
+        console.error("Error updating user avatar:", error);
+        return { success: false, error: error.message };
+    }
+}
+
 export async function getBuyerTransactions() {
     const supabase = await createClient();
 

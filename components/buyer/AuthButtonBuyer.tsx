@@ -28,11 +28,10 @@ export function AuthButton() {
         <div className="flex items-center gap-4 text-white">
             {user_avatar ? (
                 <Link href={'/buyer/account'}>
-                    <div className="h-8 w-8 rounded-full overflow-hidden bg-muted flex items-center justify-center hover:opacity-80 transition-opacity cursor-pointer">
+                    <div className="relative h-8 w-8 rounded-full overflow-hidden bg-muted hover:opacity-80 transition-opacity cursor-pointer">
                         <Image
                             src={user_avatar}
-                            width={user_avatar_size}
-                            height={user_avatar_size}
+                            fill
                             className="object-cover"
                             alt={user.email ?? "User avatar"}
                         />
