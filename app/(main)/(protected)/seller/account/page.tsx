@@ -5,7 +5,6 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Textarea } from '@/components/ui/textarea'
 import { Label } from '@/components/ui/label'
-import MfaSetup from '@/components/MfaSetup'
 
 const page = () => {
   return (
@@ -89,10 +88,10 @@ const page = () => {
       <div className='flex flex-col lg:flex-row gap-8'>
           <div className='flex flex-col gap-4 w-full lg:w-1/4'>
             <h1 className='font-bold text-2xl'>Account Security</h1>
-            <p className='text-muted-foreground'>Secure your seller account with Multi-Factor Authentication.</p>
+            <p className='text-muted-foreground'>Multi-Factor Authentication is enabled by default for all accounts.</p>
           </div>
           <div className='flex flex-col gap-4 w-full lg:w-3/4'>
-            <MfaSetup />
+            <p className='text-muted-foreground'>MFA is required for all logins. No further setup needed!</p>
           </div>
       </div>
       
