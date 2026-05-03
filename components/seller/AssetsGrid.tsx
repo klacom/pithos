@@ -11,12 +11,16 @@ type AssetsGridProps = {
   assets: AssetItem[];
   categories: string[];
   onDelete?: (id: string) => void;
+  onEdit?: (asset: AssetItem) => void;
+  onAddNew?: () => void;
 };
 
 export default function AssetsGrid({
   assets,
   categories,
   onDelete,
+  onEdit,
+  onAddNew,
 }: AssetsGridProps) {
   const [selectedCategory, setSelectedCategory] = useState("All Assets");
   const [searchQuery, setSearchQuery] = useState("");
@@ -88,14 +92,19 @@ export default function AssetsGrid({
             key={asset.id}
             asset={asset}
             onDelete={onDelete}
+            onEdit={onEdit}
           />
         ))}
 
         {/* ADD CARD */}
-        <div className="border-dashed border-2 rounded-lg flex flex-col items-center justify-center min-h-[200px] cursor-pointer">
+        <button
+          type="button"
+          onClick={() => onAddNew?.()}
+          className="border-dashed border-2 rounded-lg flex flex-col items-center justify-center min-h-[200px] cursor-pointer hover:bg-muted/30 transition-colors text-left"
+        >
           <Plus size={32} />
           <p>Add New Asset</p>
-        </div>
+        </button>
       </div>
     </div>
   );

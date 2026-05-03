@@ -48,14 +48,24 @@ export default function AssetCard({ asset, onEdit, onDelete }: Props) {
           </span>
 
           <div className="flex gap-1">
-            <Button size="icon" variant="ghost" onClick={handleView}>
+            <Button
+              size="icon"
+              variant="ghost"
+              onClick={(e) => {
+                e.stopPropagation();
+                handleView();
+              }}
+            >
               <Eye size={14} />
             </Button>
 
             <Button
               size="icon"
               variant="ghost"
-              onClick={() => onEdit?.(asset)}
+              onClick={(e) => {
+                e.stopPropagation();
+                onEdit?.(asset);
+              }}
             >
               <Edit size={14} />
             </Button>
@@ -63,7 +73,10 @@ export default function AssetCard({ asset, onEdit, onDelete }: Props) {
             <Button
               size="icon"
               variant="ghost"
-              onClick={() => onDelete?.(asset.id)}
+              onClick={(e) => {
+                e.stopPropagation();
+                onDelete?.(asset.id);
+              }}
             >
               <Trash2 size={14} />
             </Button>

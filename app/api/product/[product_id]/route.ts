@@ -47,13 +47,15 @@ export async function GET(
         }
 
         const images =
-            files?.map((file) => {
-                const { data } = supabase.storage
-                    .from("asset_photos")
-                    .getPublicUrl(`${product_id}/photos/${file.name}`)
+            files
+                ?.filter((file) => file.name !== "thumbnail")
+                .map((file) => {
+                    const { data } = supabase.storage
+                        .from("asset_photos")
+                        .getPublicUrl(`${product_id}/photos/${file.name}`)
 
-                return data.publicUrl
-            }) || []
+                    return data.publicUrl
+                }) || []
 
         return NextResponse.json({
             product,

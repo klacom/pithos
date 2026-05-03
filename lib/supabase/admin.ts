@@ -5,12 +5,20 @@ import { createClient } from "@supabase/supabase-js";
  * that require elevated privileges (e.g., user creation, deletion).
  * Should only be used in secure server-side contexts.
  */
+function serviceRoleKey(): string {
+    const key =
+        process.env.SUPABASE_SERVICE_KEY ??
+        process.env.SUPABASE_SERVICE_ROLE_KEY;
+    if (!key) {
+        throw new Error(
+            "Missing SUPABASE_SERVICE_KEY or SUPABASE_SERVICE_ROLE_KEY for admin Storage uploads.",
+        );
+    }
+    return key;
+}
+
 export function createAdminClient() {
-    return createClient(
-        process.env.NEXT_PUBLIC_SUPABASE_URL!,
-        process.env.SUPABASE_SERVICE_KEY!,
-        {
-            auth: { autoRefreshToken: false, persistSession: false },
-        }
-    );
+    return createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, serviceRoleKey(), {
+        auth: { autoRefreshToken: false, persistSession: false },
+    });
 }
