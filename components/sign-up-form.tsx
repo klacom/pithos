@@ -12,14 +12,11 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
 import { useState, useEffect } from "react";
-import SocialAuthButtons from "./SocialAuthButtons";
-import Separator from "@/components/Separator";
 import PithosLogo from "./PithosLogo";
 import { validatePassword } from "@/lib/auth/password-rules";
-import { createClient } from "@/lib/supabase/client";
 import { getSystemConfig } from "@/app/(main)/(protected)/admin/system-config/system-config-settings";
+import { Turnstile } from "@marsidev/react-turnstile";
 
 type SignUpFormProps = React.HTMLAttributes<HTMLDivElement> & {
     createAudit: (params: {
@@ -48,7 +45,7 @@ export function SignUpForm({
         min_numbers: 1,
         min_spec_chars: 1
     });
-    const router = useRouter();
+    const [captchaToken, setCaptchaToken] = useState<string | null>(null);
 
     useEffect(() => {
         const fetchRules = async () => {
@@ -89,20 +86,43 @@ export function SignUpForm({
             return;
         }
 
+        if (!captchaToken) {
+            setError("Please complete the CAPTCHA");
+            await createAudit({
+                action_name: "SIGN_UP_FAILED",
+                action_description: "User did not complete the CAPTCHA",
+                affected_resources: "auth",
+            });
+            setIsLoading(false);
+            return;
+        }
+
         try {
             const response = await fetch('/api/auth/sign-up', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ email, password }),
+                body: JSON.stringify({ email, password, captchaToken }),
             });
 
             const result = await response.json();
 
             if (!response.ok) {
+                await createAudit({
+                    action_name: "SIGN_UP_FAILED",
+                    action_description: "User failed creating an account",
+                    affected_resources: "auth",
+                });
                 throw new Error(result.message || 'Registration failed');
             }
 
             setSuccess("An activation link has been sent to your email. Please check your inbox and click the link to activate your account.");
+
+            // Sign up success audit
+            await createAudit({
+                action_name: "SIGN_UP_SUCCESS",
+                action_description: "User successfully created an account",
+                affected_resources: "auth",
+            });
         } catch (error: unknown) {
             setError(error instanceof Error ? error.message : "An error occurred");
         } finally {
@@ -193,13 +213,13 @@ export function SignUpForm({
                                     {success}
                                 </div>
                             )}
-                            <Button type="submit" className="w-full" disabled={isLoading || !!success} onClick={async () => {
-                                await createAudit({
-                                    action_name: "SIGN_UP_ATTEMPT",
-                                    action_description: "User tried to create an account",
-                                    affected_resources: "auth",
-                                });
-                            }}>
+                            <div className="w-full flex justify-center">
+                                <Turnstile
+                                    siteKey={process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY!}
+                                    onSuccess={(token) => setCaptchaToken(token)}
+                                />
+                            </div>
+                            <Button type="submit" className="w-full" disabled={isLoading || !!success}>
                                 {isLoading ? "Creating an account..." : "Sign up"}
                             </Button>
                         </div>

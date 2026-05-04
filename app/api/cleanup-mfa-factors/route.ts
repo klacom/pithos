@@ -11,7 +11,7 @@ export async function POST(req: Request) {
         const supabaseAdmin = createAdminClient()
 
         // List all factors for the user
-        const { data: { factors }, error: listError } = await supabaseAdmin.auth.mfa.listFactors({ userId })
+        const { data: factors, error: listError } = await supabaseAdmin.auth.mfa.listFactors()
         if (listError) {
             console.error("Admin list factors error:", listError)
         }
@@ -21,7 +21,6 @@ export async function POST(req: Request) {
                 try {
                     await supabaseAdmin.auth.mfa.unenroll({ 
                         factorId: factor.id,
-                        userId: userId 
                     })
                 } catch (deleteError) {
                     console.error("Admin unenroll factor error:", deleteError)

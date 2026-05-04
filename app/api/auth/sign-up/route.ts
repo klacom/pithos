@@ -5,7 +5,27 @@ import { validatePassword } from '@/lib/auth/password-rules';
 
 export async function POST(request: NextRequest) {
     try {
-        const { email, password } = await request.json();
+        const { email, password, captchaToken } = await request.json();
+
+        const verifyRes = await fetch(
+            "https://challenges.cloudflare.com/turnstile/v0/siteverify",
+            {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/x-www-form-urlencoded",
+                },
+                body: `secret=${process.env.TURNSTILE_SECRET_KEY}&response=${captchaToken}`,
+            }
+        );
+
+        const verifyData = await verifyRes.json();
+
+        if (!verifyData.success) {
+            return NextResponse.json(
+                { status: "error", message: "Captcha failed" },
+                { status: 400 }
+            );
+        }
 
         if (!email || !password) {
             return NextResponse.json(

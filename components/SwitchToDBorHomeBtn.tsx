@@ -1,32 +1,42 @@
 "use client";
 
-import { CircleGauge } from 'lucide-react'
-import { Store } from 'lucide-react';
-import Link from 'next/link'
-import { Button } from './ui/button'
-import { useState } from 'react';
-import { usePathname } from 'next/navigation';
-import { isCurrentRouteRBACProtected } from '@/lib/supabase/site_routes';
+import { CircleGauge, Store } from "lucide-react";
+import Link from "next/link";
+import { Button } from "./ui/button";
+import { usePathname } from "next/navigation";
+import { isCurrentRouteRBACProtected } from "@/lib/supabase/site_routes";
 
-// TODO: Dapat kahit nasa shopping magiging dashboard icon
+type Props = {
+    role: string;
+    DBLink: string;
+    homePageLink: string;
+};
 
-const SwitchToDBorHomeBtn = ({role, DBLink, homePageLink} : {role : string, DBLink : string, homePageLink : string}) => {
+const SwitchToDBorHomeBtn = ({ role, DBLink, homePageLink }: Props) => {
     const pathname = usePathname();
-    const [isProtected, setIsProtected] = useState(isCurrentRouteRBACProtected(pathname, role));
-    return (
-    <Link href={`${isProtected ? homePageLink : DBLink}`} onClick={()=>{
-        if(isCurrentRouteRBACProtected(pathname, role)){
-            setIsProtected(true)
-        }else{
-            setIsProtected(false)
-        }
-    }}>
-        <Button variant="ghost" size={'sm'} >
-            {isProtected ? <><Store size={16} className=''/>Go to Public</> : <><CircleGauge size={16} className=''/>Go to Restricted</>}
-        </Button>
-        <button ></button>
-    </Link>
-  )
-}
 
-export default SwitchToDBorHomeBtn
+    // derive directly (no state)
+    const isProtected = isCurrentRouteRBACProtected(pathname, role);
+
+    const href = isProtected ? homePageLink : DBLink;
+
+    return (
+        <Button asChild variant="ghost" size="sm">
+            <Link href={href} className="flex items-center gap-2">
+                {isProtected ? (
+                    <>
+                        <Store size={16} />
+                        Go to Public
+                    </>
+                ) : (
+                    <>
+                        <CircleGauge size={16} />
+                        Go to Dashboard
+                    </>
+                )}
+            </Link>
+        </Button>
+    );
+};
+
+export default SwitchToDBorHomeBtn;
