@@ -106,6 +106,8 @@ export function DataTable<T>({
         };
     }, [q])
 
+    const columnKeys = JSON.stringify(columns.map((c: any) => ({ key: c.key, filterable: c.filterable })));
+
     useEffect(() => {
         const loadOptions = async () => {
             const newOptions: Record<string, { value: string }[]> = {};
@@ -124,7 +126,7 @@ export function DataTable<T>({
         };
 
         loadOptions();
-    }, [columns]);
+    }, [columnKeys]);
 
     const sortFunction = (header: Header<T, unknown>) => {
         if (!header.column.columnDef.enableSorting) return;

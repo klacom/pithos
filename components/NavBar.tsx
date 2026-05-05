@@ -43,12 +43,14 @@ export default function NavBar({ role }: roleProps) {
     return (
         <>
             {/* Desktop */}
-            <nav className="hidden lg:flex w-full justify-center border-b h-16">
+            <nav className="hidden lg:flex w-full justify-center border-b h-16 bg-primary-foreground">
                 <div className="w-full flex justify-between items-center px-5">
 
                     <NavbarLogo />
 
-                    {config.showSearch && <NavSearchBar />}
+                    <Suspense>
+                        {config.showSearch && <NavSearchBar />}
+                    </Suspense>
 
                     <NavbarActions
                         showCart={true}
@@ -126,7 +128,9 @@ function MobileNavbar({
             <NavbarLogo />
 
             {/* Search */}
-            {config.showSearch && <NavSearchBar />}
+            <Suspense>
+                {config.showSearch && <NavSearchBar />}
+            </Suspense>
 
             {/* Actions */}
             <div className="flex flex-col gap-4 items-center">

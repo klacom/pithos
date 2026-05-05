@@ -2,7 +2,7 @@
 
 import { createClient } from "@/lib/supabase/client";
 import type { Session, User } from "@supabase/supabase-js";
-import { ReactNode, Suspense, useContext, useEffect, useState } from "react";
+import { ReactNode, Suspense, useContext, useEffect, useState, useMemo } from "react";
 import { createContext } from "react";
 
 type AuthContextType = {
@@ -13,28 +13,28 @@ type AuthContextType = {
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
-export function AuthProvider({children, initialSession}:{
+export function AuthProvider({ children, initialSession }: {
     children: ReactNode
     initialSession?: Session | null
 }) {
     const [session, setSession] = useState<Session | null>(initialSession ?? null);
     const [loading, setLoading] = useState(!initialSession);
 
-    useEffect(()=>{
+    useEffect(() => {
         const supabase = createClient();
 
         // Get session then set session and loading
 
         supabase.auth.getSession().then(
-            ({data: { session }
-            })=>{
-            setSession(session);
-            setLoading(false);
-        })
+            ({ data: { session }
+            }) => {
+                setSession(session);
+                setLoading(false);
+            })
 
         // listen for changes
 
-        const { data : listener } = supabase.auth.onAuthStateChange((_event, newSession) => {
+        const { data: listener } = supabase.auth.onAuthStateChange((_event, newSession) => {
             setSession(newSession);
             setLoading(false);
         })
@@ -46,19 +46,19 @@ export function AuthProvider({children, initialSession}:{
 
     // pack the freshly set session and user and the if loading values
 
-    const value = {
+    const value = useMemo(() => ({
         session,
         user: session?.user ?? null,
         loading
-    };
+    }), [session, loading]);
 
     // return children packed with the context
 
     return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 }
 
-export const useAuth = () =>{
-    const context= useContext(AuthContext);
+export const useAuth = () => {
+    const context = useContext(AuthContext);
     if (!context) throw new Error("useAuth must be used inside AuthProvider");
     return context;
 };

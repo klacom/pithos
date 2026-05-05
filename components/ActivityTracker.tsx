@@ -7,23 +7,29 @@ export default function ActivityTracker() {
 
     useEffect(() => {
         let lastActivity = Date.now();
-
         const events = ["mousemove", "keydown", "click", "scroll"];
+        let throttleTimer: ReturnType<typeof setTimeout> | null = null;
 
         const updateActivity = () => {
             lastActivity = Date.now();
-            if (isInactive) setIsInactive(false); // Reset inactivity state on user activity
+            
+            // Only update state if we are currently inactive
+            // and use a small throttle for the mousemove events
+            if (!throttleTimer) {
+                throttleTimer = setTimeout(() => {
+                    setIsInactive(false);
+                    throttleTimer = null;
+                }, 1000); // Throttle to once per second
+            }
+        };
+
+        const handleActivity = () => {
+            updateActivity();
         };
 
         events.forEach((event) => {
-            window.addEventListener(event, updateActivity);
+            window.addEventListener(event, handleActivity, { passive: true });
         });
-
-        // window.addEventListener("blur", () => {
-        //     lastActivity = 0;
-        // });
-
-        // if (document.hidden) return;
 
         const interval = setInterval(async () => {
             // Only ping if user was recently active (last 1 min)
@@ -31,20 +37,25 @@ export default function ActivityTracker() {
                 document.visibilityState === "visible" &&
                 Date.now() - lastActivity < 60000
             ) {
-                const response = await fetch("/api/heartbeat", { method: "POST" });
-                if (response.status === 401) {
-                    setIsInactive(true); // User is logged out due to inactivity
+                try {
+                    const response = await fetch("/api/heartbeat", { method: "POST" });
+                    if (response.status === 401) {
+                        setIsInactive(true);
+                    }
+                } catch (err) {
+                    console.error("Heartbeat failed", err);
                 }
             }
         }, 30000);
 
         return () => {
             events.forEach((event) => {
-                window.removeEventListener(event, updateActivity);
+                window.removeEventListener(event, handleActivity);
             });
             clearInterval(interval);
+            if (throttleTimer) clearTimeout(throttleTimer);
         };
-    }, [isInactive]);
+    }, []); // Run once on mount
 
     return (
         <>

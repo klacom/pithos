@@ -61,16 +61,16 @@ const NavSearchBar = () => {
 
     return (
 
-    <div className="overflow-hidden rounded-md w-full lg:w-[512px] flex items-center h-full justify-center">
-        <input placeholder="Search for an asset" className="rounded-md rounded-r-none text-sm border-muted border-r-0 focus:outline-none h-full w-full px-5 bg-popover text-primary hover:scale-103 focus:border-foreground" type="text" value={searchContent} onChange={(e)=>{setSearchContent(e.currentTarget.value)}} onKeyDown={(e)=>{
-            if(e.key === "Enter") runSearch();
-        }}/>
-        <Button variant={"red_default"} className="rounded-l-none h-full" onClick={runSearch}>
-            <Search width={16} height={24}/>
-        </Button>
+        <div className="overflow-hidden rounded-md w-full lg:w-[512px] flex items-center h-full justify-center">
+            <input placeholder="Search for an asset" className="rounded-md rounded-r-none text-sm border-muted border-r-0 focus:outline-none h-full w-full px-5 bg-popover text-primary hover:scale-103 focus:border-foreground" type="text" value={searchContent} onChange={(e) => { setSearchContent(e.currentTarget.value) }} onKeyDown={(e) => {
+                if (e.key === "Enter") runSearch();
+            }} />
+            <Button variant={"red_default"} className="rounded-l-none h-full" onClick={runSearch}>
+                <Search width={16} height={24} />
+            </Button>
 
-    </div>
-  )
+        </div>
+    )
 }
 
 export default NavSearchBar

@@ -31,25 +31,25 @@ type Transaction = {
     product_id: string
     created_at: string
     status: string
-    seller_id : string
+    seller_id: string
 }
 
 type Reviews = {
-    review_id : string
-    review_description : string
-    reviewer_id : string
-    created_at : string
-    product_id : string
-    rating : number
+    review_id: string
+    review_description: string
+    reviewer_id: string
+    created_at: string
+    product_id: string
+    rating: number
 }
 
 type Products = {
-    product_id : string
-    product_name : string
-    product_description : string
-    price : number
-    created_at : string
-    seller_owner_id : string
+    product_id: string
+    product_name: string
+    product_description: string
+    price: number
+    created_at: string
+    seller_owner_id: string
 }
 
 const ActionButtons = (
@@ -120,7 +120,7 @@ const Page = () => {
             "user_email",
             "user_fullname"
         ],
-        enabled : true
+        enabled: true
     })
 
     // memoized
@@ -134,7 +134,7 @@ const Page = () => {
         // searchableColumns: [
         //     "transaction_id",
         // ],
-        baseFilters : bTxBaseFilters,
+        baseFilters: bTxBaseFilters,
         enabled: !!selectedUser?.id,
     })
 
@@ -146,7 +146,7 @@ const Page = () => {
 
     // Table for Buyer Reviews
     const bRvwsTable = useDataTable("reviews", {
-        searchableColumns : [
+        searchableColumns: [
             "review_description"
         ],
         baseFilters: bRvwsBaseFilters,
@@ -177,9 +177,48 @@ const Page = () => {
         enabled: !!selectedUser?.id,
     })
 
+    const columns = useMemo(() => [
+        {
+            key: "id", label: "User ID", sortable: true, render: (_: any, row: any) => (
+                <p className="font-mono text-xs">{row.id}</p>
+            )
+        },
+        {
+            key: "created_at", label: "Joined At", sortable: true, render: (_: any, row: any) => (
+                <p>{formatDate(row.created_at)}</p>
+            )
+        },
+        {
+            key: "user_email", label: "Email", sortable: true, searchable: true, render: (_: any, row: any) => (
+                <p className="font-mono text-xs">{row.user_email}</p>
+            )
+        },
+        { key: "user_role", label: "Role", filterable: true },
+        { key: "login_attempts", label: "Log. Count" },
+        {
+            key: "is_locked", label: "Status", filterable: true, render: (_: any, row: any) => (
+                <span className={`px-3 py-1 rounded-full text-xs font-medium ${row.is_locked
+                    ? "text-red-600"
+                    : "text-green-600"
+                    }`}>
+                    {row.is_locked ? "Locked" : "Active"}
+                </span>
+            )
+        },
+        { key: "user_fullname", label: "Full Name", sortable: true, searchable: true },
+        {
+            key: "role", label: "Actions", sortable: false, render: (_: any, row: any) => <ActionButtons
+                row={row}
+                table={table}
+                setSelectedUser={setSelectedUser}
+                setPageTitle={setPageTitle}
+            />
+        },
+    ], [table, setSelectedUser, setPageTitle]);
 
 
-// ===============================================================================================================================
+
+    // ===============================================================================================================================
 
     return (
         <div className='flex flex-col p-4 bg-background w-full gap-4'>
@@ -202,49 +241,12 @@ const Page = () => {
                         <div className={`w-full h-full`}>
                             <DataTable<User>
                                 {...table}
-                                columns={[
-                                    {
-                                        key: "id", label: "User ID", sortable: true, render: (_: any, row: any) => (
-                                            <p className="font-mono text-xs">{row.id}</p>
-                                        )
-                                    },
-                                    {
-                                        key: "created_at", label: "Joined At", sortable: true, render: (_: any, row: any) => (
-                                            <p>{formatDate(row.created_at)}</p>
-                                        )
-                                    },
-                                    {
-                                        key: "user_email", label: "Email", sortable: true, searchable: true, render: (_: any, row: any) => (
-                                            <p className="font-mono text-xs">{row.user_email}</p>
-                                        )
-                                    },
-                                    { key: "user_role", label: "Role", filterable: true },
-                                    { key: "login_attempts", label: "Log. Count" },
-                                    {
-                                        key: "is_locked", label: "Status", filterable: true, render: (_: any, row: any) => (
-                                            <span className={`px-3 py-1 rounded-full text-xs font-medium ${row.is_locked
-                                                ? "text-red-600"
-                                                : "text-green-600"
-                                                }`}>
-                                                {row.is_locked ? "Locked" : "Active"}
-                                            </span>
-                                        )
-                                    },
-                                    { key: "user_fullname", label: "Full Name", sortable: true, searchable: true },
-                                    {
-                                        key: "role", label: "Actions", sortable: false, render: (_: any, row: any) => <ActionButtons
-                                            row={row}
-                                            table={table}
-                                            setSelectedUser={setSelectedUser}
-                                            setPageTitle={setPageTitle}
-                                        />
-                                    },
-                                ]}
+                                columns={columns}
                             />
                         </div>
                     </Suspense>
                 )}
-                
+
 
                 {selectedUser && (
                     <div className="flex w-full gap-4">
@@ -298,7 +300,7 @@ const Page = () => {
                                 <Tabs items={[
                                     {
                                         label: "Transactions",
-                                        content : (
+                                        content: (
                                             <Suspense fallback={<div className="animate-pulse w-full h-full">Loading...</div>}>
 
                                                 <DataTable<Transaction>
@@ -378,7 +380,7 @@ const Page = () => {
                                                             )
                                                         },
                                                         {
-                                                            key: "rating", label: "Rating", filterable : true,
+                                                            key: "rating", label: "Rating", filterable: true,
                                                         },
                                                     ]}
                                                 />
