@@ -1,13 +1,8 @@
 "use client"
 
 import { Button } from "../ui/button"
-import { FaArrowLeft, FaArrowRight } from "react-icons/fa"
-import InputTextField from "@/components/technical-components/InputTextField"
-import SortBy from "./SortBy"
-import FilterBy from "./FilterBy"
 import { IoIosArrowUp, IoIosArrowDown } from "react-icons/io";
 import { Header } from "@tanstack/react-table"
-import { JSX } from "react"
 import { useState } from "react"
 import { ChevronLeft, ChevronRight } from "lucide-react"
 
@@ -38,20 +33,25 @@ export function DataTable<T>({
     loading,
     filter,
     setFilter,
-    doesSearchableColumnsExist
+    doesSearchableColumnsExist,
+    baseFilterKeys
 }: any) {
 
     const [filterOptions, setFilterOptions] = useState<
         Record<string, { value: string }[]>
     >({});
 
+    const getNestedValue = (obj: any, path: string) => {
+        return path.split(".").reduce((acc, key) => acc?.[key], obj);
+    };
+
     const columnDefs: ColumnDef<T>[] = columns.map((col: any) => ({
         accessorKey: col.key,
         header: col.label,
         cell: ({ row }: any) =>
             col.render
-                ? col.render(row.getValue(col.key), row.original)
-                : row.getValue(col.key),
+                ? col.render(getNestedValue(row.original, col.key), row.original)
+                : getNestedValue(row.original, col.key),
         enableSorting: col.sortable,
         enableColumnFilter: col.filterable
     }))
@@ -77,7 +77,11 @@ export function DataTable<T>({
 
         const res = await fetch("/api/fetch-distinct-values", {
             method: "POST",
-            body: JSON.stringify({ column_name: key, table_name: entity })
+            body: JSON.stringify({
+                column_name: key,
+                table_name: entity,
+                baseFilterKeys
+            })
         });
 
         const json = await res.json();

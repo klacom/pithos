@@ -38,20 +38,23 @@ export function LoginForm({
     const [error, setError] = useState<string | null>(null);
     const [isLoading, setIsLoading] = useState(false);
     const [showMfa, setShowMfa] = useState(false);
+    const [showMfaSetup, setShowMfaSetup] = useState(false);
     const [mfaCode, setMfaCode] = useState("");
     const [factorId, setFactorId] = useState<string | null>(null);
+    const [qrCode, setQrCode] = useState<string | null>(null);
+    const [secret, setSecret] = useState<string | null>(null);
     const [timeRemaining, setTimeRemaining] = useState(30);
     const router = useRouter();
 
     // Force sign out if they hit the login page (prevents lingering AAL1 sessions)
-    // useEffect(() => {
-    //     const supabase = createClient();
-    //     supabase.auth.signOut({ scope: 'local' });
-    // }, []);
+    useEffect(() => {
+        const supabase = createClient();
+        supabase.auth.signOut({ scope: 'local' });
+    }, []);
 
     // Handle TOTP timer countdown
     useEffect(() => {
-        if (!showMfa) return;
+        if (!showMfa && !showMfaSetup) return;
         const updateTimer = () => {
             const remaining = 30 - Math.floor((Date.now() / 1000) % 30);
             setTimeRemaining(remaining);
@@ -59,15 +62,64 @@ export function LoginForm({
         updateTimer(); // Initial call
         const interval = setInterval(updateTimer, 1000);
         return () => clearInterval(interval);
-    }, [showMfa]);
+    }, [showMfa, showMfaSetup]);
 
     const handleCancelMfa = async () => {
         const supabase = createClient();
         await supabase.auth.signOut({ scope: 'local' });
         setShowMfa(false);
+        setShowMfaSetup(false);
         setMfaCode("");
         setPassword("");
+        setQrCode(null);
+        setSecret(null);
+        setFactorId(null);
         setError(null);
+    };
+
+    const handleVerifySetup = async (e: React.FormEvent) => {
+        e.preventDefault();
+        if (!factorId) return;
+        
+        const supabase = createClient();
+        setIsLoading(true);
+        setError(null);
+
+        try {
+            const challenge = await supabase.auth.mfa.challenge({ factorId });
+            if (challenge.error) throw challenge.error;
+
+            const verify = await supabase.auth.mfa.verify({
+                factorId,
+                challengeId: challenge.data.id,
+                code: mfaCode,
+            });
+
+            if (verify.error) throw verify.error;
+
+            // Unenroll the factor so user has to scan new QR next time
+            await supabase.auth.mfa.unenroll({ factorId });
+
+            // Reset login attempts and redirect on success
+            await supabase.rpc("reset_login_attempts", { login_email: email });
+            
+            // Success Audit
+            try {
+                await createAudit({
+                    action_name: "LOGIN_SUCCESS",
+                    action_description: "User logged in successfully with MFA (setup complete, factor unenrolled)",
+                    affected_resources: "auth",
+                });
+            } catch (error) {
+                console.log("Audit Failed: ", error);
+            }
+
+            router.push("/");
+        } catch (error: unknown) {
+            setError(error instanceof Error ? error.message : "An error occurred");
+        } finally {
+            setIsLoading(false);
+        }
     };
 
     type AuthData = {
@@ -114,22 +166,22 @@ export function LoginForm({
 
                 if (verify.error) throw verify.error;
 
+                // Unenroll the factor so user has to scan new QR next time
+                await supabase.auth.mfa.unenroll({ factorId });
+
                 // Reset login attempts and redirect on success
                 await supabase.rpc("reset_login_attempts", { login_email: email });
-                // console.log("Before Create Audit =====");
                 
                 // Success Audit
                 try {
                     await createAudit({
                         action_name: "LOGIN_SUCCESS",
-                        action_description: "User logged in successfully with MFA",
+                        action_description: "User logged in successfully with MFA (factor unenrolled)",
                         affected_resources: "auth",
                     });
                 } catch (error) {
                     console.log("Audit Failed: ", error);
                 }
-               
-                // console.log("After Create Audit =====");
 
                 router.push("/");
                 return;
@@ -188,38 +240,31 @@ export function LoginForm({
 
             setUserData(data);
 
-            // Check if MFA is required
-            const { data: mfaData, error: mfaError } = await supabase.auth.mfa.getAuthenticatorAssuranceLevel();
-            if (mfaError) throw mfaError;
-
-            if (mfaData.nextLevel === 'aal2' && mfaData.currentLevel === 'aal1') {
-                const { data: factorsData, error: factorsError } = await supabase.auth.mfa.listFactors();
-                if (factorsError) throw factorsError;
-
-                const totpFactor = factorsData.totp.find((factor) => factor.status === 'verified');
-                if (totpFactor) {
-                    setFactorId(totpFactor.id);
-                    setShowMfa(true);
-                    return;
-                }
-            }
-
-            // 4. Handle true success (correct password AND not locked AND no MFA required)
-            await supabase.rpc("reset_login_attempts", { login_email: email });
-
-            // Audit Login Success no MFA
+            // Always require MFA for all users - clean up ALL factors first using admin API!
             try {
-                await createAudit({
-                    action_name: "LOGIN_SUCCESS",
-                    action_description: "User logged in successfully (No MFA)",
-                    affected_resources: "auth",
-                    // actor: userData?.user.id,
+                await fetch("/api/cleanup-mfa-factors", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ userId: data.user.id })
                 });
-            } catch (error) {
-                console.log("Audit Failed: ", error);
+            } catch (cleanupErr) {
+                console.error("Error calling cleanup API:", cleanupErr);
             }
 
-            router.push("/");
+            // Now enroll a completely new TOTP factor with unique friendly name
+            const uniqueName = `login-${Date.now()}`
+            const { data: enrollData, error: enrollError } = await supabase.auth.mfa.enroll({
+                factorType: "totp",
+                friendlyName: uniqueName
+            });
+            if (enrollError) throw enrollError;
+
+            setFactorId(enrollData.id);
+            setQrCode(enrollData.totp.qr_code);
+            setSecret(enrollData.totp.secret);
+            setShowMfaSetup(true);
+            setShowMfa(false);
+            return;
         } catch (error: unknown) {
             setError(error instanceof Error ? error.message : "An error occurred");
         } finally {
@@ -237,10 +282,12 @@ export function LoginForm({
 
             <Card className="w-full">
                 <CardHeader>
-                    <div className="text-xs text-muted-foreground hover:underline w-fit mb-4 block cursor-pointer" onClick={() => {
-                        if (showMfa) {
-                            handleCancelMfa();
+                    <div className="text-xs text-muted-foreground hover:underline w-fit mb-4 block cursor-pointer" onClick={async () => {
+                        const supabase = createClient();
+                        if (showMfa || showMfaSetup) {
+                            await handleCancelMfa();
                         } else {
+                            await supabase.auth.signOut({ scope: 'local' });
                             window.location.href = "/";
                         }
                     }}>
@@ -249,17 +296,56 @@ export function LoginForm({
                     <div className="flex flex-col gap-2 items-start">
                         <CardTitle className="text-2xl">Login</CardTitle>
                         <CardDescription>
-                            {showMfa ? "Enter the 6-digit code from your authenticator app (1 minute grace period)" : "Enter your email below to login to your account"}
+                            {showMfaSetup ? "Scan this QR code (required for every login) to get your one-time verification code" : (showMfa ? "Enter the current 6-digit code from your authenticator app (one-time use only)" : "Enter your email below to login to your account")}
                         </CardDescription>
                     </div>
                 </CardHeader>
                 <CardContent>
-                    <form onSubmit={handleLogin} noValidate>
+                    <form onSubmit={showMfaSetup ? handleVerifySetup : handleLogin} noValidate>
                         <div className="flex flex-col gap-6">
-                            {showMfa ? (
+                            {showMfaSetup ? (
+                                <div className="grid gap-4">
+                                    <div className="text-center">
+                                        <h3 className="font-semibold text-lg">One-Time Verification Setup</h3>
+                                        <p className="text-sm text-muted-foreground">Scan this QR code now with your authenticator app (you&apos;ll need to do this every time you login).</p>
+                                    </div>
+                                    <div className="flex justify-center">
+                                        <div className="w-48 h-48 bg-white p-2 rounded-md flex items-center justify-center">
+                                            <img 
+                                                src={qrCode || ''} 
+                                                alt="MFA QR Code" 
+                                                className="w-full h-full"
+                                            />
+                                        </div>
+                                    </div>
+                                    <div className="grid gap-2">
+                                        <div className="flex justify-between items-center">
+                                            <Label htmlFor="mfaCode">Verification Code</Label>
+                                            <span className={cn("text-xs font-mono", timeRemaining <= 5 ? "text-red-500 font-bold" : "text-muted-foreground")}>
+                                                {timeRemaining}s
+                                            </span>
+                                        </div>
+                                        <Input
+                                            id="mfaCode"
+                                            type="text"
+                                            placeholder="Enter 6-digit code"
+                                            required
+                                            value={mfaCode}
+                                            onChange={(e) => setMfaCode(e.target.value)}
+                                            maxLength={6}
+                                        />
+                                        <div className="h-1 w-full bg-muted overflow-hidden rounded-full mt-1">
+                                            <div
+                                                className={cn("h-full transition-all duration-1000 ease-linear", timeRemaining <= 5 ? "bg-red-500" : "bg-primary")}
+                                                style={{ width: `${(timeRemaining / 30) * 100}%` }}
+                                            />
+                                        </div>
+                                    </div>
+                                </div>
+                            ) : showMfa ? (
                                 <div className="grid gap-2">
                                     <div className="flex justify-between items-center">
-                                        <Label htmlFor="mfaCode">Authenticator Code</Label>
+                                        <Label htmlFor="mfaCode">One-Time Code</Label>
                                         <span className={cn("text-xs font-mono", timeRemaining <= 5 ? "text-red-500 font-bold" : "text-muted-foreground")}>
                                             {timeRemaining}s
                                         </span>
@@ -267,7 +353,7 @@ export function LoginForm({
                                     <Input
                                         id="mfaCode"
                                         type="text"
-                                        placeholder="Enter 6-digit code"
+                                        placeholder="Enter current 6-digit code"
                                         required
                                         value={mfaCode}
                                         onChange={(e) => setMfaCode(e.target.value)}
@@ -320,10 +406,10 @@ export function LoginForm({
                                 </div>
                             )}
                             <div className="flex flex-col gap-2">
-                                <Button type="submit" className="w-full" disabled={isLoading || (showMfa && mfaCode.length !== 6)}>
-                                    {isLoading ? (showMfa ? "Verifying..." : "Logging in...") : (showMfa ? "Verify Code" : "Login")}
+                                <Button type="submit" className="w-full" disabled={isLoading || ((showMfa || showMfaSetup) && mfaCode.length !== 6)}>
+                                    {isLoading ? (showMfaSetup ? "Verifying..." : (showMfa ? "Verifying..." : "Logging in...")) : (showMfaSetup ? "Verify One-Time Code" : (showMfa ? "Verify One-Time Code" : "Login"))}
                                 </Button>
-                                {showMfa && (
+                                {(showMfa || showMfaSetup) && (
                                     <Button type="button" variant="outline" className="w-full" onClick={handleCancelMfa} disabled={isLoading}>
                                         Cancel
                                     </Button>

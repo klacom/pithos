@@ -1,6 +1,7 @@
 import { ReactNode } from "react"
 import SideBar from "./SideBar"
 import { User, Shield, ShoppingBag, Settings } from "lucide-react";
+import { createAudit } from "@/lib/supabase/create-audit";
 
 type LinkItem = {
     href: string;
@@ -30,7 +31,7 @@ const BuyerMainLayout = ({children} : {children : ReactNode}) => {
 
   return (
     <main className='flex w-full h-full min-h-0 overflow-hidden'>
-        <SideBar links={links}/>
+        <SideBar links={links} createAudit={createAudit}/>
         <section className="flex-1 min-w-0 h-full overflow-y-auto">
           {children}
         </section>

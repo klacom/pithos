@@ -6,6 +6,7 @@ export function useDataTable(
         searchableColumns?: string[]
         baseFilters?: Record<string, string | number | boolean>
         enabled? : boolean
+        select? : string
     }
 ) {
     const [data, setData] = useState([])
@@ -35,6 +36,7 @@ export function useDataTable(
                     q: debouncedQ,
                     sort,
                     order,
+                    select: options.select || "*"
                 })
 
                 // Append each searchable columns
@@ -100,6 +102,7 @@ export function useDataTable(
         filter,
         setFilter,
         refresh,
-        doesSearchableColumnsExist
+        doesSearchableColumnsExist,
+        baseFiltersKey
     }
 }
