@@ -78,6 +78,7 @@ export function LoginForm({
         setError(null);
     };
 
+    
     const handleVerifySetup = async (e: React.FormEvent) => {
         e.preventDefault();
         setIsLoading(true);
@@ -176,10 +177,21 @@ export function LoginForm({
             }
 
             // MFA STEP
+            if (result.status === "mfa_required") {
+                setFactorId(result.factorId);
+                setShowMfa(true);
+                setShowMfaSetup(false);
+                setIsLoading(false);
+                return;
+            }
+
+            // MFA SETUP STEP (for first-time users)
             if (result.status === "mfa_setup") {
+                console.log("MFA Setup Response:", result);
+                console.log("Secret:", result.secret);
                 setFactorId(result.factorId);
                 setQrCode(result.qrCode);
-                setSecret(result.secret);
+                setSecret(result.secret || "");
                 setShowMfaSetup(true);
                 setShowMfa(false);
                 setIsLoading(false);
@@ -235,7 +247,7 @@ export function LoginForm({
                     <div className="flex flex-col gap-2 items-start">
                         <CardTitle className="text-2xl">Login</CardTitle>
                         <CardDescription>
-                            {showMfaSetup ? "Scan this QR code (required for every login) to get your one-time verification code" : (showMfa ? "Enter the current 6-digit code from your authenticator app (one-time use only)" : "Enter your email below to login to your account")}
+                            {showMfaSetup ? "Your authenticator app secret - you can use this to set up additional devices" : (showMfa ? "Enter the current 6-digit code from your authenticator app (one-time use only)" : "Enter your email below to login to your account")}
                         </CardDescription>
                     </div>
                 </CardHeader>
@@ -248,8 +260,8 @@ export function LoginForm({
                         {showMfaSetup ? (
                             <div className="grid gap-4">
                                 <div className="text-center">
-                                    <h3 className="font-semibold text-lg">One-Time Verification Setup</h3>
-                                    <p className="text-sm text-muted-foreground">Scan this QR code now with your authenticator app (you&apos;ll need to do this every time you login).</p>
+                                    <h3 className="font-semibold text-lg">Your Authenticator Secret</h3>
+                                    <p className="text-sm text-muted-foreground">Use this secret to setup your authenticator app on additional devices.</p>
                                 </div>
                                 <div className="flex justify-center">
                                     <div className="w-48 h-48 bg-white p-2 rounded-md flex items-center justify-center">
@@ -260,6 +272,12 @@ export function LoginForm({
                                         />
                                     </div>
                                 </div>
+                                <div className="text-center">
+                                    <p className="text-sm text-muted-foreground mb-2">Or enter this secret manually:</p>
+                                    <div className="bg-muted p-2 rounded font-mono text-xs break-all">
+                                        {secret || ""}
+                                    </div>
+                                                                                                        </div>
                                 <div className="grid gap-2">
                                     <div className="flex justify-between items-center">
                                         <Label htmlFor="mfaCode">Verification Code</Label>
@@ -374,7 +392,7 @@ export function LoginForm({
                                 (showMfa && mfaCode.length !== 6) 
                                 // || (!showMfa && !captchaToken)
                             } onClick={showMfaSetup ? handleVerifySetup : handleLogin}>
-                                {isLoading ? (showMfa ? "Verifying..." : "Logging in...") : (showMfa ? "Verify Code" : "Login")}
+                                {isLoading ? (showMfa ? "Verifying..." : "Logging in...") : (showMfaSetup ? "Continue to Login" : (showMfa ? "Verify Code" : "Login"))}
                             </Button>
                             {(showMfa || showMfaSetup) && (
                                 <Button variant="outline" className="w-full" onClick={handleCancelMfa} disabled={isLoading}>

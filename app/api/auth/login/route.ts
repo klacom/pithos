@@ -137,8 +137,29 @@ export async function POST(request: NextRequest) {
             return NextResponse.json({ status: "ok" });
         }
 
-        // 4. MFA Enrollment Flow (If no code provided yet)
-        console.log(`[${traceId}] No MFA code provided. Starting new MFA enrollment...`);
+        // 4. Check for existing MFA factors
+        console.log(`[${traceId}] No MFA code provided. Checking for existing MFA factors...`);
+        const { data: factors, error: factorsError } = await supabase.auth.mfa.listFactors();
+
+        if (factorsError) {
+            console.error(`[${traceId}] Error listing MFA factors:`, factorsError);
+            return NextResponse.json({ status: "error", message: "Failed to check MFA status" }, { status: 500 });
+        }
+
+        // Check if user has verified TOTP factors
+        const verifiedTotpFactors = factors?.all?.filter(f => f.factor_type === 'totp' && f.status === 'verified');
+        
+        if (verifiedTotpFactors && verifiedTotpFactors.length > 0) {
+            console.log(`[${traceId}] User has existing MFA factors. Requesting verification...`);
+            return NextResponse.json({
+                status: "mfa_required",
+                message: "Please enter your authenticator code",
+                factorId: verifiedTotpFactors[0].id, // Use the first verified factor
+            });
+        }
+
+        // If no MFA factors exist, setup MFA for first-time login
+        console.log(`[${traceId}] No MFA factors found. Setting up MFA for first-time login...`);
         const enroll = await supabase.auth.mfa.enroll({
             factorType: "totp",
             friendlyName: `login-${Date.now()}`,
@@ -149,7 +170,16 @@ export async function POST(request: NextRequest) {
             return NextResponse.json({ status: "error", message: "Failed to setup MFA" }, { status: 500 });
         }
 
+        // Save the TOTP secret to user metadata
+        await supabase.auth.updateUser({
+            data: {
+                totp_secret: enroll.data.totp.secret,
+                totp_factor_id: enroll.data.id,
+            }
+        });
+
         console.log(`[${traceId}] MFA Enrollment successful. Returning QR data.`);
+        console.log(`[${traceId}] Secret:`, enroll.data.totp.secret);
         return NextResponse.json({
             status: "mfa_setup",
             factorId: enroll.data.id,

@@ -85,6 +85,58 @@ export async function POST(request: NextRequest) {
             );
         }
 
+        // After successful signup, enroll MFA for the user
+        if (data.user?.id) {
+            try {
+                const adminSupabase = createAdminClient();
+                
+                // Sign in the user to get a session for MFA enrollment
+                const { data: signInData, error: signInError } = await adminSupabase.auth.signInWithPassword({
+                    email,
+                    password,
+                });
+
+                if (signInError) {
+                    console.error('Error signing in user for MFA setup:', signInError);
+                    return NextResponse.json({ status: 'ok', user_id: data.user?.id });
+                }
+
+                // Enroll TOTP for the user
+                const { data: enrollData, error: enrollError } = await adminSupabase.auth.mfa.enroll({
+                    factorType: 'totp',
+                    friendlyName: `signup-${Date.now()}`,
+                });
+
+                if (enrollError) {
+                    console.error('Error enrolling MFA:', enrollError);
+                    return NextResponse.json({ status: 'ok', user_id: data.user?.id });
+                }
+
+                // Save the TOTP secret to user metadata
+                await adminSupabase.auth.admin.updateUserById(data.user.id, {
+                    user_metadata: {
+                        totp_secret: enrollData.totp.secret,
+                        totp_factor_id: enrollData.id,
+                    }
+                });
+
+                // Sign out the user after MFA setup
+                await adminSupabase.auth.signOut();
+
+                return NextResponse.json({
+                    status: 'mfa_setup_required',
+                    user_id: data.user?.id,
+                    factorId: enrollData.id,
+                    qrCode: enrollData.totp.qr_code,
+                    secret: enrollData.totp.secret,
+                });
+            } catch (mfaError) {
+                console.error('Error during MFA setup:', mfaError);
+                // Return success even if MFA setup fails
+                return NextResponse.json({ status: 'ok', user_id: data.user?.id });
+            }
+        }
+
         return NextResponse.json({ status: 'ok', user_id: data.user?.id });
     } catch (error) {
         console.error('Sign up error:', error);

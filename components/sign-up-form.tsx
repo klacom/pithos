@@ -38,6 +38,12 @@ export function SignUpForm({
     const [success, setSuccess] = useState<string | null>(null);
     const [passwordErrors, setPasswordErrors] = useState<string[]>([]);
     const [isLoading, setIsLoading] = useState(false);
+    const [showMfaSetup, setShowMfaSetup] = useState(false);
+    const [factorId, setFactorId] = useState<string | null>(null);
+    const [qrCode, setQrCode] = useState<string | null>(null);
+    const [secret, setSecret] = useState<string | null>(null);
+    const [mfaCode, setMfaCode] = useState("");
+    const [timeRemaining, setTimeRemaining] = useState(30);
     const [rules, setRules] = useState({
         min_char_length: 12,
         min_uppercase: 1,
@@ -61,10 +67,59 @@ export function SignUpForm({
         fetchRules();
     }, []);
 
+    // Handle TOTP timer countdown
+    useEffect(() => {
+        if (!showMfaSetup) return;
+        const updateTimer = () => {
+            const remaining = 30 - Math.floor((Date.now() / 1000) % 30);
+            setTimeRemaining(remaining);
+        };
+        updateTimer(); // Initial call
+        const interval = setInterval(updateTimer, 1000);
+        return () => clearInterval(interval);
+    }, [showMfaSetup]);
+
     const handlePasswordChange = (value: string) => {
         setPassword(value);
         const errors = validatePassword(value, rules);
         setPasswordErrors(errors);
+    };
+
+    const handleMfaVerification = async (e: React.FormEvent) => {
+        e.preventDefault();
+        setIsLoading(true);
+        setError(null);
+
+        try {
+            const response = await fetch('/api/auth/verify-mfa-setup', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ email, password, mfaCode, factorId }),
+            });
+
+            const result = await response.json();
+
+            if (!response.ok || result.status === 'error') {
+                throw new Error(result.message || 'MFA verification failed');
+            }
+
+            setSuccess("Account created and MFA setup complete! Please check your email for the activation link.");
+            setShowMfaSetup(false);
+            setMfaCode("");
+            setFactorId(null);
+            setQrCode(null);
+            setSecret(null);
+
+            await createAudit({
+                action_name: "SIGN_UP_MFA_SUCCESS",
+                action_description: "User successfully completed MFA setup during signup",
+                affected_resources: "auth",
+            });
+        } catch (error: unknown) {
+            setError(error instanceof Error ? error.message : "MFA verification failed");
+        } finally {
+            setIsLoading(false);
+        }
     };
 
     const handleSignUp = async (e: React.FormEvent) => {
@@ -115,6 +170,16 @@ export function SignUpForm({
                 throw new Error(result.message || 'Registration failed');
             }
 
+            // Check if MFA setup is required
+            if (result.status === 'mfa_setup_required') {
+                setFactorId(result.factorId);
+                setQrCode(result.qrCode);
+                setSecret(result.secret);
+                setShowMfaSetup(true);
+                setSuccess("Account created! Please set up your authenticator app to complete registration.");
+                return;
+            }
+
             setSuccess("An activation link has been sent to your email. Please check your inbox and click the link to activate your account.");
 
             // Sign up success audit
@@ -145,8 +210,9 @@ export function SignUpForm({
                     <CardDescription>Create a new account</CardDescription>
                 </CardHeader>
                 <CardContent>
-                    <form onSubmit={handleSignUp} noValidate>
-                        <div className="flex flex-col gap-6">
+                    {!showMfaSetup ? (
+                        <form onSubmit={handleSignUp} noValidate>
+                            <div className="flex flex-col gap-6">
                             <div className="grid gap-2">
                                 <Label htmlFor="email">Email</Label>
                                 <Input
@@ -223,8 +289,6 @@ export function SignUpForm({
                                 {isLoading ? "Creating an account..." : "Sign up"}
                             </Button>
                         </div>
-                        {/* <Separator /> */}
-                        {/* <SocialAuthButtons /> */}
                         <div className="mt-4 text-center text-sm">
                             Already have an account?{" "}
                             <Link href="/auth/login" className="underline underline-offset-4">
@@ -232,6 +296,65 @@ export function SignUpForm({
                             </Link>
                         </div>
                     </form>
+                    ) : (
+                        <div className="flex flex-col gap-6">
+                            <div className="text-center">
+                                <h3 className="font-semibold text-lg">Set Up Authenticator App</h3>
+                                <p className="text-sm text-muted-foreground">Scan this QR code with your authenticator app (Google Authenticator, Authy, etc.)</p>
+                            </div>
+                            <div className="flex justify-center">
+                                <div className="w-48 h-48 bg-white p-2 rounded-md flex items-center justify-center">
+                                    <img
+                                        src={qrCode || ''}
+                                        alt="MFA QR Code"
+                                        className="w-full h-full"
+                                    />
+                                </div>
+                            </div>
+                            <div className="text-center">
+                                <p className="text-sm text-muted-foreground mb-2">Or enter this secret manually:</p>
+                                <div className="bg-muted p-2 rounded font-mono text-xs break-all">
+                                    {secret}
+                                </div>
+                            </div>
+                            <form onSubmit={handleMfaVerification}>
+                                <div className="grid gap-2">
+                                    <div className="flex justify-between items-center">
+                                        <Label htmlFor="mfaCode">Verification Code</Label>
+                                        <span className={cn("text-xs font-mono", timeRemaining <= 5 ? "text-red-500 font-bold" : "text-muted-foreground")}>
+                                            {timeRemaining}s
+                                        </span>
+                                    </div>
+                                    <Input
+                                        id="mfaCode"
+                                        type="text"
+                                        placeholder="Enter 6-digit code"
+                                        required
+                                        value={mfaCode}
+                                        onChange={(e) => setMfaCode(e.target.value)}
+                                        maxLength={6}
+                                    />
+                                    <div className="h-1 w-full bg-muted overflow-hidden rounded-full mt-1">
+                                        <div
+                                            className={cn("h-full transition-all duration-1000 ease-linear", timeRemaining <= 5 ? "bg-red-500" : "bg-primary")}
+                                            style={{ width: `${(timeRemaining / 30) * 100}%` }}
+                                        />
+                                    </div>
+                                </div>
+                                <div className="flex flex-col gap-2 mt-4">
+                                    <Button type="submit" className="w-full" disabled={isLoading || mfaCode.length !== 6}>
+                                        {isLoading ? "Verifying..." : "Complete Setup"}
+                                    </Button>
+                                </div>
+                            </form>
+                            <div className="mt-4 text-center text-sm">
+                                Already have an account?{" "}
+                                <Link href="/auth/login" className="underline underline-offset-4">
+                                    Login
+                                </Link>
+                            </div>
+                        </div>
+                    )}
                 </CardContent>
             </Card>
         </div>
