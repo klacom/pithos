@@ -13,6 +13,7 @@ import {
   deleteSellerProduct,
   updateSellerProduct,
   uploadSellerProductMedia,
+  getSellerProductMediaSummary,
 } from "@/app/(main)/(protected)/seller/assets/actions";
 import type {
   SellerUploadMedia,
@@ -25,6 +26,15 @@ type Props = {
   loadError: string | null;
 };
 
+type SellerProductMediaSummary = {
+  hasCover: boolean;
+  detailCount: number;
+  hasPackage: boolean;
+  packageFileNames: string[];
+  coverUrl: string | null;
+  detailUrls: string[];
+};
+
 export default function AssetsPageClient({
   initialAssets,
   loadError,
@@ -35,6 +45,8 @@ export default function AssetsPageClient({
     null,
   );
   const [isPending, startTransition] = useTransition();
+  const [editingMediaSummary, setEditingMediaSummary] =
+    useState<SellerProductMediaSummary | null>(null);
 
   const categories = sellerAssetCategories.slice(1);
 
@@ -55,7 +67,7 @@ export default function AssetsPageClient({
       title: asset.title,
       price: Number.isFinite(asset.price) ? String(asset.price) : "",
       category: cat,
-      tags: "",
+      tags: (asset.tags ?? []).join(", "),
       description: asset.description ?? "",
     };
   }, [editingProductId, initialAssets, categories]);
@@ -95,6 +107,7 @@ export default function AssetsPageClient({
           <Button
             onClick={() => {
               setEditingProductId(null);
+              setEditingMediaSummary(null);
               setActiveTab("upload");
             }}
           >
@@ -130,8 +143,10 @@ export default function AssetsPageClient({
           initialValues={uploadInitialValues}
           onCancelEdit={() => {
             setEditingProductId(null);
+            setEditingMediaSummary(null);
             setActiveTab("grid");
           }}
+          existingMediaSummary={isEditMode(editingProductId) ? editingMediaSummary : null}
           onSave={async (
             payload: UploadAssetSavePayload,
             isDraft,
@@ -144,6 +159,7 @@ export default function AssetsPageClient({
                 title: payload.title,
                 price: Number.isFinite(payload.price) ? payload.price : 0,
                 category: payload.category,
+                tags: payload.tags,
                 description: payload.description,
                 isDraft,
               });
@@ -167,11 +183,13 @@ export default function AssetsPageClient({
               }
 
               setEditingProductId(null);
+              setEditingMediaSummary(null);
             } else {
               const { error, productId } = await createSellerProduct({
                 title: payload.title,
                 price: Number.isFinite(payload.price) ? payload.price : 0,
                 category: payload.category,
+                tags: payload.tags,
                 description: payload.description,
                 isDraft,
               });
@@ -209,11 +227,16 @@ export default function AssetsPageClient({
           categories={categoryFilterOptions}
           onAddNew={() => {
             setEditingProductId(null);
+            setEditingMediaSummary(null);
             setActiveTab("upload");
           }}
           onEdit={(asset) => {
-            setEditingProductId(asset.id);
-            setActiveTab("upload");
+            void (async () => {
+              const { data } = await getSellerProductMediaSummary(asset.id);
+              setEditingMediaSummary(data);
+              setEditingProductId(asset.id);
+              setActiveTab("upload");
+            })();
           }}
           onDelete={(id) => {
             if (
@@ -237,4 +260,8 @@ export default function AssetsPageClient({
       )}
     </div>
   );
+}
+
+function isEditMode(productId: string | null): productId is string {
+  return Boolean(productId);
 }

@@ -4,8 +4,14 @@ import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { buildStoredDescription } from "@/lib/seller/products";
-import { uploadSellerAssetPhotos } from "@/lib/seller/asset-storage";
-import { uploadSellerPackageFile } from "@/lib/seller/asset-package-storage";
+import {
+  ASSET_PHOTOS_BUCKET,
+  uploadSellerAssetPhotos,
+} from "@/lib/seller/asset-storage";
+import {
+  ASSETS_STORAGE_BUCKET,
+  uploadSellerPackageFile,
+} from "@/lib/seller/asset-package-storage";
 import {
   isAllowedPackageFile,
   MAX_PACKAGE_FILE_BYTES,
@@ -15,8 +21,18 @@ export type CreateSellerProductInput = {
   title: string;
   price: number;
   category: string;
+  tags?: string[];
   description: string;
   isDraft: boolean;
+};
+
+export type SellerProductMediaSummary = {
+  hasCover: boolean;
+  detailCount: number;
+  hasPackage: boolean;
+  packageFileNames: string[];
+  coverUrl: string | null;
+  detailUrls: string[];
 };
 
 export async function createSellerProduct(
@@ -35,8 +51,10 @@ export async function createSellerProduct(
       product_description: buildStoredDescription({
         isDraft: input.isDraft,
         category: input.category,
+        tags: input.tags ?? [],
         description: input.description,
       }),
+      product_status: input.isDraft ? "draft" : "published",
       price: input.price,
       seller_owner_id: uid,
     })
@@ -64,22 +82,39 @@ export async function updateSellerProduct(
   if (!uid) {
     return { error: "Not signed in" };
   }
-  const { error } = await supabase
+  const { data: owned, error: ownErr } = await supabase
+    .from("products")
+    .select("product_id")
+    .eq("product_id", input.productId)
+    .eq("seller_owner_id", uid)
+    .maybeSingle();
+  if (ownErr) {
+    return { error: ownErr.message };
+  }
+  if (!owned) {
+    return { error: "Asset not found for this seller account." };
+  }
+
+  const admin = createAdminClient();
+  const targetStatus = input.isDraft ? "draft" : "published";
+  const { error } = await admin
     .from("products")
     .update({
       product_name: input.title.trim(),
       product_description: buildStoredDescription({
         isDraft: input.isDraft,
         category: input.category,
+        tags: input.tags ?? [],
         description: input.description,
       }),
+      product_status: targetStatus,
       price: input.price,
     })
-    .eq("product_id", input.productId)
-    .eq("seller_owner_id", uid);
+    .eq("product_id", input.productId);
   if (error) {
     return { error: error.message };
   }
+
   revalidatePath("/seller/assets");
   revalidatePath("/seller/view-assets");
   return { error: null };
@@ -210,4 +245,158 @@ export async function deleteSellerProduct(
   revalidatePath("/seller/assets");
   revalidatePath("/seller/view-assets");
   return { error: null };
+}
+
+export async function getSellerProductMediaSummary(
+  productId: string,
+): Promise<{ data: SellerProductMediaSummary | null; error: string | null }> {
+  const supabase = await createClient();
+  const { data: claimsData } = await supabase.auth.getClaims();
+  const uid = claimsData?.claims?.sub;
+  if (!uid) {
+    return { data: null, error: "Not signed in" };
+  }
+
+  const { data: owned, error: ownershipError } = await supabase
+    .from("products")
+    .select("product_id")
+    .eq("product_id", productId)
+    .eq("seller_owner_id", uid)
+    .maybeSingle();
+
+  if (ownershipError) {
+    return { data: null, error: ownershipError.message };
+  }
+  if (!owned) {
+    return { data: null, error: "Product not found or access denied" };
+  }
+
+  try {
+    const admin = createAdminClient();
+    const [
+      { data: photoRows, error: photoError },
+      { data: thumbnailRows, error: thumbnailError },
+      { data: packageRows, error: packageError },
+    ] =
+      await Promise.all([
+        admin.storage.from(ASSET_PHOTOS_BUCKET).list(`${productId}/photos`, {
+          limit: 200,
+          sortBy: { column: "name", order: "asc" },
+        }),
+        admin
+          .storage.from(ASSET_PHOTOS_BUCKET)
+          .list(`${productId}/photos/thumbnail`, {
+            limit: 20,
+            sortBy: { column: "name", order: "asc" },
+          }),
+        admin.storage.from(ASSETS_STORAGE_BUCKET).list(productId, {
+          limit: 100,
+          sortBy: { column: "name", order: "asc" },
+        }),
+      ]);
+
+    if (photoError) {
+      return { data: null, error: photoError.message };
+    }
+    if (packageError) {
+      return { data: null, error: packageError.message };
+    }
+    if (thumbnailError) {
+      return { data: null, error: thumbnailError.message };
+    }
+
+    const rows = photoRows ?? [];
+    const thumbnailFiles = thumbnailRows ?? [];
+    const hasCover = thumbnailFiles.length > 0;
+    const detailCount = rows.filter((r) => r.name !== "thumbnail").length;
+    const detailUrls = rows
+      .filter((r) => r.name !== "thumbnail")
+      .map((r) => r.name)
+      .filter((name) => /\.(png|jpe?g|webp|gif|avif)$/i.test(name))
+      .slice(0, 12)
+      .map((name) => {
+        const { data } = admin.storage
+          .from(ASSET_PHOTOS_BUCKET)
+          .getPublicUrl(`${productId}/photos/${name}`);
+        return data.publicUrl;
+      });
+    const packageFileNames = (packageRows ?? []).map((r) => r.name);
+    const coverUrl =
+      thumbnailFiles.length > 0
+        ? admin.storage
+            .from(ASSET_PHOTOS_BUCKET)
+            .getPublicUrl(`${productId}/photos/thumbnail/${thumbnailFiles[0].name}`)
+            .data.publicUrl
+        : null;
+
+    return {
+      data: {
+        hasCover,
+        detailCount,
+        hasPackage: packageFileNames.length > 0,
+        packageFileNames,
+        coverUrl,
+        detailUrls,
+      },
+      error: null,
+    };
+  } catch (e) {
+    const message =
+      e instanceof Error ? e.message : "Server storage configuration error";
+    return { data: null, error: message };
+  }
+}
+
+export async function getSellerPackageDownloadUrl(
+  productId: string,
+): Promise<{ url: string | null; fileName: string | null; error: string | null }> {
+  const supabase = await createClient();
+  const { data: claimsData } = await supabase.auth.getClaims();
+  const uid = claimsData?.claims?.sub;
+  if (!uid) {
+    return { url: null, fileName: null, error: "Not signed in" };
+  }
+
+  const { data: owned, error: ownershipError } = await supabase
+    .from("products")
+    .select("product_id")
+    .eq("product_id", productId)
+    .eq("seller_owner_id", uid)
+    .maybeSingle();
+
+  if (ownershipError) {
+    return { url: null, fileName: null, error: ownershipError.message };
+  }
+  if (!owned) {
+    return { url: null, fileName: null, error: "Product not found or access denied" };
+  }
+
+  try {
+    const admin = createAdminClient();
+    const { data: packageRows, error: packageError } = await admin.storage
+      .from(ASSETS_STORAGE_BUCKET)
+      .list(productId, { limit: 100, sortBy: { column: "name", order: "asc" } });
+
+    if (packageError) {
+      return { url: null, fileName: null, error: packageError.message };
+    }
+    const fileName = packageRows?.[0]?.name ? String(packageRows[0].name) : null;
+    if (!fileName) {
+      return { url: null, fileName: null, error: null };
+    }
+
+    const { data: signed, error: signErr } = await admin.storage
+      .from(ASSETS_STORAGE_BUCKET)
+      .createSignedUrl(`${productId}/${fileName}`, 60 * 10);
+
+    if (signErr) {
+      return { url: null, fileName, error: signErr.message };
+    }
+
+    return { url: signed?.signedUrl ?? null, fileName, error: null };
+  } catch (e) {
+    const message =
+      e instanceof Error ? e.message : "Server storage configuration error";
+    return { url: null, fileName: null, error: message };
+  }
 }

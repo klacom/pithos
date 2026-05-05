@@ -3,6 +3,7 @@
 import { Button } from "@/components/ui/button";
 import { Eye, Edit, Trash2, FileText, Image as ImageIcon } from "lucide-react";
 import { useRouter } from "next/navigation";
+import Image from "next/image";
 import {
   formatPhpPrice,
   type AssetItem,
@@ -26,10 +27,20 @@ export default function AssetCard({ asset, onEdit, onDelete }: Props) {
 
       {/* IMAGE / PREVIEW */}
       <div
-        className="aspect-video bg-muted flex items-center justify-center cursor-pointer"
+        className="relative aspect-video bg-muted flex items-center justify-center cursor-pointer"
         onClick={handleView}
       >
-        <ImageIcon className="opacity-50" />
+        {asset.coverImageUrl ? (
+          <Image
+            src={asset.coverImageUrl}
+            alt={`${asset.title} cover`}
+            fill
+            unoptimized
+            className="object-cover"
+          />
+        ) : (
+          <ImageIcon className="opacity-50" />
+        )}
       </div>
 
       {/* CONTENT */}
@@ -99,7 +110,9 @@ export default function AssetCard({ asset, onEdit, onDelete }: Props) {
             className={`text-[10px] px-2 py-1 rounded-full ${
               asset.status === "Published"
                 ? "bg-green-500/20 text-green-600"
-                : "bg-yellow-500/20 text-yellow-600"
+                : asset.status === "Draft"
+                  ? "bg-yellow-500/20 text-yellow-600"
+                  : "bg-zinc-500/20 text-zinc-600"
             }`}
           >
             {asset.status}

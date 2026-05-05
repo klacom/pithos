@@ -3,6 +3,7 @@
 import { useCallback, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import Image from "next/image";
 import SellerAssetPhotoPickers, {
   type DetailSlot,
 } from "@/components/seller/SellerAssetPhotoPickers";
@@ -58,7 +59,17 @@ type Props = {
   /** When set, saves call `updateSellerProduct` + uploads instead of create. */
   editingProductId?: string | null;
   initialValues?: UploadFormInitialValues | null;
+  existingMediaSummary?: ExistingMediaSummary | null;
   onCancelEdit?: () => void;
+};
+
+type ExistingMediaSummary = {
+  hasCover: boolean;
+  detailCount: number;
+  hasPackage: boolean;
+  packageFileNames: string[];
+  coverUrl: string | null;
+  detailUrls: string[];
 };
 
 function emptyForm(categories: string[]): AssetFormState {
@@ -77,6 +88,7 @@ export default function UploadAssetForm({
   disabled = false,
   editingProductId = null,
   initialValues = null,
+  existingMediaSummary = null,
   onCancelEdit,
 }: Props) {
   const [formData, setFormData] = useState<AssetFormState>(() =>
@@ -194,6 +206,7 @@ export default function UploadAssetForm({
   };
 
   const allowedHint = ALLOWED_PACKAGE_EXTENSIONS.join(", ");
+  const savedMedia = isEditMode ? existingMediaSummary : null;
 
   return (
     <div className="w-full max-w-4xl mx-auto p-6 md:p-8 rounded-2xl border border-muted/80 bg-card shadow-sm">
@@ -301,6 +314,13 @@ export default function UploadAssetForm({
               </Button>
             </div>
           ) : null}
+          {isEditMode && !packageFile && existingMediaSummary?.hasPackage ? (
+            <p className="text-xs text-muted-foreground">
+              Existing package already saved ({existingMediaSummary.packageFileNames.length} file
+              {existingMediaSummary.packageFileNames.length === 1 ? "" : "s"}). Uploading a new one
+              will add/update the downloadable package.
+            </p>
+          ) : null}
         </div>
 
         <div className="space-y-4">
@@ -392,6 +412,40 @@ export default function UploadAssetForm({
           <p className="text-sm text-muted-foreground -mt-1 leading-relaxed">
             Cover and gallery shots sell the work—add them before you publish if you can.
           </p>
+        {savedMedia?.coverUrl ? (
+          <div className="rounded-xl border border-muted/60 bg-muted/10 p-3">
+            <p className="text-xs text-muted-foreground mb-2">Current saved cover</p>
+            <div className="relative aspect-video w-full max-w-md rounded-lg overflow-hidden border border-muted">
+              <Image
+                src={savedMedia.coverUrl}
+                alt="Saved cover"
+                fill
+                className="object-cover"
+                unoptimized
+              />
+            </div>
+          </div>
+        ) : null}
+        {savedMedia && savedMedia.detailUrls.length > 0 ? (
+          <div className="rounded-xl border border-muted/60 bg-muted/10 p-3">
+            <p className="text-xs text-muted-foreground mb-2">
+              Current saved gallery ({savedMedia.detailCount})
+            </p>
+            <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+              {savedMedia.detailUrls.slice(0, 6).map((url) => (
+                <div key={url} className="relative aspect-video rounded overflow-hidden border border-muted">
+                  <Image
+                    src={url}
+                    alt="Saved gallery item"
+                    fill
+                    className="object-cover"
+                    unoptimized
+                  />
+                </div>
+              ))}
+            </div>
+          </div>
+        ) : null}
         <SellerAssetPhotoPickers
           coverFile={coverFile}
           onCoverChange={setCoverFile}
@@ -402,6 +456,15 @@ export default function UploadAssetForm({
           }
           disabled={disabled || isSaving}
         />
+        {isEditMode && existingMediaSummary ? (
+          <p className="text-xs text-muted-foreground">
+            Saved media: {existingMediaSummary.hasCover ? "cover image" : "no cover image"}
+            {" · "}
+            {existingMediaSummary.detailCount} gallery file
+            {existingMediaSummary.detailCount === 1 ? "" : "s"}.
+            New uploads are added on top of what is already saved.
+          </p>
+        ) : null}
         </div>
 
         {submitError ? (

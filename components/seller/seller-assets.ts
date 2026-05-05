@@ -1,4 +1,4 @@
-export type AssetStatus = "Published" | "Draft";
+export type AssetStatus = "Published" | "Draft" | "Archived";
 
 const phpFormatter = new Intl.NumberFormat("en-PH", {
   style: "currency",
@@ -13,12 +13,14 @@ export type AssetItem = {
   title: string;
   price: number;
   status: AssetStatus;
+  coverImageUrl?: string | null;
   /** Placeholder while analytics are not wired to the DB. */
   views: number;
   /** Placeholder while analytics are not wired to the DB. */
   downloads: number;
   date: string;
   category: string;
+  tags?: string[];
   /** Parsed from `product_description` (without draft/category envelope). */
   description?: string;
 };
