@@ -47,21 +47,8 @@ export default function MfaSetup() {
     setSuccess(null);
 
     try {
-      // Clean up ANY factors that are not verified. 
-      // Supabase sometimes gets stuck if an unverified factor exists with the same "friendly name" (even if blank).
-      const { data: factorsData, error: listError } = await supabase.auth.mfa.listFactors();
-      if (listError) throw listError;
-
-      if (factorsData && factorsData.all.length > 0) {
-        // Unenroll everything that isn't 'verified'
-        const unverifiedFactors = factorsData.all.filter(f => f.status !== 'verified');
-        for (const factor of unverifiedFactors) {
-          const { error: unenrollError } = await supabase.auth.mfa.unenroll({ factorId: factor.id });
-          if (unenrollError) {
-            console.error("Failed to clean up factor:", factor.id, unenrollError);
-          }
-        }
-      }
+      // Note: We no longer automatically unenroll unverified factors
+      // to preserve MFA setup for users
 
       const { data, error } = await supabase.auth.mfa.enroll({
         factorType: "totp",

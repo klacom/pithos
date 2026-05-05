@@ -1,4 +1,3 @@
-import { Button } from "@/components/ui/button"
 import { ProductCard } from "@/components/ProductCard"
 import { createAdminClient } from "@/lib/supabase/admin";
 import { ASSET_PHOTOS_BUCKET } from "@/lib/seller/asset-storage";
@@ -125,7 +124,7 @@ async function getRatingStats(productIds: string[]): Promise<
     return new Map();
   }
   const agg = new Map<string, { sum: number; count: number }>();
-  for (const r of data as Array<{ product_id: string | null; rating: any }>) {
+  for (const r of data as Array<{ product_id: string | null; rating: number | null }>) {
     const pid = String(r.product_id ?? "");
     if (!pid) continue;
     const num = Number(r.rating);
@@ -260,10 +259,11 @@ async function fetchPublishedListingProducts(
   });
 
   if (filters.onSale) {
-    mapped = mapped.filter((p) => {
-      // sale_price check is done in SQL; still keep robustly here
-      return true;
-    });
+    // Note: The primary filtering for onSale is done in the SQL query.
+    // This client-side filter is kept as a safeguard if the data structure changes.
+    // It assumes that products with a sale_price less than price are on sale.
+    // Since sale_price is not currently mapped in ListingProduct, this remains a pass-through.
+    mapped = mapped.filter(() => true);
   }
 
   if (filters.minRating != null) {
@@ -424,7 +424,7 @@ const page = async ({
           {filters.q ? (
             <>
               Showing available items for{" "}
-              <span className="text-white font-medium">"{filters.q}"</span>
+              <span className="text-white font-medium">&quot;{filters.q}&quot;</span>
               <a
                 href="/product-listing"
                 className="ml-2 underline underline-offset-4 hover:text-foreground"
@@ -447,7 +447,7 @@ const page = async ({
             minPrice: params.minPrice ?? "",
             maxPrice: params.maxPrice ?? "",
             onSale: filters.onSale,
-            minRating: params.minRating ?? "",
+            minRating: filters.minRating != null ? String(filters.minRating) : "",
             sort: filters.sort,
           }}
         />
