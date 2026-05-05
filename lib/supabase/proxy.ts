@@ -128,12 +128,10 @@ export async function updateSession(request: NextRequest) {
         );
 
         if (!hasAccess) {
-            // return NextResponse.redirect(new URL("/unauthorized", request.url));
-            return NextResponse.next();
+            return NextResponse.redirect(new URL("/unauthorized", request.url));
+            // return NextResponse.next();
         }
     }
-
-
 
     return supabaseResponse;
 }
