@@ -78,7 +78,7 @@ const page = () => {
             author="Lark Bolotaolo"
             price="$67.00"
             imageSrc="/sample-pics/458478537_7645885715447813_4009544347800371450_n.jpg"
-            link="/product-detail"
+            link="/product-detail/stellar-sci-fi-pack"
           />
         ))}
 
