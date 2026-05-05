@@ -113,7 +113,8 @@ export function LoginForm({
             setShowMfa(true);
             setShowMfaSetup(false);
 
-            router.push("/");
+            // Force a full page refresh to ensure auth state is properly updated
+            window.location.href = "/";
         } catch (err: any) {
             setError(err.message);
         } finally {
@@ -207,7 +208,8 @@ export function LoginForm({
                     email: email,
                 });
 
-                router.push("/");
+                // Force a full page refresh to ensure auth state is properly updated
+                window.location.href = "/";
                 return;
             }
 
