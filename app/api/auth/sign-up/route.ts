@@ -5,7 +5,27 @@ import { validatePassword } from '@/lib/auth/password-rules';
 
 export async function POST(request: NextRequest) {
     try {
-        const { email, password } = await request.json();
+        const { email, password, captchaToken } = await request.json();
+
+        const verifyRes = await fetch(
+            "https://challenges.cloudflare.com/turnstile/v0/siteverify",
+            {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/x-www-form-urlencoded",
+                },
+                body: `secret=${process.env.TURNSTILE_SECRET_KEY}&response=${captchaToken}`,
+            }
+        );
+
+        const verifyData = await verifyRes.json();
+
+        if (!verifyData.success) {
+            return NextResponse.json(
+                { status: "error", message: "Captcha failed" },
+                { status: 400 }
+            );
+        }
 
         if (!email || !password) {
             return NextResponse.json(
@@ -63,6 +83,58 @@ export async function POST(request: NextRequest) {
                 { status: 'error', message: error.message },
                 { status: 400 }
             );
+        }
+
+        // After successful signup, enroll MFA for the user
+        if (data.user?.id) {
+            try {
+                const adminSupabase = createAdminClient();
+                
+                // Sign in the user to get a session for MFA enrollment
+                const { data: signInData, error: signInError } = await adminSupabase.auth.signInWithPassword({
+                    email,
+                    password,
+                });
+
+                if (signInError) {
+                    console.error('Error signing in user for MFA setup:', signInError);
+                    return NextResponse.json({ status: 'ok', user_id: data.user?.id });
+                }
+
+                // Enroll TOTP for the user
+                const { data: enrollData, error: enrollError } = await adminSupabase.auth.mfa.enroll({
+                    factorType: 'totp',
+                    friendlyName: `signup-${Date.now()}`,
+                });
+
+                if (enrollError) {
+                    console.error('Error enrolling MFA:', enrollError);
+                    return NextResponse.json({ status: 'ok', user_id: data.user?.id });
+                }
+
+                // Save the TOTP secret to user metadata
+                await adminSupabase.auth.admin.updateUserById(data.user.id, {
+                    user_metadata: {
+                        totp_secret: enrollData.totp.secret,
+                        totp_factor_id: enrollData.id,
+                    }
+                });
+
+                // Sign out the user after MFA setup
+                await adminSupabase.auth.signOut();
+
+                return NextResponse.json({
+                    status: 'mfa_setup_required',
+                    user_id: data.user?.id,
+                    factorId: enrollData.id,
+                    qrCode: enrollData.totp.qr_code,
+                    secret: enrollData.totp.secret,
+                });
+            } catch (mfaError) {
+                console.error('Error during MFA setup:', mfaError);
+                // Return success even if MFA setup fails
+                return NextResponse.json({ status: 'ok', user_id: data.user?.id });
+            }
         }
 
         return NextResponse.json({ status: 'ok', user_id: data.user?.id });

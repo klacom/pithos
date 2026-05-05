@@ -1,53 +1,142 @@
-import NavBarBuyer from "./buyer/NavBarBuyer";
-import NavBarSeller from "./seller/NavBarSeller";
-import NavBarAdmin from "./admin/NavBarAdmin";
-import { createClient } from "@/lib/supabase/server";
-import { createAdminClient } from "@/lib/supabase/admin";
+"use client";
 
-const NavBar = async () => {
+import { useState, useMemo, Suspense } from "react";
+import { usePathname } from "next/navigation";
 
-    const supabase = await createClient();
-    const supabaseAdmin = createAdminClient();
+import NavSearchBar from "./NavSearchBar";
+import BurgerBtn from "./BurgerBtn";
+import Link from "next/link";
+import PithosLogo from "./PithosLogo";
+import { ThemeSwitcher } from "./theme-switcher";
+import ShoppingCartBtn from "./ShoppingCartBtn";
+import SwitchToDBorHomeBtn from "./SwitchToDBorHomeBtn";
+import { AuthButton } from "./AuthButton";
 
-    // Get claims safely
-    const { data: claimsData, error: claimsError } = await supabase.auth.getClaims();
-    const claims = claimsData?.claims;
-    const uid = claims?.sub;   // This can still be undefined
+type roleProps = {
+    role: "buyer" | "seller" | "admin" | null;
+};
 
-    // console.log("UID from navbar claims:", uid);
+export default function NavBar({ role }: roleProps) {
+    const pathname = usePathname();
+    const [open, setOpen] = useState(false);
 
-    let role: string | null = null;
-
-    // Only query the users table if we actually have a valid uid
-    if (uid) {
-        const { data: roleRes, error } = await supabaseAdmin
-            .from('users')
-            .select('user_role')
-            .eq('id', uid)
-            .single();
-
-        if (error) {
-            console.error("Error fetching user role:", error);
-            // Don't throw here in middleware — it can break navigation
-            // Just continue with role = null (treat as no special role)
-        } else {
-            role = roleRes?.user_role || null;
-            // console.log("User role:", role);
+    const config = useMemo(() => {
+        switch (role) {
+            case "seller":
+                return {
+                    showSearch: true,
+                    dbLink: "/seller/seller-dashboard",
+                };
+            case "admin":
+                return {
+                    showSearch: true,
+                    dbLink: "/admin/admin-dashboard",
+                };
+            default:
+                return {
+                    showSearch: true,
+                    dbLink: null,
+                };
         }
-    } else {
-        console.log("Navbar No UID found — unauthenticated or invalid token");
-    }
+    }, [role, pathname]);
 
-    if (claimsError) throw claimsError;
+    return (
+        <>
+            {/* Desktop */}
+            <nav className="hidden lg:flex w-full justify-center border-b h-16">
+                <div className="w-full flex justify-between items-center px-5">
 
-    switch (role) {
-        case 'seller':
-            return <NavBarSeller role={role} />;
-        case 'admin':
-            return <NavBarAdmin role={role} />;
-        default:
-            return <NavBarBuyer />;
-    }
+                    <NavbarLogo />
+
+                    {config.showSearch && <NavSearchBar />}
+
+                    <NavbarActions
+                        showCart={true}
+                        dbLink={config.dbLink}
+                        role={role}
+                    />
+                </div>
+            </nav>
+
+            {/* Mobile trigger */}
+            <BurgerBtn open={open} setOpen={setOpen} />
+
+            {/* Mobile navbar */}
+            <MobileNavbar
+                open={open}
+                setOpen={setOpen}
+                config={config}
+                role={role}
+            />
+        </>
+    );
 }
 
-export default NavBar
+function NavbarLogo() {
+    return (
+        <Link href="/" className="flex items-center gap-2 font-bold uppercase">
+            <PithosLogo size={24} color="foreground" />
+            Pithos
+        </Link>
+    );
+}
+
+function NavbarActions({
+    showCart,
+    dbLink,
+    role,
+}: any) {
+    return (
+        <div className="flex gap-2 items-center">
+            <ThemeSwitcher />
+            {showCart && <ShoppingCartBtn />}
+
+            {dbLink && (
+                <SwitchToDBorHomeBtn
+                    role={role}
+                    DBLink={dbLink}
+                    homePageLink="/"
+                />
+            )}
+
+            <AuthButton role={role} />
+        </div>
+    );
+}
+
+function MobileNavbar({
+    open,
+    setOpen,
+    config,
+    role,
+}: any) {
+    const AuthButton = config.AuthButton;
+
+    return (
+        <div
+            className={`
+                lg:hidden fixed top-0 right-0 h-full w-full z-20
+                flex flex-col items-center justify-center gap-16
+                transition-transform duration-300 ease-in-out
+                bg-[#0f0f0f90] backdrop-blur-3xl
+                ${open ? "translate-x-0" : "translate-x-full"}
+            `}
+        >
+            {/* Logo */}
+            <NavbarLogo />
+
+            {/* Search */}
+            {config.showSearch && <NavSearchBar />}
+
+            {/* Actions */}
+            <div className="flex flex-col gap-4 items-center">
+                <NavbarActions
+                    showCart={true}
+                    dbLink={config.dbLink}
+                    role={role}
+                    AuthButton={AuthButton}
+                />
+            </div>
+        </div>
+    );
+}

@@ -36,6 +36,15 @@ export async function updateSession(request: NextRequest) {
 
     const pathname = request.nextUrl.pathname;
 
+    // Skip Api routes
+    if (pathname.startsWith("/api")) {
+        return NextResponse.next()
+    }
+
+    if (pathname.startsWith("/auth")) {
+        return supabaseResponse;
+    }
+
     if (!uid && isProtectedRoute(pathname)) {
         return NextResponse.redirect(new URL("/auth/login", request.url));
     }
@@ -52,6 +61,42 @@ export async function updateSession(request: NextRequest) {
         role = data?.user_role ?? null;
     }
 
+    // Session Timeout logic starts here
+
+    if (uid && role) {
+        const { data: session } = await supabaseAdmin
+            .from("user_sessions")
+            .select("*")
+            .eq("user_id", uid)
+            .single();
+
+        const { data: policy } = await supabaseAdmin
+            .from("session_policies")
+            .select("timeout_minutes")
+            .eq("role", role)
+            .single();
+
+        if (session && policy) {
+            const now = new Date();
+            const lastActivity = new Date(session.last_activity);
+
+            const diffMinutes =
+                (now.getTime() - lastActivity.getTime()) / 60000;
+
+            if (diffMinutes > policy.timeout_minutes) {
+                return NextResponse.redirect(new URL("/auth/login", request.url));
+            }
+
+            // sliding session update
+            await supabaseAdmin
+                .from("user_sessions")
+                .update({
+                    last_activity: now.toISOString(),
+                })
+                .eq("id", session.id);
+        }
+    }
+
     // console.log("Role from proxy getUser:", role);
 
     // exclude server actions
@@ -61,12 +106,7 @@ export async function updateSession(request: NextRequest) {
 
     if (uid && !role) {
         // return NextResponse.redirect(new URL("/unauthorized", request.url));
-        return;
-    }
-
-    // Skip Api routes
-    if (pathname.startsWith("/api")) {
-        return NextResponse.next()
+        return NextResponse.next();
     }
 
     // Public route — everyone can access
@@ -88,8 +128,8 @@ export async function updateSession(request: NextRequest) {
         );
 
         if (!hasAccess) {
-            // return NextResponse.redirect(new URL("/unauthorized", request.url));
-            return;
+            return NextResponse.redirect(new URL("/unauthorized", request.url));
+            // return NextResponse.next();
         }
     }
 
