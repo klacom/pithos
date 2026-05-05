@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createAdminClient } from '@/lib/supabase/admin';
 
 export async function POST(request: NextRequest) {
+    const adminSupabase = createAdminClient();
     try {
         const { email, password, mfaCode, factorId } = await request.json();
 
@@ -11,8 +12,6 @@ export async function POST(request: NextRequest) {
                 { status: 400 }
             );
         }
-
-        const adminSupabase = createAdminClient();
 
         // Sign in the user to get a session for MFA verification
         const { data: signInData, error: signInError } = await adminSupabase.auth.signInWithPassword({

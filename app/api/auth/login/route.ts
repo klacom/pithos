@@ -1,10 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
-import { createAdminClient } from "@/lib/supabase/admin";
 
 export async function POST(request: NextRequest) {
     const traceId = Date.now();
     console.log(`[${traceId}] --- Incoming Login Request ---`);
+    const supabase = await createClient();
 
     try {
         const body = await request.json();
@@ -19,8 +19,6 @@ export async function POST(request: NextRequest) {
                 { status: 400 }
             );
         }
-
-        const supabase = await createClient();
 
         // 1. Check if already locked
         console.log(`[${traceId}] Checking account lock status via RPC...`);
@@ -91,25 +89,25 @@ export async function POST(request: NextRequest) {
         if (mfaCode && factorId) {
             console.log(`[${traceId}] MFA Code detected. Verifying Turnstile...`);
 
-            // if (!captchaToken) {
-            //     console.warn(`[${traceId}] MFA attempted without Captcha Token.`);
-            //     return NextResponse.json({ status: "error", message: "Captcha required." }, { status: 400 });
-            // }
+            if (!captchaToken) {
+                console.warn(`[${traceId}] MFA attempted without Captcha Token.`);
+                return NextResponse.json({ status: "error", message: "Captcha required." }, { status: 400 });
+            }
 
-            // const captchaRes = await fetch("https://challenges.cloudflare.com/turnstile/v0/siteverify", {
-            //     method: "POST",
-            //     headers: { "Content-Type": "application/x-www-form-urlencoded" },
-            //     body: new URLSearchParams({
-            //         secret: process.env.TURNSTILE_SECRET_KEY!,
-            //         response: captchaToken,
-            //     }),
-            // });
+            const captchaRes = await fetch("https://challenges.cloudflare.com/turnstile/v0/siteverify", {
+                method: "POST",
+                headers: { "Content-Type": "application/x-www-form-urlencoded" },
+                body: new URLSearchParams({
+                    secret: process.env.TURNSTILE_SECRET_KEY!,
+                    response: captchaToken,
+                }),
+            });
 
-            // const captchaData = await captchaRes.json();
-            // if (!captchaData.success) {
-            //     console.error(`[${traceId}] Turnstile verification failed:`, captchaData);
-            //     return NextResponse.json({ status: "error", message: "Captcha failed." }, { status: 400 });
-            // }
+            const captchaData = await captchaRes.json();
+            if (!captchaData.success) {
+                console.error(`[${traceId}] Turnstile verification failed:`, captchaData);
+                return NextResponse.json({ status: "error", message: "Captcha failed." }, { status: 400 });
+            }
 
             // console.log(`[${traceId}] Captcha valid. Challenging MFA factor...`);
             const challenge = await supabase.auth.mfa.challenge({ factorId });

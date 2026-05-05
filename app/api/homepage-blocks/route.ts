@@ -1,9 +1,8 @@
 import { NextResponse } from "next/server"
 import { createAdminClient } from "@/lib/supabase/admin"
 
-const supabase = createAdminClient();
-
 export async function GET() {
+    const supabase = createAdminClient();
     const { data, error } = await supabase
         .from("homepage_blocks")
         .select("*")

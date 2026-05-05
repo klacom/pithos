@@ -4,6 +4,8 @@ import { createAdminClient } from '@/lib/supabase/admin';
 import { validatePassword } from '@/lib/auth/password-rules';
 
 export async function POST(request: NextRequest) {
+    const adminSupabase = createAdminClient();
+    const supabase = await createClient();
     try {
         const { email, password, captchaToken } = await request.json();
 
@@ -35,7 +37,7 @@ export async function POST(request: NextRequest) {
         }
 
         // Check if user already exists
-        const adminSupabase = createAdminClient();
+        
         const { data: existingUsers, error: userLookupError } = await adminSupabase.auth.admin.listUsers();
         
         if (!userLookupError) {
@@ -49,7 +51,7 @@ export async function POST(request: NextRequest) {
         }
 
         // Password complexity check
-        const supabase = await createClient();
+        
 
         // Fetch rules from DB
         const { data: config } = await supabase
@@ -88,8 +90,6 @@ export async function POST(request: NextRequest) {
         // After successful signup, enroll MFA for the user
         if (data.user?.id) {
             try {
-                const adminSupabase = createAdminClient();
-                
                 // Sign in the user to get a session for MFA enrollment
                 const { data: signInData, error: signInError } = await adminSupabase.auth.signInWithPassword({
                     email,

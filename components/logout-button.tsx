@@ -5,8 +5,8 @@ import { Button } from "@/components/ui/button";
 import { LogOut } from 'lucide-react';
 
 export function LogoutButton({ createAudit }: any) {
+    const supabase = createClient();
     const logout = async () => {
-        const supabase = createClient();
         // Use the global scope to ensure it logs out from everywhere, clearing session data properly
         await supabase.auth.signOut({ scope: 'local' });
 

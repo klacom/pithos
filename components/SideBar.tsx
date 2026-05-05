@@ -22,6 +22,7 @@ type LinkItem = {
 };
 
 const SideBar = ({ links, settingLink, createAudit }: { links: LinkItem[], settingLink?: LinkItem, createAudit: createAudit }) => {
+    const supabase = createClient();
     const [collapsed, setCollapsed] = useState(false);
 
     const handleLogout = async () => {
@@ -39,7 +40,6 @@ const SideBar = ({ links, settingLink, createAudit }: { links: LinkItem[], setti
             alert("Audit failed: " + JSON.stringify(error));
         }finally{
             // alert("Finally Logout Audit ===");
-            const supabase = createClient();
             await supabase.auth.signOut({ scope: "local" });
             window.location.href = "/auth/login";
         }

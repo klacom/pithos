@@ -45,11 +45,11 @@ export function LoginForm({
     const [qrCode, setQrCode] = useState<string | null>(null);
     const [secret, setSecret] = useState<string | null>(null);
     const [timeRemaining, setTimeRemaining] = useState(30);
-    const router = useRouter();
+    const supabase = createClient();
+    // const router = useRouter();
 
     // Force sign out if they hit the login page (prevents lingering AAL1 sessions)
     useEffect(() => {
-        const supabase = createClient();
         supabase.auth.signOut({ scope: 'local' });
     }, []);
 
@@ -66,7 +66,6 @@ export function LoginForm({
     }, [showMfa, showMfaSetup]);
 
     const handleCancelMfa = async () => {
-        const supabase = createClient();
         await supabase.auth.signOut({ scope: 'local' });
         setShowMfa(false);
         setShowMfaSetup(false);
@@ -78,7 +77,7 @@ export function LoginForm({
         setError(null);
     };
 
-    
+
     const handleVerifySetup = async (e: React.FormEvent) => {
         e.preventDefault();
         setIsLoading(true);
@@ -236,7 +235,6 @@ export function LoginForm({
                 {/* Card Header */}
                 <CardHeader>
                     <div className="text-xs text-muted-foreground hover:underline w-fit mb-4 block cursor-pointer" onClick={async () => {
-                        const supabase = createClient();
                         if (showMfa || showMfaSetup) {
                             await handleCancelMfa();
                         } else {
@@ -279,7 +277,7 @@ export function LoginForm({
                                     <div className="bg-muted p-2 rounded font-mono text-xs break-all">
                                         {secret || ""}
                                     </div>
-                                                                                                        </div>
+                                </div>
                                 <div className="grid gap-2">
                                     <div className="flex justify-between items-center">
                                         <Label htmlFor="mfaCode">Verification Code</Label>
@@ -294,6 +292,16 @@ export function LoginForm({
                                         required
                                         value={mfaCode}
                                         onChange={(e) => setMfaCode(e.target.value)}
+                                        onKeyDown={(e) => {
+                                            if (e.key === "Enter") {
+                                                e.preventDefault();
+                                                if (showMfaSetup) {
+                                                    handleVerifySetup(e as any);
+                                                } else {
+                                                    handleLogin(e as any);
+                                                }
+                                            }
+                                        }}
                                         maxLength={6}
                                     />
                                     <div className="h-1 w-full bg-muted overflow-hidden rounded-full mt-1">
@@ -320,6 +328,16 @@ export function LoginForm({
                                     value={mfaCode}
                                     onChange={(e) => setMfaCode(e.target.value)}
                                     maxLength={6}
+                                    onKeyDown={(e) => {
+                                        if (e.key === "Enter") {
+                                            e.preventDefault();
+                                            if (showMfaSetup) {
+                                                handleVerifySetup(e as any);
+                                            } else {
+                                                handleLogin(e as any);
+                                            }
+                                        }
+                                    }}
                                 />
                                 <div className="h-1 w-full bg-muted overflow-hidden rounded-full mt-1">
                                     <div
@@ -340,6 +358,16 @@ export function LoginForm({
                                         required
                                         value={email}
                                         onChange={(e) => setEmail(e.target.value)}
+                                        onKeyDown={(e) => {
+                                            if (e.key === "Enter") {
+                                                e.preventDefault();
+                                                if (showMfaSetup) {
+                                                    handleVerifySetup(e as any);
+                                                } else {
+                                                    handleLogin(e as any);
+                                                }
+                                            }
+                                        }}
                                     />
                                 </div>
 
@@ -355,6 +383,16 @@ export function LoginForm({
                                         required
                                         value={password}
                                         onChange={(e) => setPassword(e.target.value)}
+                                        onKeyDown={(e) => {
+                                            if (e.key === "Enter") {
+                                                e.preventDefault();
+                                                if (showMfaSetup) {
+                                                    handleVerifySetup(e as any);
+                                                } else {
+                                                    handleLogin(e as any);
+                                                }
+                                            }
+                                        }}
                                     />
                                     <Link
                                         href="/auth/forgot-password"
@@ -380,18 +418,17 @@ export function LoginForm({
                             </div>
                         )}
                         <div className="flex flex-col gap-2">
-                            {/* {!showMfa && (
-                                    <div className="w-full flex justify-center">
-                                        <Turnstile
-                                            siteKey={process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY!}
-                                            onSuccess={(token) => setCaptchaToken(token)}
-
-                                        />
-                                    </div>
-                                )} */}
+                            {!showMfa && (
+                                <div className="w-full flex justify-center">
+                                    <Turnstile
+                                        siteKey={process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY!}
+                                        onSuccess={(token) => setCaptchaToken(token)}
+                                    />
+                                </div>
+                            )}
                             <Button className="w-full" disabled={
                                 isLoading ||
-                                (showMfa && mfaCode.length !== 6) 
+                                (showMfa && mfaCode.length !== 6)
                                 // || (!showMfa && !captchaToken)
                             } onClick={showMfaSetup ? handleVerifySetup : handleLogin}>
                                 {isLoading ? (showMfa ? "Verifying..." : "Logging in...") : (showMfaSetup ? "Continue to Login" : (showMfa ? "Verify Code" : "Login"))}

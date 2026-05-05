@@ -2,10 +2,9 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { NextResponse } from "next/server";
 
 export async function POST(req: Request) {
+    const supabase = createAdminClient();
     try {
         const { column_name, table_name, baseFilters } = await req.json();
-
-        const supabase = createAdminClient();
 
         let column = column_name;
         let table = table_name;
