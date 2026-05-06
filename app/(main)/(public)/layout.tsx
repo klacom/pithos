@@ -6,7 +6,7 @@ import NavBar from '@/components/NavBar'
 const layout = ({ children }: { children: ReactNode }) => {
     return (
         <div className='flex-1 w-full flex flex-col gap-4 items-center'>
-            <Suspense fallback={<NavBar role={null} />}>
+            <Suspense>
                 <NavBarLoader />
             </Suspense>
             <main>
