@@ -16,7 +16,12 @@ const nextConfig: NextConfig = {
                 pathname: "/storage/v1/object/public/**",
             }
         ],
-    }
+    },
+    experimental: {
+        serverActions: {
+            bodySizeLimit: '5mb',
+        },
+    },
 };
 
 export default nextConfig;

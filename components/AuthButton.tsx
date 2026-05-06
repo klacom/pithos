@@ -12,7 +12,7 @@ type Props = {
 export function AuthButton({ role }: Props) {
     const { user, loading } = useAuth();
 
-    // ⚠️ Important: prevent hydration mismatch
+    // Important: prevent hydration mismatch
     if (loading) {
         return null; // ← instead of skeleton
     }
