@@ -97,8 +97,8 @@ const Page = () => {
                                 case "big_banner":
                                     return <ConfigureBigBanner block={block} key={block.id} />
 
-                                // case "list_banner":
-                                //     return <ConfigureListBanner key={block.id} />
+                                case "list_banner":
+                                    return <ConfigureListBanner block={block} key={block.id} />
 
                                 default:
                                     return null

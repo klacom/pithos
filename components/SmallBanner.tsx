@@ -1,44 +1,40 @@
-import { Star, ThumbsUp, Users, ShieldCheck } from "lucide-react";
+import * as LucideIcons from "lucide-react";
 
-export function SmallBanner() {
+type SmallBannerItem = {
+    icon: string
+    prefix: string
+    highlight: string
+    suffix: string
+}
+
+type Props = {
+    content: {
+        items: SmallBannerItem[]
+    }
+}
+
+export function SmallBanner({ content }: Props) {
+    const items = content?.items || [];
+
     return (
         <div className="w-full bg-background flex justify-center items-center">
             <div className="w-full pt-8 pb-4">
+                <div className={`grid grid-cols-2 md:grid-cols-${Math.min(items.length, 4)} gap-6 items-center justify-center text-sm text-muted-foreground`}>
+                    {items.map((item, index) => {
+                        // Dynamically get the icon component
+                        const IconComponent = (LucideIcons as any)[item.icon] || LucideIcons.HelpCircle;
 
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-6 items-center justify-center text-sm text-muted-foreground">
-
-                    {/* Item 1 */}
-                    <div className="flex justify-center items-center gap-2">
-                        <Star className="w-4 h-4" />
-                        <span>
-                            Over <span className="font-semibold text-foreground">13,000</span> top-rated assets
-                        </span>
-                    </div>
-
-                    {/* Item 2 */}
-                    <div className="flex justify-center items-center gap-2">
-                        <ThumbsUp className="w-4 h-4" />
-                        <span>
-                            Rated by <span className="font-semibold text-foreground">85,000+</span> customers
-                        </span>
-                    </div>
-
-                    {/* Item 3 */}
-                    <div className="flex justify-center items-center gap-2">
-                        <Users className="w-4 h-4" />
-                        <span>
-                            Supported by <span className="font-semibold text-foreground">100,000+</span> forum members
-                        </span>
-                    </div>
-
-                    {/* Item 4 */}
-                    <div className="flex justify-center items-center gap-2">
-                        <ShieldCheck className="w-4 h-4" />
-                        <span>
-                            Every asset <span className="font-semibold text-foreground">moderated</span> by Pithos
-                        </span>
-                    </div>
-
+                        return (
+                            <div key={index} className="flex justify-center items-center gap-2">
+                                <IconComponent className="w-4 h-4" />
+                                <span>
+                                    {item.prefix}{" "}
+                                    <span className="font-semibold text-foreground">{item.highlight}</span>{" "}
+                                    {item.suffix}
+                                </span>
+                            </div>
+                        );
+                    })}
                 </div>
             </div>
         </div>
