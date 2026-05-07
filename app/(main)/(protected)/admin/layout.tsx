@@ -1,6 +1,6 @@
 import { ReactNode } from 'react'
-import NavBarLoader from '@/components/NavBarLoader'
-import NavBar from '@/components/NavBar'
+import NavBarLoader from '@/components/navbar/NavBarLoader'
+import NavBar from '@/components/navbar/NavBar'
 import AdminMainLayout from '@/components/admin/AdminMainLayout'
 import { Suspense } from 'react'
 
@@ -10,7 +10,9 @@ const layout = ({ children }: { children: ReactNode }) => {
             <Suspense fallback={<NavBar role={null} />}>
                 <NavBarLoader />
             </Suspense>
-            <AdminMainLayout children={children} />
+            <Suspense>
+                <AdminMainLayout children={children} />
+            </Suspense>
         </div>
     )
 }

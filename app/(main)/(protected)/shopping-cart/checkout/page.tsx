@@ -1,58 +1,137 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { ArrowLeft, Loader2 } from "lucide-react";
+import { useEffect, useState, useMemo } from "react";
+import { ArrowLeft, Loader2, CreditCard, Wallet } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import Image from "next/image";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
-import { getCartItems, type CartListItem } from "@/app/shop-actions";
+import { toast } from "sonner";
+import { CartListItem } from "@/app/shop-actions";
 
 export default function CheckoutPage() {
     const [selectedPayment, setSelectedPayment] = useState<string | null>(null);
-    const [items, setItems] = useState<CartListItem[]>([]);
-    const [isLoading, setIsLoading] = useState(true);
+    const [cartItems, setCartItems] = useState<CartListItem[]>([]);
+    const [loading, setLoading] = useState(true);
+    const [isProcessing, setIsProcessing] = useState(false);
     const router = useRouter();
     const searchParams = useSearchParams();
-    const idsString = searchParams.get("ids");
+    const directProductId = searchParams.get("product_id");
+    const selectedIdsParam = searchParams.get("ids");
 
     useEffect(() => {
-        const fetchItems = async () => {
-            setIsLoading(true);
+        async function loadItems() {
+            setLoading(true);
             try {
-                const ids = idsString ? idsString.split(",") : [];
-                if (ids.length === 0) {
-                    router.push("/shopping-cart");
-                    return;
+                const res = await fetch(`/api/cart/items`, { cache: "no-store" });
+                const items: CartListItem[] = await res.json();
+                if (directProductId) {
+                    const directItem = items.find(item => item.productId === directProductId);
+                    if (directItem) {
+                        setCartItems([directItem]);
+                    } else {
+                        setCartItems(items.filter(item => item.productId === directProductId));
+                    }
+                } else if (selectedIdsParam) {
+                    const ids = selectedIdsParam.split(",");
+                    setCartItems(items.filter(item => ids.includes(item.productId)));
+                } else {
+                    setCartItems(items);
                 }
-                const cartItems = await getCartItems(ids);
-                if (cartItems.length === 0) {
-                    router.push("/shopping-cart");
-                    return;
-                }
-                setItems(cartItems);
             } catch (error) {
-                console.error("Failed to fetch checkout items:", error);
+                console.error("Failed to load checkout items:", error);
+                toast.error("Failed to load your items.");
             } finally {
-                setIsLoading(false);
+                setLoading(false);
             }
-        };
+        }
+        loadItems();
+    }, [directProductId]);
 
-        fetchItems();
-    }, [idsString, router]);
+    const totalAmount = useMemo(() => {
+        return cartItems.reduce((sum, item) => sum + item.price, 0);
+    }, [cartItems]);
 
-    const total = items.reduce((sum, item) => sum + item.price, 0);
+    const handlePlaceOrder = async () => {
+        if (!selectedPayment) {
+            toast.error("Please select a payment method.");
+            return;
+        }
 
-    const handlePlaceOrder = () => {
-        router.push("/shopping-cart/checkout/success");
+        setIsProcessing(true);
+        try {
+            // 1. Create Payment Intent
+            const res = await fetch("/api/payments/create-intent", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                    productIds: cartItems.map(item => item.productId),
+                }),
+            });
+
+            const data = await res.json();
+            if (!res.ok) throw new Error(data.error);
+
+            const { clientKey, intentId } = data;
+
+            // 2. Handle specific payment methods
+            if (selectedPayment === 'card') {
+                const sessionRes = await fetch("/api/payments/checkout-session", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({
+                        productIds: cartItems.map(item => item.productId),
+                        line_items: cartItems.map(item => {
+                            currency: "PHP"
+                            amount: item.price
+                            name: item.title
+                        }),
+                    }),
+                });
+
+                const sessionData = await sessionRes.json();
+                if (!sessionRes.ok) throw new Error(sessionData.error);
+
+                window.location.href = sessionData.checkoutUrl;
+                return;
+            }
+
+            if (selectedPayment === 'gcash' || selectedPayment === 'paymaya') {
+                const attachRes = await fetch("/api/payments/attach-intent", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({
+                        intentId,
+                        paymentMethodType: selectedPayment,
+                        clientKey,
+                    }),
+                });
+
+                const attachData = await attachRes.json();
+                if (!attachRes.ok) throw new Error(attachData.error);
+
+                const redirectUrl = attachData.data.attributes.next_action?.redirect?.url;
+                if (redirectUrl) {
+                    window.location.href = redirectUrl;
+                } else {
+                    router.push("/shopping-cart/checkout/success");
+                }
+            }
+
+        } catch (error: any) {
+            console.error("Payment failed:", error);
+            toast.error(error.message || "Something went wrong with the payment.");
+        } finally {
+            setIsProcessing(false);
+        }
     };
 
-    if (isLoading) {
+    if (loading) {
         return (
-            <div className="flex min-h-[calc(100vh-200px)] items-center justify-center">
-                <Loader2 className="h-8 w-8 animate-spin text-accent" />
+            <div className="flex min-h-screen items-center justify-center">
+                <Loader2 className="h-8 w-8 animate-spin text-primary" />
             </div>
         );
     }
@@ -73,177 +152,138 @@ export default function CheckoutPage() {
                 <div className="flex flex-col lg:flex-row gap-4 w-full">
                     {/* Left side: Payment Options */}
                     <Card className="p-8 flex flex-col gap-6 w-full lg:w-2/3">
-                        <h2 className="font-bold text-lg uppercase">Payment Options</h2>
+                        <div className="flex flex-col gap-1">
+                            <h2 className="font-bold text-lg uppercase">Payment Options</h2>
+                            <p className="text-sm text-muted-foreground">Select your preferred payment method securely powered by PayMongo.</p>
+                        </div>
 
                         <div className="flex flex-col gap-4">
                             {/* GCash */}
-                            <div 
-                                className={`p-4 rounded-xl border-2 cursor-pointer transition-all ${selectedPayment === 'gcash' ? 'border-primary bg-muted/50' : 'border-transparent bg-muted/30 hover:bg-muted/50'}`}
+                            <div
+                                className={`p-5 rounded-xl border-2 cursor-pointer transition-all ${selectedPayment === 'gcash' ? 'border-primary bg-primary/5' : 'border-muted bg-muted/20 hover:bg-muted/40'}`}
                                 onClick={() => setSelectedPayment('gcash')}
                             >
                                 <div className="flex items-center gap-4">
-                                    <div className={`w-5 h-5 rounded-full border flex items-center justify-center ${selectedPayment === 'gcash' ? 'border-primary' : 'border-muted-foreground'}`}>
-                                        {selectedPayment === 'gcash' && <div className="w-3 h-3 rounded-full bg-primary" />}
+                                    <div className={`w-6 h-6 rounded-full border-2 flex items-center justify-center ${selectedPayment === 'gcash' ? 'border-primary bg-primary' : 'border-muted-foreground'}`}>
+                                        {selectedPayment === 'gcash' && <div className="w-2 h-2 rounded-full bg-white" />}
                                     </div>
-                                    <Image src="/payment-logos/gcash.png" alt="GCash" width={60} height={20} className="object-contain" />
-                                    <span className="font-semibold">GCash</span>
+                                    <div className="p-2 bg-white rounded-lg shadow-sm">
+                                        <Image src="/payment-logos/gcash.png" alt="GCash" width={60} height={20} className="object-contain" />
+                                    </div>
+                                    <div className="flex flex-col">
+                                        <span className="font-bold">GCash</span>
+                                        <span className="text-xs text-muted-foreground">Pay using your GCash wallet</span>
+                                    </div>
                                 </div>
-                                
-                                {/* Dropdown form for GCash */}
-                                {selectedPayment === 'gcash' && (
-                                    <div className="mt-6 pl-9 flex flex-col gap-4">
-                                        <p className="text-sm text-muted-foreground">
-                                            You will be redirected to the GCash portal to securely complete your purchase.
-                                        </p>
-                                        <div className="mt-2">
-                                            <p className="text-xs text-muted-foreground mb-2">*Required: save this payment method for future purchases?</p>
-                                            <div className="flex items-center gap-4">
-                                                <label className="flex items-center gap-2 cursor-pointer">
-                                                    <input type="radio" name="save-gcash" className="w-4 h-4 text-primary" />
-                                                    <span className="text-sm">Yes</span>
-                                                </label>
-                                                <label className="flex items-center gap-2 cursor-pointer">
-                                                    <input type="radio" name="save-gcash" className="w-4 h-4 text-primary" defaultChecked />
-                                                    <span className="text-sm">No</span>
-                                                </label>
-                                            </div>
-                                        </div>
-                                    </div>
-                                )}
                             </div>
 
-                            {/* PayPal */}
-                            <div 
-                                className={`p-4 rounded-xl border-2 cursor-pointer transition-all ${selectedPayment === 'paypal' ? 'border-primary bg-muted/50' : 'border-transparent bg-muted/30 hover:bg-muted/50'}`}
-                                onClick={() => setSelectedPayment('paypal')}
+                            {/* PayMaya */}
+                            <div
+                                className={`p-5 rounded-xl border-2 cursor-pointer transition-all ${selectedPayment === 'paymaya' ? 'border-primary bg-primary/5' : 'border-muted bg-muted/20 hover:bg-muted/40'}`}
+                                onClick={() => setSelectedPayment('paymaya')}
                             >
                                 <div className="flex items-center gap-4">
-                                    <div className={`w-5 h-5 rounded-full border flex items-center justify-center ${selectedPayment === 'paypal' ? 'border-primary' : 'border-muted-foreground'}`}>
-                                        {selectedPayment === 'paypal' && <div className="w-3 h-3 rounded-full bg-primary" />}
+                                    <div className={`w-6 h-6 rounded-full border-2 flex items-center justify-center ${selectedPayment === 'paymaya' ? 'border-primary bg-primary' : 'border-muted-foreground'}`}>
+                                        {selectedPayment === 'paymaya' && <div className="w-2 h-2 rounded-full bg-white" />}
                                     </div>
-                                    <Image src="/payment-logos/paypal.webp" alt="PayPal" width={60} height={20} className="object-contain" />
-                                    <span className="font-semibold">PayPal</span>
+                                    <div className="p-2 bg-white rounded-lg shadow-sm">
+                                        <Image src="/payment-logos/paymongo.png" alt="Maya" width={60} height={20} className="object-contain" />
+                                    </div>
+                                    <div className="flex flex-col">
+                                        <span className="font-bold">Maya</span>
+                                        <span className="text-xs text-muted-foreground">Pay using your Maya account</span>
+                                    </div>
                                 </div>
-
-                                {/* Dropdown form for PayPal */}
-                                {selectedPayment === 'paypal' && (
-                                    <div className="mt-6 pl-9 flex flex-col gap-4">
-                                        <p className="text-sm text-muted-foreground">
-                                            You will be redirected to the PayPal website to securely complete your purchase.
-                                        </p>
-                                        <div className="mt-2">
-                                            <p className="text-xs text-muted-foreground mb-2">*Required: save this payment method for future purchases?</p>
-                                            <div className="flex items-center gap-4">
-                                                <label className="flex items-center gap-2 cursor-pointer">
-                                                    <input type="radio" name="save-paypal" className="w-4 h-4 text-primary" />
-                                                    <span className="text-sm">Yes</span>
-                                                </label>
-                                                <label className="flex items-center gap-2 cursor-pointer">
-                                                    <input type="radio" name="save-paypal" className="w-4 h-4 text-primary" defaultChecked />
-                                                    <span className="text-sm">No</span>
-                                                </label>
-                                            </div>
-                                        </div>
-                                    </div>
-                                )}
                             </div>
 
                             {/* Credit/Debit Card */}
-                            <div 
-                                className={`p-4 rounded-xl border-2 cursor-pointer transition-all ${selectedPayment === 'card' ? 'border-primary bg-muted/50' : 'border-transparent bg-muted/30 hover:bg-muted/50'}`}
+                            <div
+                                className={`p-5 rounded-xl border-2 cursor-pointer transition-all ${selectedPayment === 'card' ? 'border-primary bg-primary/5' : 'border-muted bg-muted/20 hover:bg-muted/40'}`}
                                 onClick={() => setSelectedPayment('card')}
                             >
                                 <div className="flex items-center gap-4">
-                                    <div className={`w-5 h-5 rounded-full border flex items-center justify-center ${selectedPayment === 'card' ? 'border-primary' : 'border-muted-foreground'}`}>
-                                        {selectedPayment === 'card' && <div className="w-3 h-3 rounded-full bg-primary" />}
+                                    <div className={`w-6 h-6 rounded-full border-2 flex items-center justify-center ${selectedPayment === 'card' ? 'border-primary bg-primary' : 'border-muted-foreground'}`}>
+                                        {selectedPayment === 'card' && <div className="w-2 h-2 rounded-full bg-white" />}
                                     </div>
-                                    <div className="w-12 h-8 bg-gray-400 rounded flex items-center justify-center">
-                                        <div className="w-full h-2 bg-gray-500 mt-2"></div>
+                                    <div className="p-2 bg-white rounded-lg shadow-sm flex gap-2">
+                                        <CreditCard className="w-8 h-8 text-blue-600" />
                                     </div>
-                                    <span className="font-semibold">Credit Card / Debit Card</span>
+                                    <div className="flex flex-col">
+                                        <span className="font-bold">Credit / Debit Card</span>
+                                        <span className="text-xs text-muted-foreground">Visa, Mastercard, JCB</span>
+                                    </div>
                                 </div>
+                            </div>
+                        </div>
 
-                                {/* Dropdown form for Card */}
-                                {selectedPayment === 'card' && (
-                                    <div className="mt-6 pl-9 flex flex-col gap-4">
-                                        <div className="flex items-center justify-between">
-                                            <span className="text-sm font-medium">Card Details</span>
-                                            <div className="flex gap-1">
-                                                <Image src="/payment-logos/visa.jpg" alt="Visa" width={30} height={20} className="object-contain" />
-                                                <Image src="/payment-logos/mastercard.png" alt="Mastercard" width={30} height={20} className="object-contain" />
-                                            </div>
-                                        </div>
-                                        
-                                        <div className="flex flex-col gap-4">
-                                            <div>
-                                                <Input placeholder="Card Number *" className="bg-background" />
-                                            </div>
-                                            <div>
-                                                <Input placeholder="Name on Card *" className="bg-background" />
-                                            </div>
-                                            <div className="flex gap-4">
-                                                <Input placeholder="Expiration *" className="bg-background flex-1" />
-                                                <Input placeholder="CCV *" className="bg-background flex-1" />
-                                            </div>
-                                        </div>
-
-                                        <div className="mt-2">
-                                            <p className="text-xs text-muted-foreground mb-2">*Required: save this payment method for future purchases?</p>
-                                            <div className="flex items-center gap-4">
-                                                <label className="flex items-center gap-2 cursor-pointer">
-                                                    <input type="radio" name="save-card" className="w-4 h-4 text-primary" />
-                                                    <span className="text-sm">Yes</span>
-                                                </label>
-                                                <label className="flex items-center gap-2 cursor-pointer">
-                                                    <input type="radio" name="save-card" className="w-4 h-4 text-primary" defaultChecked />
-                                                    <span className="text-sm">No</span>
-                                                </label>
-                                            </div>
-                                        </div>
-                                    </div>
-                                )}
+                        <div className="mt-4 p-4 bg-blue-50 border border-blue-100 rounded-lg flex gap-3 items-start">
+                            <Wallet className="w-5 h-5 text-blue-500 mt-0.5" />
+                            <div className="flex flex-col gap-1">
+                                <p className="text-sm font-semibold text-blue-900">Secure Payment</p>
+                                <p className="text-xs text-blue-700">Your payment information is encrypted and processed securely by PayMongo. Pithos does not store your card details.</p>
                             </div>
                         </div>
                     </Card>
 
                     {/* Right side: Order Summary */}
-                    <Card className="p-8 flex flex-col justify-between w-full lg:w-1/3 min-h-[400px]">
+                    <Card className="p-8 flex flex-col justify-between w-full lg:w-1/3 min-h-[400px] border-2 border-muted shadow-lg">
                         <div className="flex flex-col gap-6">
-                            <h2 className="font-bold text-lg uppercase">Order Summary</h2>
-                            
-                            <div className="flex flex-col gap-4">
-                                {items.map((item) => (
-                                    <div key={item.productId} className="flex gap-4 items-center">
-                                        <div className="relative h-[60px] w-[60px] shrink-0 overflow-hidden rounded-md border">
-                                            <Image 
-                                                src={item.imageSrc} 
-                                                alt={item.title} 
-                                                fill 
-                                                className="object-cover aspect-square"
-                                                unoptimized 
+                            <h2 className="font-bold text-lg uppercase tracking-wider">Order Summary</h2>
+
+                            <div className="flex flex-col gap-4 max-h-[300px] overflow-y-auto pr-2">
+                                {cartItems.map((item) => (
+                                    <div key={item.productId} className="flex gap-4 items-center border-b border-muted pb-4">
+                                        <div className="relative w-16 h-16 rounded-lg overflow-hidden shrink-0">
+                                            <Image
+                                                src={item.imageSrc}
+                                                alt={item.title}
+                                                fill
+                                                className="object-cover"
                                             />
                                         </div>
                                         <div className="flex-1 min-w-0">
-                                            <h3 className="font-semibold text-sm line-clamp-1">{item.title}</h3>
-                                            <p className="text-xs text-muted-foreground">{item.sellerName}</p>
+                                            <h3 className="font-bold text-sm truncate">{item.title}</h3>
+                                            <p className="text-xs text-muted-foreground truncate">by {item.sellerName}</p>
                                         </div>
-                                        <span className="font-semibold text-sm">{item.priceLabel}</span>
+                                        <span className="font-bold text-sm">₱{item.price.toLocaleString()}</span>
                                     </div>
                                 ))}
                             </div>
 
-                            <div className="flex justify-between items-center pt-4 border-t">
-                                <span className="font-semibold">Total</span>
-                                <span className="font-bold text-lg">P{total.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                            <div className="flex flex-col gap-2 pt-4 border-t-2 border-muted">
+                                <div className="flex justify-between items-center text-muted-foreground">
+                                    <span className="text-sm">Subtotal</span>
+                                    <span className="text-sm">₱{totalAmount.toLocaleString()}</span>
+                                </div>
+                                <div className="flex justify-between items-center text-muted-foreground">
+                                    <span className="text-sm">Processing Fee</span>
+                                    <span className="text-sm">₱0.00</span>
+                                </div>
+                                <div className="flex justify-between items-center pt-2 mt-2 border-t border-muted">
+                                    <span className="font-bold text-lg">Total</span>
+                                    <span className="font-black text-2xl text-primary">₱{totalAmount.toLocaleString()}</span>
+                                </div>
                             </div>
                         </div>
 
-                        <Button variant="red_default" className="w-full mt-8" onClick={handlePlaceOrder}>
-                            Place Order
+                        <Button
+                            variant="red_default"
+                            className="w-full mt-8 py-6 text-lg font-bold shadow-xl hover:translate-y-[-2px] transition-all"
+                            onClick={handlePlaceOrder}
+                            disabled={isProcessing || cartItems.length === 0}
+                        >
+                            {isProcessing ? (
+                                <>
+                                    <Loader2 className="mr-2 h-5 w-5 animate-spin" />
+                                    Processing...
+                                </>
+                            ) : (
+                                "Place Order Now"
+                            )}
                         </Button>
                     </Card>
                 </div>
             </div>
-        </main>
+        </main >
     );
 }

@@ -1,140 +1,279 @@
-import InputTextField from "@/components/technical-components/InputTextField"
-import FilterBy from "@/components/technical-components/FilterBy"
-import SortBy from "@/components/technical-components/SortBy"
-import SearchButton from "@/components/technical-components/SearchButton"
-import ExtendedCardStat from "@/components/technical-components/ExtendedCardStat"
-import MiniCard from "@/components/technical-components/Modals/MiniCard"
+'use client';
 
-const page = () => {
-    const iconSize = 32
+import { useState, useEffect } from 'react';
+import { ChevronDown, ChevronUp, Eye, RotateCcw, FileText, ToggleRight, Loader2, RefreshCw, AlertCircle } from 'lucide-react';
+import { toast } from 'sonner';
+
+interface PayMongoConfig {
+    publicKeyStatus: 'Valid' | 'Invalid' | 'Missing';
+    secretKeyStatus: 'Valid' | 'Invalid' | 'Missing';
+    webhookStatus: 'Active' | 'Inactive' | 'Error';
+    supportedMethods: string[];
+    merchantName: string;
+    merchantEmail: string;
+    settlementAccount: string;
+}
+
+interface AnalyticsMetrics {
+    balance: string;
+    successRate: string;
+    todayTransactions: number;
+    totalTransactions: number;
+    failedCount: number;
+}
+
+interface Transaction {
+    id: string;
+    txnId: string;
+    amount: string;
+    currency: string;
+    status: 'Completed' | 'Pending' | 'Failed' | 'Cancelled';
+    created_at: number;
+    description: string;
+    gateway: string;
+}
+
+interface PayMongoStats extends AnalyticsMetrics {
+    keyStatus: {
+        publicKey: string
+        secretKey: string
+        status: string
+    }
+    webhookStatus: 'Active' | 'Inactive' | 'Error'
+    webhookUrl: string
+}
+
+export default function PayMongoAdminDashboard() {
+    const [expandedSections, setExpandedSections] = useState({
+        configuration: false,
+        analytics: true,
+        actions: false,
+    });
+
+    const [loading, setLoading] = useState(true);
+    const [refreshing, setRefreshing] = useState(false);
+    const [stats, setStats] = useState<PayMongoStats | null>(null);
+    const [transactions, setTransactions] = useState<Transaction[]>([]);
+
+    const fetchData = async (isRefresh = false) => {
+        if (isRefresh) setRefreshing(true);
+        else setLoading(true);
+
+        try {
+            const [statsRes, txRes] = await Promise.all([
+                fetch('/api/payments/paymongo?type=stats'),
+                fetch('/api/payments/paymongo?type=transactions&limit=10')
+            ]);
+
+            if (!statsRes.ok || !txRes.ok) throw new Error('Failed to fetch data');
+
+            const statsData = await statsRes.json();
+            const txData = await txRes.json();
+
+            setStats(statsData);
+            setTransactions(txData.transactions);
+        } catch (error) {
+            console.error('Dashboard error:', error);
+            toast.error('Failed to load PayMongo data');
+        } finally {
+            setLoading(false);
+            setRefreshing(false);
+        }
+    };
+
+    useEffect(() => {
+        fetchData();
+    }, []);
+
+    const toggleSection = (section: keyof typeof expandedSections) => {
+        setExpandedSections(prev => ({ ...prev, [section]: !prev[section] }));
+    };
+
+    const getKeyStatusColor = (status: string) => {
+        switch (status) {
+            case 'Valid': return 'bg-green-100 text-green-800';
+            case 'Invalid': return 'bg-red-100 text-red-800';
+            default: return 'bg-gray-100 text-gray-800';
+        }
+    };
+
+    const getStatusColor = (status: string) => {
+        switch (status) {
+            case 'Completed': return 'bg-green-100 text-green-800';
+            case 'Pending': return 'bg-yellow-100 text-yellow-800';
+            case 'Failed': return 'bg-red-100 text-red-800';
+            default: return 'bg-gray-100 text-gray-800';
+        }
+    };
+
+    if (loading) {
+        return (
+            <div className="flex h-full items-center justify-center bg-background w-full">
+                <div className="flex flex-col items-center gap-2">
+                    <Loader2 className="h-8 w-8 animate-spin text-primary" />
+                    <p className="text-sm text-muted-foreground">Syncing with PayMongo...</p>
+                </div>
+            </div>
+        );
+    }
+
     return (
-        <div className='flex flex-col p-4 bg-background w-full gap-4 h-full'>
-            <div className="flex flex-col bg-background w-full gap-4">
-                <div className="flex flex-row justify-between">
-                    <h1 className='font-bold text-3xl'>Payment Gateways</h1>
-                    <div className="flex flex-row gap-2 h-full items-center">
-                        <SortBy sortOptions={[""]} />
-                        <FilterBy filterOptions={[""]} />
-                        <InputTextField placeholder="Search for users" />
-                        <SearchButton />
+        <div className="flex flex-col p-6 bg-background w-full gap-6 min-h-0 h-full overflow-y-auto">
+            {/* Header */}
+            <div className="flex items-center justify-between">
+                <div>
+                    <h1 className="text-3xl font-bold tracking-tight">PayMongo Management</h1>
+                    <p className="text-muted-foreground mt-1">Real-time gateway monitoring and transaction history.</p>
+                </div>
+                <button
+                    onClick={() => fetchData(true)}
+                    disabled={refreshing}
+                    className="flex items-center gap-2 px-4 py-2 bg-muted hover:bg-muted/80 rounded-md transition disabled:opacity-50"
+                >
+                    <RefreshCw className={`w-4 h-4 ${refreshing ? 'animate-spin' : ''}`} />
+                    Refresh
+                </button>
+            </div>
+
+            {/* Gateway Status Card */}
+            <div className="bg-card rounded-xl border shadow-sm p-8">
+                <div className="flex items-center justify-between mb-8">
+                    <div>
+                        <h2 className="text-2xl font-bold">Gateway Health</h2>
+                        <div className="flex items-center gap-3 mt-2">
+                            <span className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-green-500/10 text-green-600 text-sm font-semibold">
+                                <span className="w-2 h-2 bg-green-600 rounded-full animate-pulse"></span>
+                                Live Test Mode
+                            </span>
+                            <span className="text-sm text-muted-foreground">Response time: 42ms</span>
+                        </div>
                     </div>
                 </div>
-                <hr />
-                {/* Content */}
-                <div className='flex flex-col gap-4'>
-                    {/* Cards */}
-                    <div className="flex flex-row gap-4 w-full">
-                        <ExtendedCardStat header="PayPal" subHeader="Ping 2s Ago" icon={
-                            <svg className="fill-background" width={iconSize} height={iconSize} role="img" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                                <title>PayPal</title>
-                                <path d="M15.607 4.653H8.941L6.645 19.251H1.82L4.862 0h7.995c3.754 0 6.375 2.294 6.473 5.513-.648-.478-2.105-.86-3.722-.86m6.57 5.546c0 3.41-3.01 6.853-6.958 6.853h-2.493L11.595 24H6.74l1.845-11.538h3.592c4.208 0 7.346-3.634 7.153-6.949a5.24 5.24 0 0 1 2.848 4.686M9.653 5.546h6.408c.907 0 1.942.222 2.363.541-.195 2.741-2.655 5.483-6.441 5.483H8.714Z" />
-                            </svg>}
-                            miniCards={
-                                [
-                                    <MiniCard title="Balance" header="₱67,000.00" key={1} />,
-                                    <MiniCard title="Success Rate" header="67.67%" key={2} />,
-                                    <MiniCard title="Today’s TX" header="67" key={3} />,
-                                ]
-                            }
-                        />
-                        <ExtendedCardStat header="PayPal" subHeader="Ping 2s Ago" icon={
-                            <svg className="fill-background" width={iconSize} height={iconSize} role="img" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                                <title>PayPal</title>
-                                <path d="M15.607 4.653H8.941L6.645 19.251H1.82L4.862 0h7.995c3.754 0 6.375 2.294 6.473 5.513-.648-.478-2.105-.86-3.722-.86m6.57 5.546c0 3.41-3.01 6.853-6.958 6.853h-2.493L11.595 24H6.74l1.845-11.538h3.592c4.208 0 7.346-3.634 7.153-6.949a5.24 5.24 0 0 1 2.848 4.686M9.653 5.546h6.408c.907 0 1.942.222 2.363.541-.195 2.741-2.655 5.483-6.441 5.483H8.714Z" />
-                            </svg>}
-                            miniCards={
-                                [
-                                    <MiniCard title="Balance" header="₱67,000.00" key={1} />,
-                                    <MiniCard title="Success Rate" header="67.67%" key={2} />,
-                                    <MiniCard title="Today’s TX" header="67" key={3} />,
-                                ]
-                            }
-                        />
+
+                {/* Mini Stats Cards */}
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                    <div className="bg-blue-500/5 rounded-xl p-6 border border-blue-500/10">
+                        <p className="text-sm text-blue-500 font-bold uppercase tracking-wider">Account Balance</p>
+                        <p className="text-3xl font-black text-blue-600 dark:text-blue-400 mt-2">{stats?.balance || '₱0.00'}</p>
+                        <p className="text-xs text-blue-500 mt-3 flex items-center gap-1">
+                            <RefreshCw className="w-3 h-3" /> Updated just now
+                        </p>
                     </div>
 
-                    {/* Table */}
-                    <div className="w-full p-4 bg-primary-foreground border border-muted rounded-lg">
-                        <table className="*:*:*:border *:*:*:border-muted *:*:*:p-4 w-full bg-primary-foreground" border={1}>
-                            <thead>
-                                <tr>
-                                    <td><input type="checkbox" name="" id="" /></td>
-                                    <th>TXN ID</th>
-                                    <th>Buyer ID</th>
-                                    <th>Seller ID</th>
-                                    <th>Amount</th>
-                                    <th>Gateway</th>
-                                    <th>Status</th>
-                                    <th>Date & Time</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                <tr>
-                                    <td><input type="checkbox" name="" id="" /></td>
-                                    <td>#123-456-789</td>
-                                    <td>k(dot)com</td>
-                                    <td>baldo64</td>
-                                    <td>₱3,500.00</td>
-                                    <td>GCash</td>
-                                    <td className="text-success">Completed</td>
-                                    <td>2-22-26 - 2:41 PM</td>
-                                </tr>
-                                <tr>
-                                    <td><input type="checkbox" name="" id="" /></td>
-                                    <td>#123-456-789</td>
-                                    <td>k(dot)com</td>
-                                    <td>baldo64</td>
-                                    <td>₱3,500.00</td>
-                                    <td>GCash</td>
-                                    <td className="">Pending</td>
-                                    <td>2-22-26 - 2:41 PM</td>
-                                </tr>
-                                <tr>
-                                    <td><input type="checkbox" name="" id="" /></td>
-                                    <td>#123-456-789</td>
-                                    <td>k(dot)com</td>
-                                    <td>baldo64</td>
-                                    <td>₱3,500.00</td>
-                                    <td>GCash</td>
-                                    <td className="text-destructive">Failed</td>
-                                    <td>2-22-26 - 2:41 PM</td>
-                                </tr>
-                                <tr>
-                                    <td><input type="checkbox" name="" id="" /></td>
-                                    <td>#123-456-789</td>
-                                    <td>k(dot)com</td>
-                                    <td>baldo64</td>
-                                    <td>₱3,500.00</td>
-                                    <td>GCash</td>
-                                    <td className="text-success">Completed</td>
-                                    <td>2-22-26 - 2:41 PM</td>
-                                </tr>
-                                <tr>
-                                    <td><input type="checkbox" name="" id="" /></td>
-                                    <td>#123-456-789</td>
-                                    <td>k(dot)com</td>
-                                    <td>baldo64</td>
-                                    <td>₱3,500.00</td>
-                                    <td>GCash</td>
-                                    <td className="">Pending</td>
-                                    <td>2-22-26 - 2:41 PM</td>
-                                </tr>
-                                <tr>
-                                    <td><input type="checkbox" name="" id="" /></td>
-                                    <td>#123-456-789</td>
-                                    <td>k(dot)com</td>
-                                    <td>baldo64</td>
-                                    <td>₱3,500.00</td>
-                                    <td>GCash</td>
-                                    <td className="text-destructive">Failed</td>
-                                    <td>2-22-26 - 2:41 PM</td>
-                                </tr>
-                            </tbody>
-                        </table>
+                    <div className="bg-green-500/5 rounded-xl p-6 border border-green-500/10">
+                        <p className="text-sm text-green-500 font-bold uppercase tracking-wider">Success Rate</p>
+                        <p className="text-3xl font-black text-green-600 dark:text-green-400 mt-2">{stats?.successRate || '0.00%'}</p>
+                        <p className="text-xs text-green-500 mt-3">Out of {stats?.totalTransactions} attempts</p>
+                    </div>
+
+                    <div className="bg-purple-500/5 rounded-xl p-6 border border-purple-500/10">
+                        <p className="text-sm text-purple-500 font-bold uppercase tracking-wider">Total Sales</p>
+                        <p className="text-3xl font-black text-purple-600 dark:text-purple-400 mt-2">{stats?.totalTransactions || 0}</p>
+                        <p className="text-xs text-purple-500 mt-3 flex items-center gap-1">
+                            <AlertCircle className="w-3 h-3" /> {stats?.failedCount} failed attempts
+                        </p>
                     </div>
                 </div>
             </div>
-        </div>
-    )
-}
 
-export default page
+            {/* Configuration Section */}
+            <div className="bg-card rounded-xl border shadow-sm ">
+                <button
+                    onClick={() => toggleSection('configuration')}
+                    className="w-full flex items-center justify-between p-6 hover:bg-muted/50 transition"
+                >
+                    <div className="flex items-center gap-3">
+                        <div className="p-2 bg-muted rounded-lg">
+                            <ToggleRight className="w-5 h-5 text-muted-foreground" />
+                        </div>
+                        <h3 className="text-lg font-bold">API Configuration</h3>
+                    </div>
+                    {expandedSections.configuration ? <ChevronUp /> : <ChevronDown />}
+                </button>
+
+                {expandedSections.configuration && (
+                    <div className="p-8 border-t bg-muted/20 grid grid-cols-1 md:grid-cols-2 gap-8">
+                        <div className="space-y-4">
+                            <h4 className="font-bold text-sm uppercase tracking-wider text-muted-foreground">Key Status</h4>
+                            <div className="space-y-3">
+                                <div className="flex items-center justify-between p-4 bg-background rounded-lg border">
+                                    <span className="text-sm font-medium">Public Key</span>
+                                    <span className={`px-3 py-1 rounded-full text-xs font-bold ${getKeyStatusColor(stats?.keyStatus.publicKey || 'Missing')}`}>
+                                        {stats?.keyStatus.publicKey.toUpperCase() || 'MISSING'}
+                                    </span>
+                                </div>
+                                <div className="flex items-center justify-between p-4 bg-background rounded-lg border">
+                                    <span className="text-sm font-medium">Secret Key</span>
+                                    <span className={`px-3 py-1 rounded-full text-xs font-bold ${getKeyStatusColor(stats?.keyStatus.secretKey || 'Missing')}`}>
+                                        {stats?.keyStatus.secretKey.toUpperCase() || 'MISSING'}
+                                    </span>
+                                </div>
+                            </div>
+                        </div>
+                        <div className="space-y-4">
+                            <h4 className="font-bold text-sm uppercase tracking-wider text-muted-foreground">Webhook Status</h4>
+                            <div className="p-4 bg-background rounded-lg border space-y-3">
+                                <div className="flex items-center justify-between">
+                                    <span className="text-sm font-medium">Status</span>
+                                    <span className={`px-3 py-1 rounded-full text-xs font-bold ${stats?.webhookStatus === 'Active' ? 'bg-blue-500/10 text-blue-600' : 'bg-red-500/10 text-red-600'}`}>
+                                        {stats?.webhookStatus.toUpperCase() || 'INACTIVE'}
+                                    </span>
+                                </div>
+                                <p className="text-xs text-muted-foreground font-mono truncate">
+                                    URL: {stats?.webhookUrl || 'Not set'}
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+                )}
+            </div>
+
+            {/* Transactions Table */}
+            <div className="bg-card rounded-xl border shadow-sm  mb-8">
+                <div className="p-6 border-b flex items-center justify-between">
+                    <h3 className="text-lg font-bold">Recent PayMongo Transactions</h3>
+                    <button className="text-sm text-primary font-bold hover:underline">View All</button>
+                </div>
+
+                <div className="overflow-x-auto">
+                    <table className="w-full text-sm">
+                        <thead>
+                            <tr className="bg-muted/50 text-muted-foreground font-bold">
+                                <th className="px-6 py-4 text-left">REFERENCE</th>
+                                <th className="px-6 py-4 text-left">DATE</th>
+                                <th className="px-6 py-4 text-left">DESCRIPTION</th>
+                                <th className="px-6 py-4 text-right">AMOUNT</th>
+                                <th className="px-6 py-4 text-center">STATUS</th>
+                            </tr>
+                        </thead>
+                        <tbody className="divide-y">
+                            {transactions.length > 0 ? (
+                                transactions.map((tx) => (
+                                    <tr key={tx.id} className="hover:bg-muted/30 transition">
+                                        <td className="px-6 py-4 font-mono font-medium text-blue-600">{tx.txnId}</td>
+                                        <td className="px-6 py-4 text-muted-foreground">
+                                            {new Date(tx.created_at * 1000).toLocaleDateString()}
+                                        </td>
+                                        <td className="px-6 py-4 font-medium">{tx.description}</td>
+                                        <td className="px-6 py-4 text-right font-bold">₱{parseFloat(tx.amount).toLocaleString()}</td>
+                                        <td className="px-6 py-4 text-center">
+                                            <span className={`px-3 py-1 rounded-full text-xs font-bold ${getStatusColor(tx.status)}`}>
+                                                {tx.status.toUpperCase()}
+                                            </span>
+                                        </td>
+                                    </tr>
+                                ))
+                            ) : (
+                                <tr>
+                                    <td colSpan={5} className="px-6 py-12 text-center text-muted-foreground">
+                                        No recent transactions found.
+                                    </td>
+                                </tr>
+                            )}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    );
+}

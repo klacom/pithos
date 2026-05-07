@@ -105,9 +105,31 @@ export default function OrderDetailsPage() {
         );
     };
 
+    const handleDownload = async () => {
+        if (!transaction?.product_id) return;
+
+        try {
+            const res = await fetch(`/api/products/${transaction.product_id}/download`);
+            const data = await res.json();
+
+            if (!res.ok) throw new Error(data.error);
+
+            const a = document.createElement('a');
+            a.href = data.downloadUrl;
+            a.download = data.fileName;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            toast.success("Download started!");
+        } catch (err: any) {
+            console.error("Download failed:", err);
+            toast.error(err.message || "Failed to download asset.");
+        }
+    };
+
     if (loading) {
         return (
-            <div className='flex flex-col p-4 bg-background w-full gap-8 overflow-y-auto'> 
+            <div className='flex flex-col p-4 bg-background w-full gap-8 overflow-y-auto'>
                 <div className='flex flex-col gap-2'>
                     <h1 className='font-bold text-3xl'>Order Details</h1>
                 </div>
@@ -120,7 +142,7 @@ export default function OrderDetailsPage() {
 
     if (!transaction) {
         return (
-            <div className='flex flex-col p-4 bg-background w-full gap-8 overflow-y-auto'> 
+            <div className='flex flex-col p-4 bg-background w-full gap-8 overflow-y-auto'>
                 <div className='flex flex-col gap-2'>
                     <Link href="/buyer/account/purchase-history" className="flex items-center gap-2 text-muted-foreground hover:text-foreground mb-2">
                         <ArrowLeft className="w-4 h-4" />
@@ -141,7 +163,7 @@ export default function OrderDetailsPage() {
     const vendorName = product?.seller_owner_id?.user_fullname || product?.seller_owner_id?.user_email?.split('@')[0] || 'Unknown Vendor';
 
     return (
-        <div className='flex flex-col p-4 bg-background w-full gap-8 overflow-y-auto'> 
+        <div className='flex flex-col p-4 bg-background w-full gap-8 overflow-y-auto'>
             <div className='flex flex-col gap-2'>
                 <Link href="/buyer/account/purchase-history" className="flex items-center gap-2 text-muted-foreground hover:text-foreground mb-2">
                     <ArrowLeft className="w-4 h-4" />
@@ -187,7 +209,7 @@ export default function OrderDetailsPage() {
                         <Package className="w-5 h-5" />
                         Items Purchased
                     </h3>
-                    
+
                     <div className="border border-muted rounded-lg overflow-hidden">
                         <div className="grid grid-cols-12 gap-4 p-4 bg-muted/30 font-medium text-sm">
                             <div className="col-span-6">Product</div>
@@ -195,7 +217,7 @@ export default function OrderDetailsPage() {
                             <div className="col-span-2 text-center">License</div>
                             <div className="col-span-2 text-right">Price</div>
                         </div>
-                        
+
                         <div className="grid grid-cols-12 gap-4 p-4 items-center border-t border-muted">
                             <div className="col-span-6">
                                 <div className="flex items-center gap-4">
@@ -235,9 +257,14 @@ export default function OrderDetailsPage() {
                 <Card className="w-full p-6 bg-primary-foreground border-muted">
                     <h3 className="font-semibold text-xl mb-4">Download Your Assets</h3>
                     <p className="text-muted-foreground mb-4">Your purchased assets are available for download below.</p>
-                    <Button variant="red_default" className="w-full md:w-auto">
+                    <Button
+                        variant="red_default"
+                        className="w-full md:w-auto"
+                        onClick={handleDownload}
+                        disabled={transaction.status.toLowerCase() !== 'completed'}
+                    >
                         <Download className="w-4 h-4 mr-2" />
-                        Download All Files (ZIP)
+                        Download All Files
                     </Button>
                 </Card>
             </div>

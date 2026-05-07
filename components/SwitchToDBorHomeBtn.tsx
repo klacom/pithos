@@ -15,15 +15,15 @@ type Props = {
 const SwitchToDBorHomeBtn = ({ role, DBLink, homePageLink }: Props) => {
     const pathname = usePathname();
 
-    // derive directly (no state)
-    const isProtected = isCurrentRouteRBACProtected(pathname, role);
+    // Check if we are in restricted routes (seller or admin specific)
+    const isRestricted = pathname.startsWith('/seller') || pathname.startsWith('/admin');
 
-    const href = isProtected ? homePageLink : DBLink;
+    const href = isRestricted ? homePageLink : DBLink;
 
     return (
         <Button asChild variant="ghost" size="sm">
             <Link href={href} className="flex items-center gap-2">
-                {isProtected ? (
+                {isRestricted ? (
                     <>
                         <Store size={16} />
                         Go to Public
@@ -31,7 +31,7 @@ const SwitchToDBorHomeBtn = ({ role, DBLink, homePageLink }: Props) => {
                 ) : (
                     <>
                         <CircleGauge size={16} />
-                        Go to Dashboard
+                        Go to Restricted Area
                     </>
                 )}
             </Link>
