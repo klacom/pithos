@@ -2,13 +2,18 @@
 
 import { useAuth } from "@/components/AuthProvider";
 import ActivityTracker from "./ActivityTracker"; 
+import { Suspense } from "react";
 
 export default function ActivityTrackerWrapper() {
     const { user } = useAuth();
 
     if (!user) {
-        return null; // Do not render ActivityTracker if no user is authenticated
+        return null;
     }
 
-    return <ActivityTracker />;
+    return (
+        <Suspense fallback={null}>
+            <ActivityTracker />
+        </Suspense>
+    );
 }

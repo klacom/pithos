@@ -5,7 +5,7 @@ import { toast } from "sonner";
 import InputTextField from "@/components/technical-components/InputTextField";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
-import { getSystemConfig, saveSystemConfig, SystemConfig } from "./system-config-settings";
+import { getSystemConfig, saveSystemConfig, SystemConfig, getSessionPolicies, saveSessionPolicy, SessionPolicy } from "./system-config-settings";
 
 /**
  * System Configuration Page
@@ -15,6 +15,7 @@ import { getSystemConfig, saveSystemConfig, SystemConfig } from "./system-config
 const Page = () => {
     const [loading, setLoading] = useState(true);
     const [saving, setSaving] = useState(false);
+    const [policies, setPolicies] = useState<SessionPolicy[]>([]);
     const [config, setConfig] = useState<SystemConfig>({
         max_login_attempts: 3,
         min_char_length: 12,
@@ -26,17 +27,55 @@ const Page = () => {
 
     // Fetch initial configuration on load
     useEffect(() => {
-        const fetchConfig = async () => {
-            const { data, error } = await getSystemConfig();
-            if (error) {
-                toast.error(`Error loading configuration: ${error}`);
-            } else if (data) {
-                setConfig(data);
+        const fetchData = async () => {
+            const [configRes, policiesRes] = await Promise.all([
+                getSystemConfig(),
+                getSessionPolicies()
+            ]);
+
+            if (configRes.error) {
+                toast.error(`Error loading configuration: ${configRes.error}`);
+            } else if (configRes.data) {
+                setConfig(configRes.data);
             }
+
+            if (policiesRes.error) {
+                toast.error(`Error loading session policies: ${policiesRes.error}`);
+            } else if (policiesRes.data) {
+                setPolicies(policiesRes.data);
+            }
+
             setLoading(false);
         };
-        fetchConfig();
+        fetchData();
     }, []);
+
+    const handleSaveAllPolicies = async () => {
+        setSaving(true);
+        try {
+            const results = await Promise.all(
+                policies.map(policy => saveSessionPolicy(policy.role, policy.timeout_minutes))
+            );
+            
+            const allSuccess = results.every(res => res.success);
+            if (allSuccess) {
+                toast.success("All session policies updated successfully!");
+            } else {
+                toast.error("Some policies failed to update.");
+            }
+        } catch (error) {
+            toast.error("An error occurred while saving policies.");
+        } finally {
+            setSaving(false);
+        }
+    };
+
+    const handlePolicyChange = (role: string, value: string) => {
+        const timeout = parseInt(value) || 0;
+        setPolicies(prev => prev.map(p => 
+            p.role === role ? { ...p, timeout_minutes: timeout } : p
+        ));
+    };
 
     const handleSave = async () => {
         setSaving(true);
@@ -97,138 +136,152 @@ const Page = () => {
             <hr />
 
             {/* Content Container */}
-            <div className="flex gap-4 flex-col min-h-0 overflow-y-auto">
+            <div className="flex flex-col gap-6 min-h-0 overflow-y-auto">
+                <div className="flex flex-col gap-20 pt-4">
+                    {/* Login and Password Section */}
+                    <div className='flex gap-4 items-start'>
+                        <div className='flex flex-col gap-4 w-1/4 sticky top-0 bg-primary-foreground border border-muted rounded-lg p-4'>
+                            <h1 className='font-bold text-2xl'>Login and Password</h1>
+                            <p>Customize the login and password constraints for a better security.</p>
+                            <Button className='w-fit' onClick={handleSave} disabled={saving}>
+                                {saving ? "Saving..." : "Save"}
+                            </Button>
+                        </div>
 
-                {/* Login and Password */}
-                <div className='flex gap-4'>
-
-                    {/* Title */}
-                    <div className='flex flex-col gap-4 w-1/4 sticky top-0 h-fit bg-primary-foreground border border-muted rounded-lg p-4'>
-                        <h1 className='font-bold text-2xl'>Login and Password</h1>
-                        <p>Customize the login and password constraints for a better security.</p>
-                        <Button
-                            variant={"default"}
-                            className="w-fit self-end"
-                            onClick={handleSave}
-                            disabled={saving}
-                        >
-                            {saving ? "Saving..." : "Save"}
-                        </Button>
-                    </div>
-
-                    {/* Interactable Content */}
-                    <div className='flex flex-col gap-4 w-3/4'>
-
-                        {/* Login Attempts */}
-                        <div className='flex flex-col gap-4 w-full p-4 bg-primary-foreground border border-muted rounded-lg'>
-
-                            {/* Login Content */}
-
-                            <div className="flex flex-col gap-4">
-
-                                {/* Title */}
-                                <h2 className='font-semibold flex gap-2 text-xl items-center'>Login</h2>
+                        <div className='flex flex-col gap-4 w-3/4'>
+                            <div className='flex flex-col gap-4 w-full p-4 bg-primary-foreground border border-muted rounded-lg'>
+                                <h2 className='font-semibold text-xl'>Constraints</h2>
                                 <hr />
-
-                                {/* Login Attempts */}
-                                <Card className="flex flex-col gap-4 p-4">
-                                    <h3 className="font-medium">Login Attempts</h3>
-                                    <InputTextField
-                                        name="max_login_attempts"
-                                        type="number"
-                                        min={3}
-                                        value={config.max_login_attempts}
-                                        onChange={handleChange}
-                                        placeholder="Enter the maximum number of login attempts"
-                                    />
-                                    <p className="text-sm text-accent">Note: Minimum of 3 Login Attempts only</p>
-                                </Card>
-
-                                <hr />
-                            </div>
-
-                            {/* Password Content */}
-
-                            <div className="flex flex-col gap-4">
-
-                                {/* Title */}
-                                <h2 className='font-semibold flex gap-2 text-xl items-center'>Password</h2>
-                                <hr />
-
-                                {/* Compiled Content */}
                                 <div className="flex flex-col gap-4">
-                                    {/* Character Length */}
-                                    <Card className="flex flex-col gap-4 p-4">
-                                        <h3 className="font-medium">Character Length</h3>
-                                        <InputTextField
-                                            name="min_char_length"
-                                            type="number"
-                                            min={12}
-                                            value={config.min_char_length}
-                                            onChange={handleChange}
-                                            placeholder="Enter minimum length of password"
-                                        />
-                                        <p className="text-sm text-accent">Note: Minimum of at least 12 characters</p>
+                                    <Card className="flex flex-col gap-4 p-4 border border-muted shadow-none bg-background/50">
+                                        <div className='flex flex-col gap-1'>
+                                            <p className='text-sm font-medium'>Maximum Login Attempts</p>
+                                            <InputTextField
+                                                name="max_login_attempts"
+                                                type="number"
+                                                value={config.max_login_attempts}
+                                                onChange={handleChange}
+                                                placeholder="Enter maximum login attempts"
+                                            />
+                                            <p className='text-sm text-accent italic'>Note: Minimum of 3 Login Attempts only</p>
+                                        </div>
                                     </Card>
 
-                                    {/* Capital Letter */}
-                                    <Card className="flex flex-col gap-4 p-4">
-                                        <h3 className="font-medium">Capital Letters</h3>
-                                        <InputTextField
-                                            name="min_uppercase"
-                                            type="number"
-                                            min={1}
-                                            value={config.min_uppercase}
-                                            onChange={handleChange}
-                                            placeholder="Enter number of minimum capital letters"
-                                        />
-                                        <p className="text-sm text-accent">Note: Minimum of at least 1 capital letter</p>
+                                    <Card className="flex flex-col gap-4 p-4 border border-muted shadow-none bg-background/50">
+                                        <div className='flex flex-col gap-1'>
+                                            <p className='text-sm font-medium'>Minimum Character Length</p>
+                                            <InputTextField
+                                                name="min_char_length"
+                                                type="number"
+                                                value={config.min_char_length}
+                                                onChange={handleChange}
+                                                placeholder="Enter minimum password length"
+                                            />
+                                            <p className='text-sm text-accent italic'>Note: Passwords must be at least 12 characters</p>
+                                        </div>
                                     </Card>
 
-                                    {/* Small Letters */}
-                                    <Card className="flex flex-col gap-4 p-4">
-                                        <h3 className="font-medium">Small Letters</h3>
-                                        <InputTextField
-                                            name="min_lowercase"
-                                            type="number"
-                                            min={1}
-                                            value={config.min_lowercase}
-                                            onChange={handleChange}
-                                            placeholder="Enter number of minimum small letters"
-                                        />
-                                        <p className="text-sm text-accent">Note: Minimum of at least 1 small letter</p>
+                                    <Card className="flex flex-col gap-4 p-4 border border-muted shadow-none bg-background/50">
+                                        <div className='flex flex-col gap-1'>
+                                            <p className='text-sm font-medium'>Capital Letters</p>
+                                            <InputTextField
+                                                name="min_uppercase"
+                                                type="number"
+                                                value={config.min_uppercase}
+                                                onChange={handleChange}
+                                                placeholder="Enter minimum capital letters"
+                                            />
+                                            <p className='text-sm text-accent italic'>Note: Minimum of at least {config.min_uppercase} capital letter</p>
+                                        </div>
                                     </Card>
 
-                                    {/* Numbers */}
-                                    <Card className="flex flex-col gap-4 p-4">
-                                        <h3 className="font-medium">Numbers</h3>
-                                        <InputTextField
-                                            name="min_numbers"
-                                            type="number"
-                                            min={1}
-                                            value={config.min_numbers}
-                                            onChange={handleChange}
-                                            placeholder="Enter number of minimum numbers"
-                                        />
-                                        <p className="text-sm text-accent">Note: Minimum of at least 1 number</p>
+                                    <Card className="flex flex-col gap-4 p-4 border border-muted shadow-none bg-background/50">
+                                        <div className='flex flex-col gap-1'>
+                                            <p className='text-sm font-medium'>Small Letters</p>
+                                            <InputTextField
+                                                name="min_lowercase"
+                                                type="number"
+                                                value={config.min_lowercase}
+                                                onChange={handleChange}
+                                                placeholder="Enter minimum small letters"
+                                            />
+                                            <p className='text-sm text-accent italic'>Note: Minimum of at least {config.min_lowercase} small letter</p>
+                                        </div>
                                     </Card>
 
-                                    {/* Special Characters */}
-                                    <Card className="flex flex-col gap-4 p-4">
-                                        <h3 className="font-medium">Special Characters</h3>
-                                        <InputTextField
-                                            name="min_spec_chars"
-                                            type="number"
-                                            min={1}
-                                            value={config.min_spec_chars}
-                                            onChange={handleChange}
-                                            placeholder="Enter number of minimum special characters"
-                                        />
-                                        <p className="text-sm text-accent">Note: Minimum of at least 1 special character</p>
+                                    <Card className="flex flex-col gap-4 p-4 border border-muted shadow-none bg-background/50">
+                                        <div className='flex flex-col gap-1'>
+                                            <p className='text-sm font-medium'>Numbers</p>
+                                            <InputTextField
+                                                name="min_numbers"
+                                                type="number"
+                                                value={config.min_numbers}
+                                                onChange={handleChange}
+                                                placeholder="Enter minimum numbers"
+                                            />
+                                            <p className='text-sm text-accent italic'>Note: Minimum of at least {config.min_numbers} number</p>
+                                        </div>
+                                    </Card>
+
+                                    <Card className="flex flex-col gap-4 p-4 border border-muted shadow-none bg-background/50">
+                                        <div className='flex flex-col gap-1'>
+                                            <p className='text-sm font-medium'>Special Characters</p>
+                                            <InputTextField
+                                                name="min_spec_chars"
+                                                type="number"
+                                                value={config.min_spec_chars}
+                                                onChange={handleChange}
+                                                placeholder="Enter minimum special characters"
+                                            />
+                                            <p className='text-sm text-accent italic'>Note: Minimum of at least {config.min_spec_chars} special character</p>
+                                        </div>
                                     </Card>
                                 </div>
+                            </div>
+                        </div>
+                    </div>
 
+                    {/* Session Timeout Policies Section */}
+                        <div className='flex gap-4 items-start'>
+                            {/* Title */}
+                            <div className='flex flex-col gap-4 w-1/4 sticky top-0 bg-primary-foreground border border-muted rounded-lg p-4'>
+                                <h1 className='font-bold text-2xl'>Session Timeout</h1>
+                            <p className="text-sm">Set the inactivity timeout (in minutes) for each user role. A warning will be shown efore expiration depending on the timeout duration (e.g 5 minutes if session timeout is 30 minutes).</p>
+                            <Button className='w-fit' onClick={handleSaveAllPolicies} disabled={saving}>
+                                {saving ? "Saving..." : "Save All Policies"}
+                            </Button>
+                        </div>
+
+                        {/* Interactable Content */}
+                        <div className='flex flex-col gap-4 w-3/4'>
+                            <div className='flex flex-col gap-4 w-full p-4 bg-primary-foreground border border-muted rounded-lg'>
+                                <h2 className='font-semibold flex gap-2 text-xl items-center'>Role Policies</h2>
                                 <hr />
+                                <div className="flex flex-col gap-4">
+                                    {policies.map((policy) => (
+                                        <Card key={policy.role} className="flex flex-col gap-4 p-4 border border-muted shadow-none bg-background/50">
+                                            <div className="flex items-center justify-between gap-4">
+                                                <h3 className="font-bold text-lg capitalize">{policy.role} Policy</h3>
+                                            </div>
+                                            <div className="space-y-3">
+                                                <div className="space-y-1">
+                                                    <h3 className="font-medium">Inactivity Timeout (Minutes)</h3>
+                                                    <InputTextField
+                                                        type="number"
+                                                        min={1}
+                                                        value={policy.timeout_minutes}
+                                                        onChange={(e) => handlePolicyChange(policy.role, e.target.value)}
+                                                        placeholder={`Enter minutes for ${policy.role}`}
+                                                    />
+                                                </div>
+                                                <p className="text-sm text-accent">Note: User will be warned at {Math.max(1, policy.timeout_minutes - 5)} minutes.</p>
+                                            </div>
+                                        </Card>
+                                    ))}
+                                    {policies.length === 0 && (
+                                        <p className="text-muted-foreground py-8 text-center italic">No role policies found in the database.</p>
+                                    )}
+                                </div>
                             </div>
                         </div>
                     </div>

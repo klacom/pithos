@@ -2,6 +2,11 @@
 
 import { createAdminClient } from "@/lib/supabase/admin";
 
+export type SessionPolicy = {
+    role: string;
+    timeout_minutes: number;
+};
+
 export type SystemConfig = {
     max_login_attempts: number;
     min_char_length: number;
@@ -10,6 +15,66 @@ export type SystemConfig = {
     min_numbers: number;
     min_spec_chars: number;
 };
+
+/**
+ * Fetches the session policies for all roles.
+ * If no policies exist, it creates default ones.
+ */
+export async function getSessionPolicies() {
+    const admin = createAdminClient();
+    
+    // 1. Try to fetch existing policies using the correct column 'role'
+    const { data: existingData, error: fetchError } = await admin
+        .from('session_policies')
+        .select('role, timeout_minutes')
+        .order('role');
+
+    if (fetchError) {
+        console.error("Error fetching session policies:", fetchError.message);
+        return { data: null, error: fetchError.message };
+    }
+
+    // 2. If policies exist, return them
+    if (existingData && existingData.length > 0) {
+        return { data: existingData as SessionPolicy[], error: null };
+    }
+
+    // 3. If no policies exist, initialize with defaults
+    console.log("No session policies found. Initializing defaults...");
+    const defaultPolicies: SessionPolicy[] = [
+        { role: "admin", timeout_minutes: 30 },
+        { role: "seller", timeout_minutes: 30 },
+        { role: "buyer", timeout_minutes: 30 },
+    ];
+
+    const { data: insertedData, error: insertError } = await admin
+        .from('session_policies')
+        .upsert(defaultPolicies, { onConflict: 'role' })
+        .select();
+
+    if (insertError) {
+        console.error("Error initializing default session policies:", insertError.message);
+        return { data: null, error: insertError.message };
+    }
+
+    return { data: insertedData as SessionPolicy[], error: null };
+}
+
+/**
+ * Saves or updates a session policy for a specific role.
+ */
+export async function saveSessionPolicy(role: string, timeout_minutes: number) {
+    const admin = createAdminClient();
+    const { error } = await admin
+        .from('session_policies')
+        .upsert({ role, timeout_minutes }, { onConflict: 'role' });
+
+    if (error) {
+        console.error("Error saving session policy:", error.message);
+        return { success: false, error: error.message };
+    }
+    return { success: true };
+}
 
 /**
  * Fetches the system configuration using the admin client.

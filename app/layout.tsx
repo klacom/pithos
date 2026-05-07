@@ -43,7 +43,7 @@ export default function RootLayout({
                     disableTransitionOnChange
                 >
                     <AuthProvider>
-                        {/* <ActivityTrackerWrapper /> */}
+                        <ActivityTrackerWrapper />
                         {children}
                         <Toaster />
                     </AuthProvider>

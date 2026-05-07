@@ -64,31 +64,51 @@ export async function updateSession(request: NextRequest) {
 
     // Session Timeout logic starts here
 
-    if (uid && role && session) {
-        const { data: policy } = await supabaseAdmin
-            .from("session_policies")
-            .select("timeout_minutes")
-            .eq("role", role)
-            .single();
+    if (uid && role) {
+        if (session) {
+            // Get policy based on role (using 'role' column as per your database)
+            const { data: policy } = await supabaseAdmin
+                .from("session_policies")
+                .select("timeout_minutes")
+                .eq("role", role)
+                .single();
 
-        if (policy) {
+            const timeoutMinutes = policy?.timeout_minutes || 2; // Default to 2 mins
+            
             const now = new Date();
             const lastActivity = new Date(session.last_activity);
+            const lastSignIn = user.last_sign_in_at ? new Date(user.last_sign_in_at) : null;
+            
+            const diffMinutes = (now.getTime() - lastActivity.getTime()) / 60000;
 
-            const diffMinutes =
-                (now.getTime() - lastActivity.getTime()) / 60000;
-
-            if (diffMinutes > policy.timeout_minutes) {
-                return NextResponse.redirect(new URL("/auth/login", request.url));
+            if (diffMinutes > timeoutMinutes) {
+                // Check if user re-authenticated recently (more recent than our last_activity)
+                if (lastSignIn && lastSignIn > lastActivity) {
+                    // User just logged in, update our session tracker and continue
+                    await supabaseAdmin
+                        .from("user_sessions")
+                        .update({ last_activity: now.toISOString() })
+                        .eq("user_id", uid);
+                } else {
+                    // Truly inactive, logout the user
+                    await supabase.auth.signOut();
+                    return NextResponse.redirect(new URL("/auth/login", request.url));
+                }
+            } else {
+                // Sliding session: Update activity timestamp on page navigation
+                await supabaseAdmin
+                    .from("user_sessions")
+                    .update({ last_activity: now.toISOString() })
+                    .eq("user_id", uid);
             }
-
-            // sliding session update
+        } else {
+            // No session record exists for this authenticated user, create one
             await supabaseAdmin
                 .from("user_sessions")
-                .update({
-                    last_activity: now.toISOString(),
-                })
-                .eq("id", session.id);
+                .insert({ 
+                    user_id: uid, 
+                    last_activity: new Date().toISOString() 
+                });
         }
     }
 
