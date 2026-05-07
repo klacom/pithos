@@ -30,7 +30,6 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import {
     addToCart,
-    getProductViewerState,
     removeCartItem,
     toggleFavorite,
 } from "@/app/shop-actions";
@@ -119,7 +118,8 @@ function getFileIcon(fileName: string) {
 }
 
 export default function ProductDetailPage() {
-    const { product_id } = useParams<{ product_id: string }>();
+    const params = useParams<{ product_id: string }>();
+    const product_id = params?.product_id;
     const router = useRouter();
 
     const [product, setProduct] = useState<ProductData | null>(null);
@@ -136,7 +136,8 @@ export default function ProductDetailPage() {
     const [currentImageIndex, setCurrentImageIndex] = useState(0);
     const [isInCart, setIsInCart] = useState(false);
     const [isFavorite, setIsFavorite] = useState(false);
-    const [isBusy, setIsBusy] = useState<"cart" | "favorite" | "buy" | null>(null);
+    const [isOwner, setIsOwner] = useState(false);
+    const [isBusy, setIsBusy] = useState<"cart" | "favorite" | "buy" | "download" | null>(null);
     const [isLoading, setIsLoading] = useState(true);
 
     const currentImage = images[currentImageIndex] || "/pithos/PithosThumbnail.png";
@@ -175,10 +176,10 @@ export default function ProductDetailPage() {
             setIsLoading(true);
 
             try {
-                const [productRes, reviewsRes, viewerState] = await Promise.all([
+                const [productRes, reviewsRes, viewerStateRes] = await Promise.all([
                     fetch(`/api/product/${product_id}`),
                     fetch(`/api/product/${product_id}/reviews`),
-                    getProductViewerState(product_id),
+                    fetch(`/api/products/${product_id}/viewer-state`),
                 ]);
 
                 if (!productRes.ok) {
@@ -187,6 +188,7 @@ export default function ProductDetailPage() {
 
                 const productData = (await productRes.json()) as ProductPayload;
                 const reviewsData = reviewsRes.ok ? await reviewsRes.json() : null;
+                const viewerState = viewerStateRes.ok ? await viewerStateRes.json() : null;
 
                 const [sellerProductsRes, suggestedRes] = await Promise.all([
                     fetch(
@@ -215,6 +217,7 @@ export default function ProductDetailPage() {
                 setYouMightLike(suggestedData.products ?? []);
                 setIsInCart(Boolean(viewerState?.isInCart));
                 setIsFavorite(Boolean(viewerState?.isFavorite));
+                setIsOwner(Boolean(viewerState?.isOwner));
             } catch (error) {
                 console.error(error);
                 if (!ignore) {
@@ -260,6 +263,7 @@ export default function ProductDetailPage() {
 
     const emitCartUpdated = () => {
         window.dispatchEvent(new CustomEvent("cart-updated"));
+        // console.log("EVENT FIRED");
     };
 
     const handleAddToCart = async () => {
@@ -314,8 +318,35 @@ export default function ProductDetailPage() {
 
         setIsInCart(true);
         emitCartUpdated();
-        toast.success("Item is ready in your cart for checkout.");
-        router.push("/shopping-cart");
+        // Redirect directly to checkout with this product
+        router.push(`/shopping-cart/checkout?product_id=${product_id}`);
+    };
+
+    const handleDownload = async () => {
+        if (!product_id) return;
+
+        setIsBusy("download");
+        try {
+            const res = await fetch(`/api/products/${product_id}/download`);
+            const data = await res.json();
+
+            if (!res.ok) throw new Error(data.error);
+
+            // Trigger download using the signed URL
+            const a = document.createElement('a');
+            a.href = data.downloadUrl;
+            a.download = data.fileName;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+
+            toast.success("Download started!");
+        } catch (error: any) {
+            console.error("Download failed:", error);
+            toast.error(error.message || "Failed to download asset.");
+        } finally {
+            setIsBusy(null);
+        }
     };
 
     if (isLoading || !product) {
@@ -686,8 +717,8 @@ export default function ProductDetailPage() {
                                             opacity: currentImageIndex === index ? 1 : 0.68,
                                         }}
                                         className={`relative h-24 w-24 overflow-hidden rounded-2xl border ${currentImageIndex === index
-                                                ? "border-accent shadow-lg shadow-accent/20"
-                                                : "border-border"
+                                            ? "border-accent shadow-lg shadow-accent/20"
+                                            : "border-border"
                                             }`}
                                     >
                                         <Image
@@ -709,8 +740,8 @@ export default function ProductDetailPage() {
                                     onClick={() => setCurrentImageIndex(index)}
                                     aria-label={`Go to image ${index + 1}`}
                                     className={`h-2.5 rounded-full transition-all ${currentImageIndex === index
-                                            ? "w-8 bg-accent"
-                                            : "w-2.5 bg-muted-foreground/30"
+                                        ? "w-8 bg-accent"
+                                        : "w-2.5 bg-gray-500/30"
                                         }`}
                                 />
                             ))}
@@ -725,8 +756,8 @@ export default function ProductDetailPage() {
                                         key={tab}
                                         onClick={() => setActiveTab(tab)}
                                         className={`rounded-full px-4 py-2 text-sm font-medium transition ${activeTab === tab
-                                                ? "bg-accent text-accent-foreground"
-                                                : "text-muted-foreground hover:bg-muted"
+                                            ? "bg-accent text-accent-foreground"
+                                            : "text-muted-foreground hover:bg-muted"
                                             }`}
                                     >
                                         {tab}
@@ -813,30 +844,43 @@ export default function ProductDetailPage() {
                             </div>
 
                             <div className="grid gap-3">
-                                <Button
-                                    variant={isInCart ? "outline" : "red_default"}
-                                    className="h-12 w-full"
-                                    onClick={handleAddToCart}
-                                    disabled={isBusy !== null}
-                                >
-                                    <ShoppingCart size={18} />
-                                    {isBusy === "cart"
-                                        ? isInCart
-                                            ? "Removing..."
-                                            : "Adding..."
-                                        : isInCart
-                                            ? "Remove From Your Cart"
-                                            : "Add To Cart"}
-                                </Button>
+                                {isOwner ? (
+                                    <Button
+                                        className="h-12 w-full bg-emerald-600 hover:bg-emerald-700 text-white"
+                                        onClick={handleDownload}
+                                        disabled={isBusy !== null}
+                                    >
+                                        <Download size={18} />
+                                        {isBusy === "download" ? "Downloading..." : "Download Asset"}
+                                    </Button>
+                                ) : (
+                                    <>
+                                        <Button
+                                            variant={isInCart ? "outline" : "red_default"}
+                                            className="h-12 w-full"
+                                            onClick={handleAddToCart}
+                                            disabled={isBusy !== null}
+                                        >
+                                            <ShoppingCart size={18} />
+                                            {isBusy === "cart"
+                                                ? isInCart
+                                                    ? "Removing..."
+                                                    : "Adding..."
+                                                : isInCart
+                                                    ? "Remove From Your Cart"
+                                                    : "Add To Cart"}
+                                        </Button>
 
-                                <Button
-                                    className="h-12 w-full"
-                                    onClick={handleBuyNow}
-                                    disabled={isBusy !== null}
-                                >
-                                    <Zap size={18} />
-                                    {isBusy === "buy" ? "Preparing..." : "Buy Now"}
-                                </Button>
+                                        <Button
+                                            className="h-12 w-full"
+                                            onClick={handleBuyNow}
+                                            disabled={isBusy !== null}
+                                        >
+                                            <Zap size={18} />
+                                            {isBusy === "buy" ? "Preparing..." : "Buy Now"}
+                                        </Button>
+                                    </>
+                                )}
 
                                 <Button
                                     variant={isFavorite ? "red_ghost" : "outline"}

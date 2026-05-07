@@ -1,14 +1,10 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { ASSET_PHOTOS_BUCKET } from "@/lib/seller/asset-storage";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
 
-const phpFormatter = new Intl.NumberFormat("en-PH", {
-  style: "currency",
-  currency: "PHP",
-});
+// ─── Shared types ────────────────────────────────────────────────────────────
 
 export type CartListItem = {
   productId: string;
@@ -35,9 +31,7 @@ type MoveToFavoritesResult =
   | ActionErrorResult
   | { success: true; action: "added" | "removed"; cartCount: number };
 
-function formatPeso(amount: number) {
-  return amount <= 0 ? "Free" : phpFormatter.format(amount);
-}
+// ─── Internal helpers ─────────────────────────────────────────────────────────
 
 async function getCurrentUser() {
   const supabase = await createClient();
@@ -48,67 +42,6 @@ async function getCurrentUser() {
   return { supabase, user };
 }
 
-async function getRatingStats(productIds: string[]) {
-  if (productIds.length === 0) {
-    return new Map<string, { average: number; count: number }>();
-  }
-
-  const admin = createAdminClient();
-  const { data } = await admin
-    .from("reviews")
-    .select("product_id, rating")
-    .in("product_id", productIds);
-
-  const totals = new Map<string, { sum: number; count: number }>();
-
-  for (const review of data ?? []) {
-    const productId = String(review.product_id ?? "");
-    const rating = Number(review.rating ?? 0);
-
-    if (!productId || !Number.isFinite(rating)) continue;
-
-    const current = totals.get(productId) ?? { sum: 0, count: 0 };
-    current.sum += rating;
-    current.count += 1;
-    totals.set(productId, current);
-  }
-
-  return new Map(
-    Array.from(totals.entries()).map(([productId, value]) => [
-      productId,
-      {
-        average: value.count > 0 ? value.sum / value.count : 0,
-        count: value.count,
-      },
-    ]),
-  );
-}
-
-async function getThumbnailMap(productIds: string[]) {
-  const admin = createAdminClient();
-  const entries = await Promise.all(
-    productIds.map(async (productId) => {
-      const { data: thumbs } = await admin.storage
-        .from(ASSET_PHOTOS_BUCKET)
-        .list(`${productId}/photos/thumbnail`, {
-          limit: 20,
-          sortBy: { column: "name", order: "asc" },
-        });
-
-      const name = thumbs?.[0]?.name;
-      if (!name) return [productId, "/pithos/PithosThumbnail.png"] as const;
-
-      const { data } = admin.storage
-        .from(ASSET_PHOTOS_BUCKET)
-        .getPublicUrl(`${productId}/photos/thumbnail/${name}`);
-
-      return [productId, data.publicUrl || "/pithos/PithosThumbnail.png"] as const;
-    }),
-  );
-
-  return new Map(entries);
-}
-
 function refreshShopViews(productId?: string) {
   revalidatePath("/shopping-cart");
   if (productId) {
@@ -116,10 +49,57 @@ function refreshShopViews(productId?: string) {
   }
 }
 
-export async function getCartCount() {
-  const { supabase, user } = await getCurrentUser();
+// ─── Fetch helpers (thin wrappers around the GET API routes) ──────────────────
+// These are plain async functions — NOT server actions — and can be called from
+// client components or other server code.  They delegate all data fetching to
+// the corresponding route handlers under /api/cart/.
 
-  if (!user) return 0;
+export type SuggestedProduct = {
+  id: string;
+  title: string;
+  subtitle: string;
+  rating: number;
+  reviews: number;
+  author: string;
+  price: string;
+  imageSrc: string;
+  link: string;
+};
+
+// export async function getProductViewerState(productId: string) {
+//   const res = await fetch(
+//     `/api/cart/viewer-state?productId=${encodeURIComponent(productId)}`,
+//     { cache: "no-store" },
+//   );
+
+//   if (!res.ok) {
+//     return {
+//       isInCart: false,
+//       isFavorite: false,
+//       isOwner: false,
+//       isLoggedIn: false,
+//     };
+//   }
+
+//   return res.json() as Promise<{
+//     isInCart: boolean;
+//     isFavorite: boolean;
+//     isOwner: boolean;
+//     isLoggedIn: boolean;
+//   }>;
+// }
+
+// ─── Mutation server actions ──────────────────────────────────────────────────
+
+async function getCartCount() {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  if (!user) {
+    return 0;
+  }
 
   const { count } = await supabase
     .from("cart")
@@ -127,42 +107,6 @@ export async function getCartCount() {
     .eq("user_id", user.id);
 
   return count ?? 0;
-}
-
-export async function getProductViewerState(productId: string) {
-  const { supabase, user } = await getCurrentUser();
-
-  if (!user) {
-    return {
-      isInCart: false,
-      isFavorite: false,
-      cartCount: 0,
-      isLoggedIn: false,
-    };
-  }
-
-  const [{ data: cartRow }, { data: favoriteRow }, count] = await Promise.all([
-    supabase
-      .from("cart")
-      .select("product_id")
-      .eq("user_id", user.id)
-      .eq("product_id", productId)
-      .maybeSingle(),
-    supabase
-      .from("favorites")
-      .select("product_id")
-      .eq("user_id", user.id)
-      .eq("product_id", productId)
-      .maybeSingle(),
-    getCartCount(),
-  ]);
-
-  return {
-    isInCart: Boolean(cartRow),
-    isFavorite: Boolean(favoriteRow),
-    cartCount: count,
-    isLoggedIn: true,
-  };
 }
 
 export async function addToCart(productId: string): Promise<CartMutationResult> {
@@ -178,10 +122,7 @@ export async function addToCart(productId: string): Promise<CartMutationResult> 
   const { error } = await supabase
     .from("cart")
     .upsert(
-      {
-        user_id: user.id,
-        product_id: productId,
-      },
+      { user_id: user.id, product_id: productId },
       { onConflict: "user_id,product_id" },
     );
 
@@ -191,10 +132,9 @@ export async function addToCart(productId: string): Promise<CartMutationResult> 
 
   refreshShopViews(productId);
 
-  return {
-    success: true,
-    cartCount: await getCartCount(),
-  };
+  const count = await getCartCount();
+
+  return { success: true, cartCount: count };
 }
 
 export async function toggleFavorite(productId: string): Promise<FavoriteToggleResult> {
@@ -226,11 +166,7 @@ export async function toggleFavorite(productId: string): Promise<FavoriteToggleR
     }
 
     refreshShopViews(productId);
-
-    return {
-      success: true,
-      action: "removed" as const,
-    };
+    return { success: true, action: "removed" as const };
   }
 
   const { error } = await supabase.from("favorites").insert({
@@ -243,178 +179,7 @@ export async function toggleFavorite(productId: string): Promise<FavoriteToggleR
   }
 
   refreshShopViews(productId);
-
-  return {
-    success: true,
-    action: "added" as const,
-  };
-}
-
-export async function getCartItems(): Promise<CartListItem[]> {
-  const { supabase, user } = await getCurrentUser();
-
-  if (!user) return [];
-
-  const { data: cartRows, error: cartError } = await supabase
-    .from("cart")
-    .select("product_id, created_at")
-    .eq("user_id", user.id)
-    .order("created_at", { ascending: false });
-
-  if (cartError || !cartRows?.length) {
-    return [];
-  }
-
-  const productIds = [
-    ...new Set(cartRows.map((row) => String(row.product_id ?? "")).filter(Boolean)),
-  ];
-
-  const admin = createAdminClient();
-  const [productsResult, thumbnails] = await Promise.all([
-    admin
-      .from("products")
-      .select(
-        "product_id, product_name, product_description, price, seller_owner_id, product_status",
-      )
-      .in("product_id", productIds),
-    getThumbnailMap(productIds),
-  ]);
-
-  let products = productsResult.data ?? [];
-
-  // Fallback to per-product lookup so cart items still render even if the bulk query
-  // returns an incomplete result due to type/serialization quirks.
-  if (products.length < productIds.length) {
-    const fallbackProducts = await Promise.all(
-      productIds.map(async (productId) => {
-        const { data } = await admin
-          .from("products")
-          .select(
-            "product_id, product_name, product_description, price, seller_owner_id, product_status",
-          )
-          .eq("product_id", productId)
-          .maybeSingle();
-
-        return data;
-      }),
-    );
-
-    const mergedById = new Map<string, (typeof products)[number]>();
-    for (const product of products) {
-      if (product?.product_id != null) {
-        mergedById.set(String(product.product_id), product);
-      }
-    }
-    for (const product of fallbackProducts) {
-      if (product?.product_id != null) {
-        mergedById.set(String(product.product_id), product);
-      }
-    }
-    products = Array.from(mergedById.values());
-  }
-
-  const sellerIds = [
-    ...new Set(
-      products
-        .map((product) => String(product.seller_owner_id ?? ""))
-        .filter(Boolean),
-    ),
-  ];
-
-  const { data: sellers } =
-    sellerIds.length > 0
-      ? await admin.from("users").select("id, user_fullname").in("id", sellerIds)
-      : { data: [] };
-
-  const sellerById = new Map(
-    (sellers ?? []).map((seller) => [
-      String(seller.id),
-      String(seller.user_fullname ?? "Unknown seller"),
-    ]),
-  );
-
-  const productById = new Map(
-    products.map((product) => [String(product.product_id), product]),
-  );
-
-  return cartRows
-    .map((row) => {
-      const productId = String(row.product_id ?? "");
-      const product = productById.get(productId);
-      if (!product) return null;
-
-      const price = Number(product.price ?? 0);
-
-      return {
-        productId,
-        title: String(product.product_name ?? "Untitled asset"),
-        subtitle: String(product.product_description ?? "").trim(),
-        sellerName:
-          sellerById.get(String(product.seller_owner_id ?? "")) ?? "Unknown seller",
-        price,
-        priceLabel: formatPeso(price),
-        imageSrc: thumbnails.get(productId) ?? "/pithos/PithosThumbnail.png",
-        addedAt: String(row.created_at ?? new Date().toISOString()),
-        productStatus: String(product.product_status ?? "published"),
-      } satisfies CartListItem;
-    })
-    .filter((item): item is CartListItem => Boolean(item));
-}
-
-export async function getSuggestedProducts(limit = 4, excludeIds: string[] = []) {
-  const admin = createAdminClient();
-  const { data: products } = await admin
-    .from("products")
-    .select("product_id, product_name, product_description, price, seller_owner_id")
-    .eq("product_status", "published")
-    .limit(Math.max(limit + excludeIds.length, limit + 2));
-
-  const filtered = (products ?? [])
-    .filter((product) => !excludeIds.includes(String(product.product_id ?? "")))
-    .slice(0, limit);
-
-  const productIds = filtered.map((product) => String(product.product_id ?? ""));
-  const [ratingById, thumbnails] = await Promise.all([
-    getRatingStats(productIds),
-    getThumbnailMap(productIds),
-  ]);
-
-  const sellerIds = [
-    ...new Set(
-      filtered.map((product) => String(product.seller_owner_id ?? "")).filter(Boolean),
-    ),
-  ];
-
-  const { data: sellers } =
-    sellerIds.length > 0
-      ? await admin.from("users").select("id, user_fullname").in("id", sellerIds)
-      : { data: [] };
-
-  const sellerById = new Map(
-    (sellers ?? []).map((seller) => [
-      String(seller.id),
-      String(seller.user_fullname ?? "Unknown seller"),
-    ]),
-  );
-
-  return filtered.map((product) => {
-    const productId = String(product.product_id ?? "");
-    const rating = ratingById.get(productId);
-    const price = Number(product.price ?? 0);
-
-    return {
-      id: productId,
-      title: String(product.product_name ?? "Untitled Asset"),
-      subtitle: String(product.product_name ?? "Untitled Asset"),
-      rating: Number((rating?.average ?? 0).toFixed(1)),
-      reviews: rating?.count ?? 0,
-      author:
-        sellerById.get(String(product.seller_owner_id ?? "")) ?? "Unknown seller",
-      price: formatPeso(price),
-      imageSrc: thumbnails.get(productId) ?? "/pithos/PithosThumbnail.png",
-      link: `/product-detail/${productId}`,
-    };
-  });
+  return { success: true, action: "added" as const };
 }
 
 export async function removeCartItem(productId: string): Promise<CartMutationResult> {
@@ -436,10 +201,9 @@ export async function removeCartItem(productId: string): Promise<CartMutationRes
 
   refreshShopViews(productId);
 
-  return {
-    success: true,
-    cartCount: await getCartCount(),
-  };
+  const count = await getCartCount();
+
+  return { success: true, cartCount: count };
 }
 
 export async function clearCart(): Promise<CartMutationResult> {

@@ -19,8 +19,6 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import {
   clearCart,
-  getCartItems,
-  getSuggestedProducts,
   moveCartItemToFavorites,
   removeCartItem,
   type CartListItem,
@@ -44,7 +42,8 @@ export default function ShoppingCartPage() {
       setIsLoading(true);
 
       try {
-        const cartItems = await getCartItems();
+        const res = await fetch(`/api/cart/items`, { cache: "no-store" });
+        const cartItems: CartListItem[] = await res.json();
 
         if (ignore) return;
 
@@ -52,20 +51,30 @@ export default function ShoppingCartPage() {
         setSelectedIds(cartItems.map((item) => item.productId));
 
         try {
-          const recommendations = await getSuggestedProducts(
-            5,
-            cartItems.map((item) => item.productId),
+          const res = await fetch(
+            `/api/cart/suggestions?limit=5&exclude=${cartItems
+              .map((item) => item.productId)
+              .join(",")}`,
+            { cache: "no-store" }
           );
+
+          if (!res.ok) {
+            throw new Error("Failed to load suggestions");
+          }
+
+          const recommendations: any[] = await res.json();
 
           if (!ignore) {
             setSuggestedProducts(recommendations);
           }
         } catch (error) {
           console.error(error);
+
           if (!ignore) {
             setSuggestedProducts([]);
           }
         }
+
       } catch (error) {
         console.error(error);
         if (!ignore) {
@@ -104,6 +113,7 @@ export default function ShoppingCartPage() {
 
   const emitCartUpdated = () => {
     window.dispatchEvent(new CustomEvent("cart-updated"));
+    // console.log("EVENT FIRED");
   };
 
   const toggleItemSelection = (productId: string) => {
@@ -253,9 +263,8 @@ export default function ShoppingCartPage() {
                   return (
                     <Card
                       key={item.productId}
-                      className={`rounded-3xl border transition ${
-                        selected ? "border-accent/40 shadow-md" : "border-border"
-                      }`}
+                      className={`rounded-3xl border transition ${selected ? "border-accent/40 shadow-md" : "border-border"
+                        }`}
                     >
                       <div className="flex flex-col gap-4 p-5 md:flex-row md:items-center">
                         <div className="flex items-start gap-4">
@@ -405,7 +414,7 @@ export default function ShoppingCartPage() {
 
               {selectedCount > 0 ? (
                 <Button variant="red_default" className="h-12 w-full" asChild>
-                  <Link href="/shopping-cart/checkout">Proceed To Checkout</Link>
+                  <Link href={`/shopping-cart/checkout?ids=${selectedIds.join(',')}`}>Proceed To Checkout</Link>
                 </Button>
               ) : (
                 <Button variant="disabled" className="h-12 w-full">

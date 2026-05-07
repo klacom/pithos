@@ -1,6 +1,6 @@
 import { ReactNode } from "react";
 import SideBar from "./SideBar";
-import { Home, PackagePlus, Notebook, Settings } from "lucide-react";
+import { Home, PackagePlus, Notebook, Settings, WalletCards } from "lucide-react";
 import { createAudit } from "@/lib/supabase/create-audit";
 
 const SellerMainLayout = ({ children }: { children: ReactNode }) => {
@@ -21,6 +21,11 @@ const SellerMainLayout = ({ children }: { children: ReactNode }) => {
             href: "/seller/orders",
             label: "Orders",
             icon: <Notebook size={iconSize} />,
+        },
+        {
+            href: "/seller/payout-settings",
+            label: "Payout Settings",
+            icon: <WalletCards size={iconSize} />,
         },
     ];
 

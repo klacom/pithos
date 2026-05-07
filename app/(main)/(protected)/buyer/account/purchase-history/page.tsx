@@ -82,7 +82,7 @@ const page = () => {
             key: "products.product_name",
             label: "Product Name",
             sortable: false,
-            searchable : true,
+            searchable: true,
             render: (_: any, row: any) =>
                 row.products?.product_name ||
                 row.products?.name ||
@@ -109,7 +109,7 @@ const page = () => {
         {
             key: "status",
             label: "Status",
-            filterable : true,
+            filterable: true,
             render: (value: string) => (
                 <span className={getStatusColor(value)}>
                     {capitalizeFirstLetter(value)}
@@ -119,28 +119,58 @@ const page = () => {
         {
             key: "actions",
             label: "Actions",
-            render: (_: any, row: any) => (
-                <div className="flex flex-row gap-2 w-full justify-center">
-                    <Link href={`/buyer/account/purchase-history/${row.transaction_id}`}>
-                        <Button variant="default" className="sm">
-                            View Details
-                        </Button>
-                    </Link>
-                    <Button variant={"red_default"} className="sm">
-                        Download
-                    </Button>
-                </div>
+            render: (_: any, row: any) => {
+                const isCompleted = row.status === 'completed';
+                const productId = row.products?.product_id;
 
+                const handleDownload = async () => {
+                    if (!productId) return;
 
-            )
+                    try {
+                        const res = await fetch(`/api/products/${productId}/download`);
+                        const data = await res.json();
+
+                        if (!res.ok) throw new Error(data.error);
+
+                        const a = document.createElement('a');
+                        a.href = data.downloadUrl;
+                        a.download = data.fileName;
+                        document.body.appendChild(a);
+                        a.click();
+                        document.body.removeChild(a);
+                    } catch (err: any) {
+                        console.error("Download failed:", err);
+                        alert(err.message || "Failed to download asset.");
+                    }
+                };
+
+                return (
+                    <div className="flex flex-row gap-2 w-full justify-center">
+                        <Link href={`/buyer/account/purchase-history/${row.transaction_id}`}>
+                            <Button variant="outline" size="sm">
+                                View Details
+                            </Button>
+                        </Link>
+                        {isCompleted && (
+                            <Button
+                                variant={"red_default"}
+                                size="sm"
+                                onClick={handleDownload}
+                            >
+                                Download
+                            </Button>
+                        )}
+                    </div>
+                );
+            }
         }
     ];
 
     return (
         <div className='flex flex-col p-4 bg-background w-full gap-4 h-full justify-between overflow-y-auto'>
-            
+
             <div className="flex flex-col bg-background w-full gap-4 h-full">
-                
+
                 {/* Header */}
                 <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
                     <h1 className='font-bold text-3xl'>Purchase History</h1>
@@ -153,7 +183,7 @@ const page = () => {
 
                     <div className="w-full p-4 bg-primary-foreground border border-muted rounded-lg flex-1 flex flex-col justify-between h-full">
 
-                        <Suspense>     
+                        <Suspense>
                             <DataTable
                                 entity="transactions"
                                 columns={columns}

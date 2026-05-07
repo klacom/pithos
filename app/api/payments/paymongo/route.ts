@@ -1,4 +1,4 @@
-import { getBalance, listCharges } from '@/lib/payments/paymongo/paymongo';
+import { getBalance, listPayments, checkKeys, listWebhooks } from '@/lib/payments/paymongo/paymongo';
 import { NextRequest, NextResponse } from 'next/server';
 
 export async function GET(request: NextRequest) {
@@ -13,7 +13,7 @@ export async function GET(request: NextRequest) {
 
         if (type === 'transactions') {
             const limit = parseInt(searchParams.get('limit') || '50');
-            const charges = await listCharges(limit);
+            const charges = await listPayments(limit);
 
             // Transform PayMongo charges to match dashboard format
             const transactions = charges.data.map((charge: any) => {
@@ -34,20 +34,28 @@ export async function GET(request: NextRequest) {
         }
 
         if (type === 'stats') {
-            const charges = await listCharges(100);
+            const [charges, balance, keyStatus, webhooks] = await Promise.all([
+                listPayments(100),
+                getBalance(),
+                checkKeys(),
+                listWebhooks()
+            ]);
+
             const total = charges.data.length;
             const paid = charges.data.filter((c: any) => c.attributes.status === 'paid').length;
             const failed = charges.data.filter((c: any) => c.attributes.status === 'failed').length;
 
             const successRate = total > 0 ? ((paid / total) * 100).toFixed(2) : '0.00';
-            const balance = await getBalance();
 
             return NextResponse.json({
                 balance: `₱${balance.toFixed(2)}`,
                 successRate: `${successRate}%`,
-                todayTransactions: total, // This would need filtering by date for accuracy
+                todayTransactions: total, 
                 totalTransactions: total,
                 failedCount: failed,
+                keyStatus,
+                webhookStatus: webhooks.data.length > 0 ? 'Active' : 'Inactive',
+                webhookUrl: webhooks.data[0]?.attributes?.url || 'Not set'
             });
         }
 
