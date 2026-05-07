@@ -4,6 +4,7 @@ import Link from "next/link";
 import { Button } from "./ui/button";
 import { useAuth } from "./AuthProvider";
 import Image from "next/image";
+import { useEffect, useState } from "react";
 
 type Props = {
     role: "buyer" | "seller" | "admin" | null;
@@ -11,10 +12,15 @@ type Props = {
 
 export function AuthButton({ role }: Props) {
     const { user, loading } = useAuth();
+    const [mounted, setMounted] = useState(false);
+
+    useEffect(() => {
+        setMounted(true);
+    }, []);
 
     // Important: prevent hydration mismatch
-    if (loading) {
-        return null; // ← instead of skeleton
+    if (!mounted || loading) {
+        return <div className="h-8 w-8" />; // Placeholder with same dimensions as avatar
     }
 
     const avatar = user?.user_metadata?.avatar_url ?? "";

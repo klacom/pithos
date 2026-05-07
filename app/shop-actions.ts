@@ -1,5 +1,6 @@
 "use server";
 
+import { cache } from "react";
 import { revalidatePath } from "next/cache";
 import { ASSET_PHOTOS_BUCKET } from "@/lib/seller/asset-storage";
 import { createAdminClient } from "@/lib/supabase/admin";
@@ -20,6 +21,7 @@ export type CartListItem = {
   imageSrc: string;
   addedAt: string;
   productStatus: string;
+  isFavorite: boolean;
 };
 
 type ActionErrorResult = {
@@ -48,7 +50,7 @@ async function getCurrentUser() {
   return { supabase, user };
 }
 
-async function getRatingStats(productIds: string[]) {
+const getRatingStats = cache(async (productIds: string[]) => {
   if (productIds.length === 0) {
     return new Map<string, { average: number; count: number }>();
   }
@@ -82,16 +84,17 @@ async function getRatingStats(productIds: string[]) {
       },
     ]),
   );
-}
+});
 
-async function getThumbnailMap(productIds: string[]) {
+const getThumbnailMap = cache(async (productIds: string[]) => {
+  if (productIds.length === 0) return new Map<string, string>();
   const admin = createAdminClient();
   const entries = await Promise.all(
     productIds.map(async (productId) => {
       const { data: thumbs } = await admin.storage
         .from(ASSET_PHOTOS_BUCKET)
         .list(`${productId}/photos/thumbnail`, {
-          limit: 20,
+          limit: 1,
           sortBy: { column: "name", order: "asc" },
         });
 
@@ -107,7 +110,7 @@ async function getThumbnailMap(productIds: string[]) {
   );
 
   return new Map(entries);
-}
+});
 
 function refreshShopViews(productId?: string) {
   revalidatePath("/shopping-cart");
@@ -116,7 +119,7 @@ function refreshShopViews(productId?: string) {
   }
 }
 
-export async function getCartCount() {
+export const getCartCount = cache(async () => {
   const { supabase, user } = await getCurrentUser();
 
   if (!user) return 0;
@@ -127,7 +130,7 @@ export async function getCartCount() {
     .eq("user_id", user.id);
 
   return count ?? 0;
-}
+});
 
 export async function getProductViewerState(productId: string) {
   const { supabase, user } = await getCurrentUser();
@@ -233,10 +236,14 @@ export async function toggleFavorite(productId: string): Promise<FavoriteToggleR
     };
   }
 
-  const { error } = await supabase.from("favorites").insert({
-    user_id: user.id,
-    product_id: productId,
-  });
+  // Use upsert to be more robust against RLS quirks.
+  const { error } = await supabase.from("favorites").upsert(
+    {
+      user_id: user.id,
+      product_id: productId,
+    },
+    { onConflict: "user_id,product_id" },
+  );
 
   if (error) {
     return { success: false, error: error.message };
@@ -250,16 +257,22 @@ export async function toggleFavorite(productId: string): Promise<FavoriteToggleR
   };
 }
 
-export async function getCartItems(): Promise<CartListItem[]> {
+export async function getCartItems(filterIds?: string[]): Promise<CartListItem[]> {
   const { supabase, user } = await getCurrentUser();
 
   if (!user) return [];
 
-  const { data: cartRows, error: cartError } = await supabase
+  const query = supabase
     .from("cart")
     .select("product_id, created_at")
     .eq("user_id", user.id)
     .order("created_at", { ascending: false });
+
+  if (filterIds && filterIds.length > 0) {
+    query.in("product_id", filterIds);
+  }
+
+  const { data: cartRows, error: cartError } = await query;
 
   if (cartError || !cartRows?.length) {
     return [];
@@ -270,7 +283,7 @@ export async function getCartItems(): Promise<CartListItem[]> {
   ];
 
   const admin = createAdminClient();
-  const [productsResult, thumbnails] = await Promise.all([
+  const [productsResult, thumbnails, favoritesResult] = await Promise.all([
     admin
       .from("products")
       .select(
@@ -278,9 +291,17 @@ export async function getCartItems(): Promise<CartListItem[]> {
       )
       .in("product_id", productIds),
     getThumbnailMap(productIds),
+    supabase
+      .from("favorites")
+      .select("product_id")
+      .eq("user_id", user.id)
+      .in("product_id", productIds),
   ]);
 
   let products = productsResult.data ?? [];
+  const favoriteIds = new Set(
+    (favoritesResult.data ?? []).map((f) => String(f.product_id)),
+  );
 
   // Fallback to per-product lookup so cart items still render even if the bulk query
   // returns an incomplete result due to type/serialization quirks.
@@ -323,13 +344,20 @@ export async function getCartItems(): Promise<CartListItem[]> {
 
   const { data: sellers } =
     sellerIds.length > 0
-      ? await admin.from("users").select("id, user_fullname").in("id", sellerIds)
+      ? await admin
+          .from("users")
+          .select("id, user_fullname, user_email")
+          .in("id", sellerIds)
       : { data: [] };
 
   const sellerById = new Map(
     (sellers ?? []).map((seller) => [
       String(seller.id),
-      String(seller.user_fullname ?? "Unknown seller"),
+      String(
+        seller.user_fullname ||
+          seller.user_email?.split("@")[0] ||
+          "Pithos Publisher",
+      ),
     ]),
   );
 
@@ -350,12 +378,13 @@ export async function getCartItems(): Promise<CartListItem[]> {
         title: String(product.product_name ?? "Untitled asset"),
         subtitle: String(product.product_description ?? "").trim(),
         sellerName:
-          sellerById.get(String(product.seller_owner_id ?? "")) ?? "Unknown seller",
+          sellerById.get(String(product.seller_owner_id ?? "")) ?? "Pithos Publisher",
         price,
         priceLabel: formatPeso(price),
         imageSrc: thumbnails.get(productId) ?? "/pithos/PithosThumbnail.png",
         addedAt: String(row.created_at ?? new Date().toISOString()),
         productStatus: String(product.product_status ?? "published"),
+        isFavorite: favoriteIds.has(productId),
       } satisfies CartListItem;
     })
     .filter((item): item is CartListItem => Boolean(item));
@@ -387,13 +416,20 @@ export async function getSuggestedProducts(limit = 4, excludeIds: string[] = [])
 
   const { data: sellers } =
     sellerIds.length > 0
-      ? await admin.from("users").select("id, user_fullname").in("id", sellerIds)
+      ? await admin
+          .from("users")
+          .select("id, user_fullname, user_email")
+          .in("id", sellerIds)
       : { data: [] };
 
   const sellerById = new Map(
     (sellers ?? []).map((seller) => [
       String(seller.id),
-      String(seller.user_fullname ?? "Unknown seller"),
+      String(
+        seller.user_fullname ||
+          seller.user_email?.split("@")[0] ||
+          "Pithos Publisher",
+      ),
     ]),
   );
 
@@ -409,7 +445,7 @@ export async function getSuggestedProducts(limit = 4, excludeIds: string[] = [])
       rating: Number((rating?.average ?? 0).toFixed(1)),
       reviews: rating?.count ?? 0,
       author:
-        sellerById.get(String(product.seller_owner_id ?? "")) ?? "Unknown seller",
+        sellerById.get(String(product.seller_owner_id ?? "")) ?? "Pithos Publisher",
       price: formatPeso(price),
       imageSrc: thumbnails.get(productId) ?? "/pithos/PithosThumbnail.png",
       link: `/product-detail/${productId}`,
@@ -463,12 +499,29 @@ export async function clearCart(): Promise<CartMutationResult> {
 export async function moveCartItemToFavorites(
   productId: string,
 ): Promise<MoveToFavoritesResult> {
-  const favoriteResult = await toggleFavorite(productId);
+  const { supabase, user } = await getCurrentUser();
 
-  if (!favoriteResult.success) {
-    return favoriteResult;
+  if (!user) {
+    return {
+      success: false,
+      error: "You must be logged in to manage favorites.",
+    };
   }
 
+  // 1. Ensure it's in favorites (don't use toggle, use upsert/insert)
+  const { error: favError } = await supabase.from("favorites").upsert(
+    {
+      user_id: user.id,
+      product_id: productId,
+    },
+    { onConflict: "user_id,product_id" },
+  );
+
+  if (favError) {
+    return { success: false, error: favError.message };
+  }
+
+  // 2. Remove from cart
   const removeResult = await removeCartItem(productId);
 
   if (!removeResult.success) {
@@ -477,7 +530,7 @@ export async function moveCartItemToFavorites(
 
   return {
     success: true,
-    action: favoriteResult.action,
+    action: "added",
     cartCount: removeResult.cartCount,
   };
 }

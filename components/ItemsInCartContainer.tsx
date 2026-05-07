@@ -11,7 +11,7 @@ const ItemsInCartContainer = () => {
         {/* Header */}
 
         <div className={`flex flex-row gap-2 md:gap-${checkBoxAndOtherGap} items-center`}>
-            <input type="checkbox" name="" id="" className="h-5 w-5 focus:ring-accent checked:text-accent checked:border-accent rounded-sm"/>
+            <input type="checkbox" name="" id="" className="rounded"/>
             <h2 className="text-xl md:text-2xl font-semibold">2 items in your cart</h2>
         </div>
 

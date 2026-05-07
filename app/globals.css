@@ -90,4 +90,8 @@
   body {
     @apply bg-background text-foreground;
   }
+
+  input[type="checkbox"] {
+    @apply h-5 w-5 rounded border-border text-accent focus:ring-accent accent-accent;
+  }
 }

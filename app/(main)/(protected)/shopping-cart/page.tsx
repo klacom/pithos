@@ -21,8 +21,8 @@ import {
   clearCart,
   getCartItems,
   getSuggestedProducts,
-  moveCartItemToFavorites,
   removeCartItem,
+  toggleFavorite,
   type CartListItem,
 } from "@/app/shop-actions";
 
@@ -34,10 +34,12 @@ export default function ShoppingCartPage() {
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const [suggestedProducts, setSuggestedProducts] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [mounted, setMounted] = useState(false);
   const [busyItemId, setBusyItemId] = useState<string | null>(null);
   const [isClearing, setIsClearing] = useState(false);
 
   useEffect(() => {
+    setMounted(true);
     let ignore = false;
 
     async function loadCart() {
@@ -120,34 +122,66 @@ export default function ShoppingCartPage() {
 
   const handleRemoveItem = async (productId: string) => {
     setBusyItemId(productId);
+    // Optimistic update
+    const prevItems = [...items];
+    const prevSelectedIds = [...selectedIds];
+    setItems((current) => current.filter((item) => item.productId !== productId));
+    setSelectedIds((current) => current.filter((id) => id !== productId));
+
     const result = await removeCartItem(productId);
     setBusyItemId(null);
 
     if (!result.success) {
+      setItems(prevItems); // Revert
+      setSelectedIds(prevSelectedIds);
       toast.error(result.error);
       return;
     }
 
-    setItems((current) => current.filter((item) => item.productId !== productId));
-    setSelectedIds((current) => current.filter((id) => id !== productId));
     emitCartUpdated();
     toast.success("Removed from cart.");
   };
 
-  const handleMoveToFavorites = async (productId: string) => {
+  const handleToggleFavorite = async (productId: string) => {
+    const item = items.find((i) => i.productId === productId);
+    if (!item) return;
+
     setBusyItemId(productId);
-    const result = await moveCartItemToFavorites(productId);
+
+    // Optimistically toggle the favorite status in the UI
+    const nextFavoriteStatus = !item.isFavorite;
+    setItems((current) =>
+      current.map((i) =>
+        i.productId === productId ? { ...i, isFavorite: nextFavoriteStatus } : i,
+      ),
+    );
+
+    const result = await toggleFavorite(productId);
     setBusyItemId(null);
 
     if (!result.success) {
+      // Revert if the server call fails
+      setItems((current) =>
+        current.map((i) =>
+          i.productId === productId ? { ...i, isFavorite: !nextFavoriteStatus } : i,
+        ),
+      );
       toast.error(result.error);
       return;
     }
 
-    setItems((current) => current.filter((item) => item.productId !== productId));
-    setSelectedIds((current) => current.filter((id) => id !== productId));
+    // Ensure the state matches the actual server action (added or removed)
+    const isAdded = result.action === "added";
+    setItems((current) =>
+      current.map((i) =>
+        i.productId === productId ? { ...i, isFavorite: isAdded } : i,
+      ),
+    );
+
     emitCartUpdated();
-    toast.success("Moved to favorites.");
+    toast.success(
+      isAdded ? "Added to favorites." : "Removed from favorites.",
+    );
   };
 
   const handleClearCart = async () => {
@@ -168,8 +202,16 @@ export default function ShoppingCartPage() {
     toast.success("Cart cleared.");
   };
 
+  const formatCurrency = (amount: number) => {
+    if (!mounted) return "P0.00";
+    return new Intl.NumberFormat("en-PH", {
+      style: "currency",
+      currency: "PHP",
+    }).format(amount);
+  };
+
   return (
-    <main className="mb-10 flex flex-col gap-8 px-4 py-6 md:px-14 lg:px-24 xl:px-32 2xl:px-44">
+    <main className="mx-auto mb-10 flex max-w-screen-2xl flex-col gap-8 px-4 py-6 md:px-8 lg:px-12">
       <div className="flex flex-col gap-3">
         <Button
           variant="red_ghost"
@@ -188,51 +230,58 @@ export default function ShoppingCartPage() {
         </div>
       </div>
 
-      <div className="grid gap-6 xl:grid-cols-[minmax(0,1.45fr)_380px]">
+      <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_380px]">
         <div className="space-y-4">
           <Card className="overflow-hidden">
             <div className="flex flex-col gap-4 border-b bg-muted/40 p-5 md:flex-row md:items-center md:justify-between">
-              <label className="flex items-center gap-3">
+              <div className="flex items-center gap-3">
                 <input
                   ref={selectAllRef}
                   type="checkbox"
-                  className="h-5 w-5 rounded border"
+                  className="rounded"
                   checked={allSelected}
                   onChange={toggleSelectAll}
                 />
-                <div>
+                <label className="cursor-pointer" onClick={toggleSelectAll}>
                   <p className="font-semibold">
                     {selectedCount} of {totalItems} selected
                   </p>
-                  <p className="text-sm text-muted-foreground">
+                  <p className="text-xs text-muted-foreground">
                     Select individual items or use Select All to update totals dynamically.
                   </p>
-                </div>
-              </label>
+                </label>
+              </div>
 
-              <div className="flex flex-wrap gap-2">
+              <div className="flex items-center gap-4 shrink-0">
                 <Button
                   variant="outline"
+                  size="sm"
                   onClick={handleClearCart}
                   disabled={isClearing || items.length === 0}
+                  className="h-9"
                 >
                   <Trash2 size={16} />
                   {isClearing ? "Clearing..." : "Clear Cart"}
                 </Button>
                 {selectedCount > 0 ? (
-                  <Button variant="red_default" asChild>
-                    <Link href="/shopping-cart/checkout">Proceed To Checkout</Link>
+                  <Button variant="red_default" asChild className="h-9">
+                    <Link
+                      href={`/shopping-cart/checkout?ids=${selectedIds.join(",")}`}
+                    >
+                      Proceed To Checkout
+                    </Link>
                   </Button>
                 ) : (
-                  <Button variant="disabled">Proceed To Checkout</Button>
+                  <Button variant="disabled" className="h-9">Proceed To Checkout</Button>
                 )}
               </div>
             </div>
 
-            <div className="space-y-4 p-5">
+            <div className="min-h-[500px] space-y-4 p-5">
               {isLoading ? (
-                <div className="rounded-2xl border border-dashed p-6 text-muted-foreground">
-                  Loading cart items...
+                <div className="flex h-[400px] flex-col items-center justify-center space-y-4 rounded-3xl border border-dashed text-muted-foreground">
+                  <div className="h-10 w-10 animate-spin rounded-full border-4 border-accent border-t-transparent" />
+                  <p className="animate-pulse">Loading your cart items...</p>
                 </div>
               ) : items.length === 0 ? (
                 <div className="rounded-3xl border border-dashed p-8 text-center">
@@ -258,10 +307,10 @@ export default function ShoppingCartPage() {
                       }`}
                     >
                       <div className="flex flex-col gap-4 p-5 md:flex-row md:items-center">
-                        <div className="flex items-start gap-4">
+                        <div className="flex items-center gap-4">
                           <input
                             type="checkbox"
-                            className="mt-5 h-5 w-5 rounded border"
+                            className="rounded"
                             checked={selected}
                             onChange={() => toggleItemSelection(item.productId)}
                           />
@@ -320,20 +369,23 @@ export default function ShoppingCartPage() {
 
                         <div className="flex shrink-0 flex-row gap-2 md:flex-col">
                           <Button
-                            variant="outline"
-                            onClick={() => handleMoveToFavorites(item.productId)}
-                            disabled={isBusy}
+                            variant={item.isFavorite ? "red_ghost" : "outline"}
+                            onClick={() => handleToggleFavorite(item.productId)}
+                            disabled={busyItemId === item.productId}
                           >
-                            <Heart size={16} />
-                            Save
+                            <Heart
+                              size={16}
+                              className={item.isFavorite ? "fill-current" : ""}
+                            />
+                            {item.isFavorite ? "Favorited" : "Favorite"}
                           </Button>
                           <Button
                             variant="red_ghost"
                             onClick={() => handleRemoveItem(item.productId)}
-                            disabled={isBusy}
+                            disabled={busyItemId === item.productId}
                           >
                             <Trash2 size={16} />
-                            {isBusy ? "Working..." : "Remove"}
+                            {busyItemId === item.productId ? "Working..." : "Remove"}
                           </Button>
                         </div>
                       </div>
@@ -345,16 +397,13 @@ export default function ShoppingCartPage() {
           </Card>
         </div>
 
-        <aside className="space-y-4 xl:sticky xl:top-20 xl:h-fit">
+        <aside className="space-y-4 lg:sticky lg:top-24 lg:h-fit">
           <Card className="rounded-3xl p-6">
             <div className="space-y-6">
               <div>
                 <p className="text-sm text-muted-foreground">Selected subtotal</p>
                 <h2 className="mt-2 text-3xl font-bold">
-                  {new Intl.NumberFormat("en-PH", {
-                    style: "currency",
-                    currency: "PHP",
-                  }).format(subtotal)}
+                  {formatCurrency(subtotal)}
                 </h2>
                 <p className="mt-2 text-sm text-muted-foreground">
                   {selectedCount} selected item{selectedCount === 1 ? "" : "s"} out of{" "}
@@ -395,10 +444,7 @@ export default function ShoppingCartPage() {
                 <div className="flex items-center justify-between text-base font-semibold">
                   <span>Total</span>
                   <span>
-                    {new Intl.NumberFormat("en-PH", {
-                      style: "currency",
-                      currency: "PHP",
-                    }).format(subtotal)}
+                    {formatCurrency(subtotal)}
                   </span>
                 </div>
               </div>

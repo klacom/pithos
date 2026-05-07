@@ -6,7 +6,7 @@ import { Button } from "./ui/button";
 const CartItem = ({checkBoxAndOtherGap} : {checkBoxAndOtherGap : Number}) => {
   return (
     <div className={`flex flex-row gap-2 md:gap-${checkBoxAndOtherGap} items-center justify-between`}>
-        <input type="checkbox" name="" id="" className="h-5 w-5 focus:ring-accent checked:text-accent checked:border-accent rounded-sm border-white"/>
+        <input type="checkbox" name="" id="" className="rounded"/>
 
         {/* Image Thumbnail */}
 

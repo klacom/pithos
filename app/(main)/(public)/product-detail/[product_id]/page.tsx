@@ -90,10 +90,10 @@ function formatPeso(price: number) {
     return price <= 0 ? "Free" : phpFormatter.format(price);
 }
 
-function renderStars(rating: number, size = 16) {
+function renderStars(rating: number, size = 16, prefix = "star") {
     return Array.from({ length: 5 }).map((_, index) => (
         <Star
-            key={`${rating}-${index}`}
+            key={`${prefix}-${index}`}
             size={size}
             className={
                 index < Math.round(rating)
@@ -134,12 +134,41 @@ export default function ProductDetailPage() {
     const [moreFromSeller, setMoreFromSeller] = useState<RelatedProduct[]>([]);
     const [youMightLike, setYouMightLike] = useState<RelatedProduct[]>([]);
     const [currentImageIndex, setCurrentImageIndex] = useState(0);
+    const [isAutoPlaying, setIsAutoPlaying] = useState(true);
     const [isInCart, setIsInCart] = useState(false);
     const [isFavorite, setIsFavorite] = useState(false);
     const [isBusy, setIsBusy] = useState<"cart" | "favorite" | "buy" | null>(null);
     const [isLoading, setIsLoading] = useState(true);
 
     const currentImage = images[currentImageIndex] || "/pithos/PithosThumbnail.png";
+
+    const autoPlayTimerRef = useMemo(() => ({ current: null as any }), []);
+    const resumeTimerRef = useMemo(() => ({ current: null as any }), []);
+
+    const stopAutoPlayTemporarily = () => {
+        if (autoPlayTimerRef.current) window.clearInterval(autoPlayTimerRef.current);
+        if (resumeTimerRef.current) window.clearTimeout(resumeTimerRef.current);
+
+        setIsAutoPlaying(false);
+        resumeTimerRef.current = window.setTimeout(() => {
+            setIsAutoPlaying(true);
+        }, 15000); // Stop for 15 seconds after manual interaction
+    };
+
+    const handleThumbnailClick = (index: number) => {
+        setCurrentImageIndex(index);
+        stopAutoPlayTemporarily();
+    };
+
+    const handlePrevImage = () => {
+        setCurrentImageIndex((prev) => (prev === 0 ? images.length - 1 : prev - 1));
+        stopAutoPlayTemporarily();
+    };
+
+    const handleNextImage = () => {
+        setCurrentImageIndex((prev) => (prev === images.length - 1 ? 0 : prev + 1));
+        stopAutoPlayTemporarily();
+    };
 
     const parsedDescription = useMemo(() => {
         const description = product?.product_description?.trim() ?? "";
@@ -235,28 +264,22 @@ export default function ProductDetailPage() {
     }, [product_id]);
 
     useEffect(() => {
-        if (images.length <= 1) return;
+        if (images.length <= 1 || !isAutoPlaying) return;
 
-        const timer = window.setInterval(() => {
+        autoPlayTimerRef.current = window.setInterval(() => {
             setCurrentImageIndex((prev) => (prev + 1) % images.length);
         }, 5000);
 
-        return () => window.clearInterval(timer);
-    }, [images]);
+        return () => {
+            if (autoPlayTimerRef.current) window.clearInterval(autoPlayTimerRef.current);
+        };
+    }, [images, isAutoPlaying, autoPlayTimerRef]);
 
     useEffect(() => {
         if (currentImageIndex >= images.length) {
             setCurrentImageIndex(0);
         }
     }, [currentImageIndex, images.length]);
-
-    const handlePrevImage = () => {
-        setCurrentImageIndex((prev) => (prev === 0 ? images.length - 1 : prev - 1));
-    };
-
-    const handleNextImage = () => {
-        setCurrentImageIndex((prev) => (prev === images.length - 1 ? 0 : prev + 1));
-    };
 
     const emitCartUpdated = () => {
         window.dispatchEvent(new CustomEvent("cart-updated"));
@@ -266,35 +289,44 @@ export default function ProductDetailPage() {
         if (!product_id) return;
 
         setIsBusy("cart");
-        const result = isInCart
+        // Optimistic update
+        const prevInCart = isInCart;
+        setIsInCart(!prevInCart);
+
+        const result = prevInCart
             ? await removeCartItem(product_id)
             : await addToCart(product_id);
         setIsBusy(null);
 
         if (!result.success) {
+            setIsInCart(prevInCart); // Revert
             toast.error(result.error);
             return;
         }
 
-        setIsInCart(!isInCart);
         emitCartUpdated();
-        toast.success(isInCart ? "Removed from your cart." : "Added to cart.");
+        toast.success(prevInCart ? "Removed from your cart." : "Added to cart.");
     };
 
     const handleToggleFavorite = async () => {
         if (!product_id) return;
 
         setIsBusy("favorite");
+        // Optimistic update
+        const prevFavorite = isFavorite;
+        setIsFavorite(!prevFavorite);
+
         const result = await toggleFavorite(product_id);
         setIsBusy(null);
 
         if (!result.success) {
+            setIsFavorite(prevFavorite); // Revert
             toast.error(result.error);
             return;
         }
 
         const nextValue = result.action === "added";
-        setIsFavorite(nextValue);
+        setIsFavorite(nextValue); // Sync with actual result
         toast.success(
             nextValue ? "Added to favorites." : "Removed from favorites.",
         );
@@ -314,8 +346,7 @@ export default function ProductDetailPage() {
 
         setIsInCart(true);
         emitCartUpdated();
-        toast.success("Item is ready in your cart for checkout.");
-        router.push("/shopping-cart");
+        router.push(`/shopping-cart/checkout?ids=${product_id}`);
     };
 
     if (isLoading || !product) {
@@ -345,26 +376,32 @@ export default function ProductDetailPage() {
 
                         <Card className="p-6">
                             <div className="space-y-4">
-                                <div className="flex items-center justify-between gap-4 border-b pb-3">
-                                    <span className="text-sm text-muted-foreground">Category</span>
-                                    <span className="font-medium">{parsedDescription.category}</span>
-                                </div>
-                                <div className="flex items-center justify-between gap-4 border-b pb-3">
-                                    <span className="text-sm text-muted-foreground">Published</span>
-                                    <span className="font-medium">
-                                        {new Date(product.created_at).toLocaleDateString("en-PH", {
-                                            month: "short",
-                                            day: "numeric",
-                                            year: "numeric",
-                                        })}
-                                    </span>
-                                </div>
-                                <div className="flex items-center justify-between gap-4 border-b pb-3">
-                                    <span className="text-sm text-muted-foreground">Status</span>
-                                    <span className="font-medium capitalize">
-                                        {product.product_status || "published"}
-                                    </span>
-                                </div>
+                                    <div className="flex items-center justify-between gap-4 border-b pb-3">
+                                        <span className="text-sm text-muted-foreground">Category</span>
+                                        <span className="font-medium">{parsedDescription.category}</span>
+                                    </div>
+                                    <div className="flex items-center justify-between gap-4 border-b pb-3">
+                                        <span className="text-sm text-muted-foreground">Published</span>
+                                        <span className="font-medium">
+                                            {new Date(product.created_at).toLocaleDateString("en-PH", {
+                                                month: "short",
+                                                day: "numeric",
+                                                year: "numeric",
+                                            })}
+                                        </span>
+                                    </div>
+                                    <div className="flex items-center justify-between gap-4 border-b pb-3">
+                                        <span className="text-sm text-muted-foreground">Status</span>
+                                        <span className="font-medium capitalize">
+                                            {product.product_status || "published"}
+                                        </span>
+                                    </div>
+                                    <div className="flex items-center justify-between gap-4 border-b pb-3">
+                                        <span className="text-sm text-muted-foreground">Publisher</span>
+                                        <span className="font-medium">
+                                            {seller?.user_fullname || seller?.user_email?.split("@")[0] || "Pithos Publisher"}
+                                        </span>
+                                    </div>
                                 <div className="space-y-3 pt-1">
                                     <span className="text-sm text-muted-foreground">Highlights</span>
                                     <div className="flex flex-wrap gap-2">
@@ -468,7 +505,7 @@ export default function ProductDetailPage() {
                                             {avgRating.toFixed(1)}
                                         </span>
                                         <div>
-                                            <div className="flex gap-1">{renderStars(avgRating, 18)}</div>
+                                            <div className="flex gap-1">{renderStars(avgRating, 18, "community")}</div>
                                             <p className="mt-1 text-sm text-muted-foreground">
                                                 Based on {reviewCount} review{reviewCount === 1 ? "" : "s"}
                                             </p>
@@ -483,8 +520,8 @@ export default function ProductDetailPage() {
 
                         <div className="grid gap-4">
                             {reviews.length > 0 ? (
-                                reviews.map((review) => (
-                                    <Card key={review.id} className="p-6">
+                                reviews.map((review, index) => (
+                                    <Card key={review.id || `review-${index}`} className="p-6">
                                         <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
                                             <div className="flex gap-4">
                                                 <div className="flex h-12 w-12 items-center justify-center rounded-full bg-accent/10 font-semibold text-accent">
@@ -496,7 +533,7 @@ export default function ProductDetailPage() {
                                                     </p>
                                                     <div className="mt-1 flex items-center gap-2">
                                                         <div className="flex gap-1">
-                                                            {renderStars(review.rating, 14)}
+                                                            {renderStars(review.rating, 14, `review-${review.id || index}`)}
                                                         </div>
                                                         <span className="text-sm text-muted-foreground">
                                                             {review.rating}/5
@@ -532,12 +569,16 @@ export default function ProductDetailPage() {
                         <Card className="p-6">
                             <div className="flex flex-col gap-5 md:flex-row md:items-center">
                                 <div className="flex h-20 w-20 items-center justify-center rounded-3xl bg-accent/10 text-2xl font-bold text-accent">
-                                    {(seller?.user_fullname || "PU").slice(0, 2).toUpperCase()}
+                                    {(seller?.user_fullname || seller?.user_email || "PU")
+                                        .slice(0, 2)
+                                        .toUpperCase()}
                                 </div>
                                 <div className="space-y-2">
                                     <div className="flex items-center gap-2">
                                         <h3 className="text-2xl font-bold">
-                                            {seller?.user_fullname || "Unknown Publisher"}
+                                            {seller?.user_fullname ||
+                                                seller?.user_email?.split("@")[0] ||
+                                                "Pithos Publisher"}
                                         </h3>
                                         <BadgeCheck className="text-accent" size={18} />
                                     </div>
@@ -610,8 +651,8 @@ export default function ProductDetailPage() {
                 Go Back
             </Button>
 
-            <div className="grid gap-8 xl:grid-cols-[minmax(0,1.3fr)_420px]">
-                <div className="space-y-8">
+            <div className="grid gap-8 lg:grid-cols-[1fr] xl:grid-cols-[minmax(0,1.3fr)_400px]">
+                <div className="flex flex-col gap-8 min-w-0">
                     <Card className="overflow-hidden border-none bg-transparent shadow-none">
                         <div className="relative overflow-hidden rounded-[28px] border bg-black">
                             <div className="absolute inset-0">
@@ -625,14 +666,14 @@ export default function ProductDetailPage() {
 
                             <div className="absolute inset-0 bg-gradient-to-b from-black/20 via-black/35 to-black/60" />
 
-                            <div className="relative aspect-[16/10] overflow-hidden">
+                            <div className="relative aspect-video sm:aspect-[16/10] overflow-hidden">
                                 <AnimatePresence mode="wait">
                                     <motion.div
                                         key={currentImage}
                                         initial={{ opacity: 0, scale: 1.03, x: 20 }}
                                         animate={{ opacity: 1, scale: 1, x: 0 }}
                                         exit={{ opacity: 0, scale: 0.98, x: -20 }}
-                                        transition={{ duration: 0.45, ease: "easeOut" }}
+                                        transition={{ duration: 0.3, ease: "easeOut" }}
                                         className="absolute inset-0"
                                     >
                                         <Image
@@ -641,6 +682,8 @@ export default function ProductDetailPage() {
                                             alt={product.product_name}
                                             className="object-contain"
                                             sizes="(max-width: 1280px) 100vw, 900px"
+                                            priority
+                                            unoptimized
                                         />
                                     </motion.div>
                                 </AnimatePresence>
@@ -677,7 +720,7 @@ export default function ProductDetailPage() {
                             {images.map((image, index) => (
                                 <button
                                     key={`${image}-${index}`}
-                                    onClick={() => setCurrentImageIndex(index)}
+                                    onClick={() => handleThumbnailClick(index)}
                                     className="shrink-0"
                                 >
                                     <motion.div
@@ -695,7 +738,8 @@ export default function ProductDetailPage() {
                                             src={image}
                                             alt={`${product.product_name} preview ${index + 1}`}
                                             className="object-cover"
-                                            quality={20}
+                                            quality={60}
+                                            unoptimized
                                         />
                                     </motion.div>
                                 </button>
@@ -706,11 +750,11 @@ export default function ProductDetailPage() {
                             {images.map((_, index) => (
                                 <button
                                     key={`dot-${index}`}
-                                    onClick={() => setCurrentImageIndex(index)}
+                                    onClick={() => handleThumbnailClick(index)}
                                     aria-label={`Go to image ${index + 1}`}
                                     className={`h-2.5 rounded-full transition-all ${currentImageIndex === index
                                             ? "w-8 bg-accent"
-                                            : "w-2.5 bg-muted-foreground/30"
+                                            : "w-2.5 bg-muted-foreground/60"
                                         }`}
                                 />
                             ))}
@@ -734,7 +778,7 @@ export default function ProductDetailPage() {
                                 ))}
                             </div>
                         </div>
-                        <div className="p-5 md:p-6">{renderTabContent()}</div>
+                        <div className="p-5 md:p-6 min-h-[450px]">{renderTabContent()}</div>
                     </Card>
 
                     <section className="space-y-4">
@@ -744,7 +788,7 @@ export default function ProductDetailPage() {
                             </h2>
                         </div>
                         {moreFromSeller.length > 0 ? (
-                            <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-4">
+                            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
                                 {moreFromSeller.map((item) => (
                                     <ProductCard key={item.id} {...item} />
                                 ))}
@@ -761,7 +805,7 @@ export default function ProductDetailPage() {
                             <h2 className="text-2xl font-bold">You Might Like</h2>
                         </div>
                         {youMightLike.length > 0 ? (
-                            <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-4">
+                            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
                                 {youMightLike.map((item) => (
                                     <ProductCard key={item.id} {...item} />
                                 ))}
@@ -785,12 +829,12 @@ export default function ProductDetailPage() {
                                 {product.product_name}
                             </h1>
                             <p className="mt-3 text-muted-foreground">
-                                by {seller?.user_fullname || "Unknown Publisher"}
+                                by {seller?.user_fullname || seller?.user_email?.split("@")[0] || "Pithos Publisher"}
                             </p>
 
                             <div className="mt-5 flex flex-wrap items-center gap-4">
                                 <div className="flex items-center gap-2">
-                                    <div className="flex gap-1">{renderStars(avgRating)}</div>
+                                    <div className="flex gap-1">{renderStars(avgRating, 16, "sidebar")}</div>
                                     <span className="font-semibold">{avgRating.toFixed(1)}</span>
                                 </div>
                                 <span className="text-sm text-muted-foreground">

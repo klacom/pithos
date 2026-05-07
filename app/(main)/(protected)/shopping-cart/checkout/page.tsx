@@ -1,22 +1,61 @@
 "use client";
 
-import { useState } from "react";
-import { ArrowLeft } from "lucide-react";
+import { useEffect, useState } from "react";
+import { ArrowLeft, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import Image from "next/image";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
+import { getCartItems, type CartListItem } from "@/app/shop-actions";
 
 export default function CheckoutPage() {
     const [selectedPayment, setSelectedPayment] = useState<string | null>(null);
+    const [items, setItems] = useState<CartListItem[]>([]);
+    const [isLoading, setIsLoading] = useState(true);
     const router = useRouter();
+    const searchParams = useSearchParams();
+    const idsString = searchParams.get("ids");
+
+    useEffect(() => {
+        const fetchItems = async () => {
+            setIsLoading(true);
+            try {
+                const ids = idsString ? idsString.split(",") : [];
+                if (ids.length === 0) {
+                    router.push("/shopping-cart");
+                    return;
+                }
+                const cartItems = await getCartItems(ids);
+                if (cartItems.length === 0) {
+                    router.push("/shopping-cart");
+                    return;
+                }
+                setItems(cartItems);
+            } catch (error) {
+                console.error("Failed to fetch checkout items:", error);
+            } finally {
+                setIsLoading(false);
+            }
+        };
+
+        fetchItems();
+    }, [idsString, router]);
+
+    const total = items.reduce((sum, item) => sum + item.price, 0);
 
     const handlePlaceOrder = () => {
         router.push("/shopping-cart/checkout/success");
     };
+
+    if (isLoading) {
+        return (
+            <div className="flex min-h-[calc(100vh-200px)] items-center justify-center">
+                <Loader2 className="h-8 w-8 animate-spin text-accent" />
+            </div>
+        );
+    }
 
     return (
         <main className="flex flex-col gap-8 min-h-[calc(100vh-200px)] mb-8">
@@ -173,29 +212,29 @@ export default function CheckoutPage() {
                             <h2 className="font-bold text-lg uppercase">Order Summary</h2>
                             
                             <div className="flex flex-col gap-4">
-                                {/* Item 1 */}
-                                <div className="flex gap-4 items-center">
-                                    <Image src="/sample-pics/96d4a866c211c472cbef2b19a1de1828.jpg" alt="Item" width={60} height={60} className="rounded-md object-cover aspect-square" />
-                                    <div className="flex-1">
-                                        <h3 className="font-semibold text-sm line-clamp-1">Stellar Sci-Fi Pack: Male and Female Character</h3>
-                                        <p className="text-xs text-muted-foreground">Lark Bolotaolo</p>
+                                {items.map((item) => (
+                                    <div key={item.productId} className="flex gap-4 items-center">
+                                        <div className="relative h-[60px] w-[60px] shrink-0 overflow-hidden rounded-md border">
+                                            <Image 
+                                                src={item.imageSrc} 
+                                                alt={item.title} 
+                                                fill 
+                                                className="object-cover aspect-square"
+                                                unoptimized 
+                                            />
+                                        </div>
+                                        <div className="flex-1 min-w-0">
+                                            <h3 className="font-semibold text-sm line-clamp-1">{item.title}</h3>
+                                            <p className="text-xs text-muted-foreground">{item.sellerName}</p>
+                                        </div>
+                                        <span className="font-semibold text-sm">{item.priceLabel}</span>
                                     </div>
-                                    <span className="font-semibold text-sm">$67.00</span>
-                                </div>
-                                {/* Item 2 */}
-                                <div className="flex gap-4 items-center">
-                                    <Image src="/sample-pics/427910050_10160735009917626_224300477084609345_n.jpg" alt="Item" width={60} height={60} className="rounded-md object-cover aspect-square" />
-                                    <div className="flex-1">
-                                        <h3 className="font-semibold text-sm line-clamp-1">Modular Anime Main Characters</h3>
-                                        <p className="text-xs text-muted-foreground">Lark Bolotaolo</p>
-                                    </div>
-                                    <span className="font-semibold text-sm">$67.00</span>
-                                </div>
+                                ))}
                             </div>
 
                             <div className="flex justify-between items-center pt-4 border-t">
                                 <span className="font-semibold">Total</span>
-                                <span className="font-bold text-lg">$134.00</span>
+                                <span className="font-bold text-lg">P{total.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
                             </div>
                         </div>
 

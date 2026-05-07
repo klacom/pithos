@@ -120,6 +120,7 @@ export async function GET(
     return NextResponse.json({
       reviews: (reviews ?? []).map((review) => ({
         ...review,
+        review_text: review.review_text?.slice(0, 100000) || "", // Limit to 100k characters (~100KB)
         buyer_name:
           buyerNameById.get(String(review.buyer_id ?? "")) ?? "Verified buyer",
       })),
