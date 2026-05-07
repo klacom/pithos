@@ -224,7 +224,7 @@ export default function ShoppingCartPage() {
 
         <div className="flex flex-col gap-2">
           <h1 className="text-4xl font-bold">Your Cart</h1>
-          <p className="text-muted-foreground">
+          <p className="text-foreground/70">
             {totalItems} {totalItems === 1 ? "item" : "items"} in your cart
           </p>
         </div>
@@ -277,21 +277,29 @@ export default function ShoppingCartPage() {
               </div>
             </div>
 
-            <div className="min-h-[500px] space-y-4 p-5">
+            <div className="min-h-[700px] space-y-4 p-5">
               {isLoading ? (
-                <div className="flex h-[400px] flex-col items-center justify-center space-y-4 rounded-3xl border border-dashed text-muted-foreground">
-                  <div className="h-10 w-10 animate-spin rounded-full border-4 border-accent border-t-transparent" />
-                  <p className="animate-pulse">Loading your cart items...</p>
+                <div className="flex min-h-[600px] w-full flex-col items-center justify-center text-muted-foreground">
+                  <div className="flex flex-col items-center gap-5">
+                    <div className="relative h-14 w-14">
+                      <div className="absolute inset-0 animate-ping rounded-full bg-accent/20" />
+                      <div className="h-14 w-14 animate-spin rounded-full border-4 border-accent border-t-transparent" />
+                    </div>
+                    <p className="animate-pulse font-medium tracking-wide">Loading your cart items...</p>
+                  </div>
                 </div>
               ) : items.length === 0 ? (
-                <div className="rounded-3xl border border-dashed p-8 text-center">
-                  <ShoppingBag className="mx-auto mb-3 text-accent" size={28} />
-                  <h2 className="text-xl font-semibold">Your cart is empty</h2>
-                  <p className="mt-2 text-sm text-muted-foreground">
-                    Browse assets and add the ones you want to purchase.
+                <div className="flex min-h-[600px] w-full flex-col items-center justify-center p-8 text-center">
+                  <div className="relative mb-6">
+                    <div className="absolute inset-0 scale-150 blur-2xl bg-accent/5 rounded-full" />
+                    <ShoppingBag className="relative text-accent/20" size={100} />
+                  </div>
+                  <h2 className="text-3xl font-bold tracking-tight">Your cart is empty</h2>
+                  <p className="mt-3 max-w-[340px] text-lg text-muted-foreground leading-relaxed">
+                    Explore our collection of premium digital assets and find something amazing today.
                   </p>
-                  <Button className="mt-5" asChild>
-                    <Link href="/product-listing">Explore Products</Link>
+                  <Button className="mt-10 h-14 px-10 rounded-full text-lg shadow-lg shadow-accent/10 hover:shadow-accent/20 transition-all" asChild>
+                    <Link href="/product-listing">Start Exploring</Link>
                   </Button>
                 </div>
               ) : (
@@ -338,25 +346,25 @@ export default function ShoppingCartPage() {
                               >
                                 {item.title}
                               </Link>
-                              <p className="mt-1 text-sm text-muted-foreground">
+                              <p className="mt-1 text-sm text-foreground/80">
                                 by {item.sellerName}
                               </p>
-                              <p className="mt-2 line-clamp-2 text-sm text-muted-foreground">
+                              <p className="mt-2 line-clamp-2 text-sm text-foreground/70">
                                 {item.subtitle || "Ready-to-use digital product package."}
                               </p>
                             </div>
 
                             <div className="shrink-0 text-left md:text-right">
-                              <p className="text-sm text-muted-foreground">Price</p>
+                              <p className="text-sm text-foreground/70">Price</p>
                               <p className="text-xl font-bold">{item.priceLabel}</p>
                             </div>
                           </div>
 
                           <div className="mt-4 flex flex-wrap items-center gap-2 text-xs">
-                            <span className="rounded-full bg-muted px-3 py-1 text-muted-foreground">
+                            <span className="rounded-full bg-muted px-3 py-1 text-foreground/70">
                               Added {new Date(item.addedAt).toLocaleDateString("en-PH")}
                             </span>
-                            <span className="rounded-full bg-muted px-3 py-1 text-muted-foreground capitalize">
+                            <span className="rounded-full bg-muted px-3 py-1 text-foreground/70 capitalize">
                               {item.productStatus}
                             </span>
                             {selected ? (
@@ -401,11 +409,11 @@ export default function ShoppingCartPage() {
           <Card className="rounded-3xl p-6">
             <div className="space-y-6">
               <div>
-                <p className="text-sm text-muted-foreground">Selected subtotal</p>
+                <p className="text-sm text-foreground/70">Selected subtotal</p>
                 <h2 className="mt-2 text-3xl font-bold">
                   {formatCurrency(subtotal)}
                 </h2>
-                <p className="mt-2 text-sm text-muted-foreground">
+                <p className="mt-2 text-sm text-foreground/70">
                   {selectedCount} selected item{selectedCount === 1 ? "" : "s"} out of{" "}
                   {totalItems}
                 </p>
@@ -414,19 +422,19 @@ export default function ShoppingCartPage() {
               <div className="space-y-3 rounded-2xl bg-muted/40 p-4 text-sm">
                 <div className="flex items-start gap-3">
                   <CheckCircle2 className="mt-0.5 text-accent" size={16} />
-                  <p className="text-muted-foreground">
+                  <p className="text-foreground/70">
                     Checkbox changes update the total instantly.
                   </p>
                 </div>
                 <div className="flex items-start gap-3">
                   <PackageOpen className="mt-0.5 text-accent" size={16} />
-                  <p className="text-muted-foreground">
+                  <p className="text-foreground/70">
                     Prices stay in Philippine Peso and tax is not applied yet.
                   </p>
                 </div>
                 <div className="flex items-start gap-3">
                   <ShieldCheck className="mt-0.5 text-accent" size={16} />
-                  <p className="text-muted-foreground">
+                  <p className="text-foreground/70">
                     Removing or clearing cart only deletes cart rows, not the products themselves.
                   </p>
                 </div>
@@ -434,11 +442,11 @@ export default function ShoppingCartPage() {
 
               <div className="space-y-3 border-t pt-4 text-sm">
                 <div className="flex items-center justify-between">
-                  <span className="text-muted-foreground">Items selected</span>
+                  <span className="text-foreground/70">Items selected</span>
                   <span className="font-medium">{selectedCount}</span>
                 </div>
                 <div className="flex items-center justify-between">
-                  <span className="text-muted-foreground">Tax</span>
+                  <span className="text-foreground/70">Tax</span>
                   <span className="font-medium">Not applied</span>
                 </div>
                 <div className="flex items-center justify-between text-base font-semibold">
@@ -472,7 +480,7 @@ export default function ShoppingCartPage() {
             ))}
           </div>
         ) : (
-          <Card className="p-6 text-muted-foreground">
+          <Card className="p-6 text-foreground/70">
             Recommendations will appear here once more products are available.
           </Card>
         )}

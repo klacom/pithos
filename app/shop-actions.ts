@@ -44,10 +44,10 @@ function formatPeso(amount: number) {
 async function getCurrentUser() {
   const supabase = await createClient();
   const {
-    data: { user },
-  } = await supabase.auth.getUser();
+    data: { session },
+  } = await supabase.auth.getSession();
 
-  return { supabase, user };
+  return { supabase, user: session?.user ?? null };
 }
 
 const getRatingStats = cache(async (productIds: string[]) => {
@@ -123,6 +123,8 @@ export const getCartCount = cache(async () => {
   const { supabase, user } = await getCurrentUser();
 
   if (!user) return 0;
+
+  console.log(`[ShopActions] Fetching cart count for user: ${user.id}`);
 
   const { count } = await supabase
     .from("cart")

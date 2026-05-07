@@ -20,6 +20,7 @@ import {
     ShoppingCart,
     Sparkles,
     Star,
+    X,
     Zap,
 } from "lucide-react";
 import Image from "next/image";
@@ -139,6 +140,7 @@ export default function ProductDetailPage() {
     const [isFavorite, setIsFavorite] = useState(false);
     const [isBusy, setIsBusy] = useState<"cart" | "favorite" | "buy" | null>(null);
     const [isLoading, setIsLoading] = useState(true);
+    const [isZoomed, setIsZoomed] = useState(false);
 
     const currentImage = images[currentImageIndex] || "/pithos/PithosThumbnail.png";
 
@@ -351,9 +353,15 @@ export default function ProductDetailPage() {
 
     if (isLoading || !product) {
         return (
-            <main className="px-4 py-10 md:px-20 lg:px-32 xl:px-44 2xl:px-60">
-                <div className="flex min-h-[60vh] items-center justify-center text-muted-foreground">
-                    Loading product details...
+            <main className="mx-auto mb-10 flex max-w-screen-2xl flex-col gap-8 px-4 py-6 md:px-8 lg:px-12">
+                <div className="flex min-h-[70vh] w-full flex-col items-center justify-center text-muted-foreground">
+                    <div className="flex flex-col items-center gap-5">
+                        <div className="relative h-16 w-16">
+                            <div className="absolute inset-0 animate-ping rounded-full bg-accent/20" />
+                            <div className="h-16 w-16 animate-spin rounded-full border-4 border-accent border-t-transparent" />
+                        </div>
+                        <p className="animate-pulse text-lg font-medium tracking-wide">Loading product details...</p>
+                    </div>
                 </div>
             </main>
         );
@@ -369,7 +377,7 @@ export default function ProductDetailPage() {
                                 <Sparkles size={16} />
                                 Overview
                             </div>
-                            <p className="whitespace-pre-wrap leading-7 text-muted-foreground">
+                            <p className="whitespace-pre-wrap leading-7 text-foreground">
                                 {parsedDescription.body}
                             </p>
                         </Card>
@@ -377,11 +385,11 @@ export default function ProductDetailPage() {
                         <Card className="p-6">
                             <div className="space-y-4">
                                     <div className="flex items-center justify-between gap-4 border-b pb-3">
-                                        <span className="text-sm text-muted-foreground">Category</span>
+                                        <span className="text-sm text-foreground/70">Category</span>
                                         <span className="font-medium">{parsedDescription.category}</span>
                                     </div>
                                     <div className="flex items-center justify-between gap-4 border-b pb-3">
-                                        <span className="text-sm text-muted-foreground">Published</span>
+                                        <span className="text-sm text-foreground/70">Published</span>
                                         <span className="font-medium">
                                             {new Date(product.created_at).toLocaleDateString("en-PH", {
                                                 month: "short",
@@ -391,19 +399,19 @@ export default function ProductDetailPage() {
                                         </span>
                                     </div>
                                     <div className="flex items-center justify-between gap-4 border-b pb-3">
-                                        <span className="text-sm text-muted-foreground">Status</span>
+                                        <span className="text-sm text-foreground/70">Status</span>
                                         <span className="font-medium capitalize">
                                             {product.product_status || "published"}
                                         </span>
                                     </div>
                                     <div className="flex items-center justify-between gap-4 border-b pb-3">
-                                        <span className="text-sm text-muted-foreground">Publisher</span>
+                                        <span className="text-sm text-foreground/70">Publisher</span>
                                         <span className="font-medium">
                                             {seller?.user_fullname || seller?.user_email?.split("@")[0] || "Pithos Publisher"}
                                         </span>
                                     </div>
                                 <div className="space-y-3 pt-1">
-                                    <span className="text-sm text-muted-foreground">Highlights</span>
+                                    <span className="text-sm text-foreground/70">Highlights</span>
                                     <div className="flex flex-wrap gap-2">
                                         {(parsedDescription.tags.length > 0
                                             ? parsedDescription.tags
@@ -447,12 +455,12 @@ export default function ProductDetailPage() {
                                                     </div>
                                                     <div className="min-w-0">
                                                         <p className="truncate font-medium">{fileName}</p>
-                                                        <p className="text-xs text-muted-foreground">
+                                                        <p className="text-xs text-foreground/60">
                                                             Stored in `assets_storage`
                                                         </p>
                                                     </div>
                                                 </div>
-                                                <span className="rounded-full bg-muted px-3 py-1 text-xs uppercase text-muted-foreground">
+                                                <span className="rounded-full bg-muted px-3 py-1 text-xs uppercase text-foreground/70">
                                                     {fileName.split(".").pop() || "file"}
                                                 </span>
                                             </div>
@@ -460,7 +468,7 @@ export default function ProductDetailPage() {
                                     })}
                                 </div>
                             ) : (
-                                <div className="rounded-2xl border border-dashed p-5 text-sm text-muted-foreground">
+                                <div className="rounded-2xl border border-dashed p-5 text-sm text-foreground/70">
                                     No package files are currently listed for this asset.
                                 </div>
                             )}
@@ -472,7 +480,7 @@ export default function ProductDetailPage() {
                                     <Download className="text-accent" size={18} />
                                     <div>
                                         <p className="font-medium">What to expect</p>
-                                        <p className="text-sm text-muted-foreground">
+                                        <p className="text-sm text-foreground/70">
                                             Buyers receive the same downloadable files uploaded by the
                                             publisher.
                                         </p>
@@ -482,7 +490,7 @@ export default function ProductDetailPage() {
                                     <ShieldCheck className="text-accent" size={18} />
                                     <div>
                                         <p className="font-medium">Organized package</p>
-                                        <p className="text-sm text-muted-foreground">
+                                        <p className="text-sm text-foreground/70">
                                             File names stay visible here so the buyer knows what is inside
                                             before purchase.
                                         </p>
@@ -495,143 +503,188 @@ export default function ProductDetailPage() {
 
             case "Reviews":
                 return (
-                    <div className="space-y-6">
-                        <Card className="p-6">
-                            <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
-                                <div>
-                                    <p className="text-sm text-muted-foreground">Community rating</p>
-                                    <div className="mt-2 flex items-center gap-3">
-                                        <span className="text-4xl font-bold">
-                                            {avgRating.toFixed(1)}
-                                        </span>
-                                        <div>
-                                            <div className="flex gap-1">{renderStars(avgRating, 18, "community")}</div>
-                                            <p className="mt-1 text-sm text-muted-foreground">
-                                                Based on {reviewCount} review{reviewCount === 1 ? "" : "s"}
-                                            </p>
+                    <div className="grid gap-6 lg:grid-cols-[1.6fr_1fr]">
+                        <div className="space-y-6">
+                            <Card className="p-6">
+                                <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+                                    <div>
+                                        <p className="text-sm text-foreground/70">Community rating</p>
+                                        <div className="mt-2 flex items-center gap-3">
+                                            <span className="text-4xl font-bold">
+                                                {avgRating.toFixed(1)}
+                                            </span>
+                                            <div>
+                                                <div className="flex gap-1">{renderStars(avgRating, 18, "community")}</div>
+                                                <p className="mt-1 text-sm text-foreground/70">
+                                                    Based on {reviewCount} review{reviewCount === 1 ? "" : "s"}
+                                                </p>
+                                            </div>
                                         </div>
                                     </div>
                                 </div>
-                                <div className="rounded-2xl border bg-muted/50 px-4 py-3 text-sm text-muted-foreground">
-                                    Sample reviews are auto-seeded when an asset has no feedback yet.
-                                </div>
-                            </div>
-                        </Card>
+                            </Card>
 
-                        <div className="grid gap-4">
-                            {reviews.length > 0 ? (
-                                reviews.map((review, index) => (
-                                    <Card key={review.id || `review-${index}`} className="p-6">
-                                        <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
-                                            <div className="flex gap-4">
-                                                <div className="flex h-12 w-12 items-center justify-center rounded-full bg-accent/10 font-semibold text-accent">
-                                                    {(review.buyer_name || "VB").slice(0, 2).toUpperCase()}
-                                                </div>
-                                                <div>
-                                                    <p className="font-semibold">
-                                                        {review.buyer_name || "Verified buyer"}
-                                                    </p>
-                                                    <div className="mt-1 flex items-center gap-2">
-                                                        <div className="flex gap-1">
-                                                            {renderStars(review.rating, 14, `review-${review.id || index}`)}
+                            <div className="grid gap-4">
+                                {reviews.length > 0 ? (
+                                    reviews.map((review, index) => (
+                                        <Card key={review.id || `review-${index}`} className="p-6">
+                                            <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
+                                                <div className="flex gap-4">
+                                                    <div className="flex h-12 w-12 items-center justify-center rounded-full bg-accent/10 font-semibold text-accent">
+                                                        {(review.buyer_name || "VB").slice(0, 2).toUpperCase()}
+                                                    </div>
+                                                    <div>
+                                                        <p className="font-semibold">
+                                                            {review.buyer_name || "Verified buyer"}
+                                                        </p>
+                                                        <div className="mt-1 flex items-center gap-2">
+                                                            <div className="flex gap-1">
+                                                                {renderStars(review.rating, 14, `review-${review.id || index}`)}
+                                                            </div>
+                                                            <span className="text-sm text-foreground/70">
+                                                                {review.rating}/5
+                                                            </span>
                                                         </div>
-                                                        <span className="text-sm text-muted-foreground">
-                                                            {review.rating}/5
-                                                        </span>
                                                     </div>
                                                 </div>
+                                                <p className="text-sm text-foreground/70">
+                                                    {new Date(review.created_at).toLocaleDateString("en-PH", {
+                                                        month: "short",
+                                                        day: "numeric",
+                                                        year: "numeric",
+                                                    })}
+                                                </p>
                                             </div>
-                                            <p className="text-sm text-muted-foreground">
-                                                {new Date(review.created_at).toLocaleDateString("en-PH", {
-                                                    month: "short",
-                                                    day: "numeric",
-                                                    year: "numeric",
-                                                })}
+                                            <p className="mt-4 leading-7 text-foreground">
+                                                {review.review_text || "No review text provided."}
                                             </p>
-                                        </div>
-                                        <p className="mt-4 leading-7 text-muted-foreground">
-                                            {review.review_text || "No review text provided."}
-                                        </p>
+                                        </Card>
+                                    ))
+                                ) : (
+                                    <Card className="p-6 text-foreground/70 text-center">
+                                        No reviews yet for this item.
                                     </Card>
-                                ))
-                            ) : (
-                                <Card className="p-6 text-muted-foreground">
-                                    No reviews yet for this item.
-                                </Card>
-                            )}
+                                )}
+                            </div>
                         </div>
+
+                        <Card className="p-6 h-fit">
+                            <div className="rounded-2xl border bg-muted/50 px-4 py-3 text-sm text-foreground/70">
+                                Sample reviews are auto-seeded when an asset has no feedback yet.
+                            </div>
+                        </Card>
                     </div>
                 );
 
             case "Publisher Info":
                 return (
-                    <div className="grid gap-6 lg:grid-cols-[1.4fr_1fr]">
-                        <Card className="p-6">
-                            <div className="flex flex-col gap-5 md:flex-row md:items-center">
-                                <div className="flex h-20 w-20 items-center justify-center rounded-3xl bg-accent/10 text-2xl font-bold text-accent">
-                                    {(seller?.user_fullname || seller?.user_email || "PU")
-                                        .slice(0, 2)
-                                        .toUpperCase()}
-                                </div>
-                                <div className="space-y-2">
-                                    <div className="flex items-center gap-2">
-                                        <h3 className="text-2xl font-bold">
-                                            {seller?.user_fullname ||
-                                                seller?.user_email?.split("@")[0] ||
-                                                "Pithos Publisher"}
-                                        </h3>
-                                        <BadgeCheck className="text-accent" size={18} />
+                    <div className="grid gap-6 lg:grid-cols-[1.6fr_1fr]">
+                        <div className="space-y-6">
+                            <Card className="p-6">
+                                <div className="flex flex-col gap-6 md:flex-row md:items-center">
+                                    <div className="flex h-24 w-24 items-center justify-center rounded-[32px] bg-accent/10 text-3xl font-bold text-accent shadow-inner">
+                                        {(seller?.user_fullname || seller?.user_email || "PU")
+                                            .slice(0, 2)
+                                            .toUpperCase()}
                                     </div>
-                                    <p className="text-muted-foreground">
-                                        Trusted publisher profile for this asset listing.
-                                    </p>
-                                    <div className="flex flex-wrap gap-2">
-                                        <span className="rounded-full bg-muted px-3 py-1 text-xs font-medium">
-                                            Seller
-                                        </span>
-                                        <span className="rounded-full bg-muted px-3 py-1 text-xs font-medium">
-                                            Digital creator
-                                        </span>
+                                    <div className="space-y-3">
+                                        <div className="flex items-center gap-3">
+                                            <h3 className="text-3xl font-bold tracking-tight text-foreground">
+                                                {seller?.user_fullname ||
+                                                    seller?.user_email?.split("@")[0] ||
+                                                    "Pithos Publisher"}
+                                            </h3>
+                                            <div className="rounded-full bg-accent/10 p-1 text-accent">
+                                                <BadgeCheck size={20} />
+                                            </div>
+                                        </div>
+                                        <p className="text-lg text-foreground/80">
+                                            Verified digital asset creator on Pithos.
+                                        </p>
+                                        <div className="flex flex-wrap gap-2 pt-1">
+                                            <span className="rounded-full border bg-muted px-4 py-1.5 text-xs font-semibold uppercase tracking-wider text-foreground/70">
+                                                Professional Seller
+                                            </span>
+                                            <span className="rounded-full border bg-muted px-4 py-1.5 text-xs font-semibold uppercase tracking-wider text-foreground/70">
+                                                Content Creator
+                                            </span>
+                                        </div>
                                     </div>
                                 </div>
-                            </div>
-                        </Card>
+                            </Card>
 
-                        <Card className="p-6">
-                            <div className="space-y-4 text-sm">
-                                <div className="flex items-center gap-3">
-                                    <Mail size={16} className="text-accent" />
-                                    <div>
-                                        <p className="text-muted-foreground">Contact</p>
-                                        <p className="font-medium">
-                                            {seller?.user_email || "Not publicly available"}
-                                        </p>
+                            <Card className="p-6">
+                                <div className="space-y-4">
+                                    <div className="flex items-center gap-2 text-sm font-semibold uppercase tracking-widest text-accent">
+                                        <Sparkles size={14} />
+                                        Publisher Background
+                                    </div>
+                                    <p className="leading-relaxed text-foreground/80">
+                                        This publisher is a trusted member of the Pithos community, 
+                                        specializing in high-quality digital assets for creators. 
+                                        All assets from this seller are reviewed for quality and performance.
+                                    </p>
+                                </div>
+                            </Card>
+                        </div>
+
+                        <div className="space-y-6">
+                            <Card className="p-6">
+                                <div className="space-y-6">
+                                    <div className="flex items-center gap-2 text-sm font-semibold uppercase tracking-widest text-accent">
+                                        <Mail size={14} />
+                                        Contact Details
+                                    </div>
+                                    <div className="space-y-5">
+                                        <div className="flex items-center gap-4">
+                                            <div className="rounded-xl bg-muted p-2.5 text-foreground/60">
+                                                <Mail size={18} />
+                                            </div>
+                                            <div>
+                                                <p className="text-xs font-medium uppercase tracking-wider text-foreground/50">Email Address</p>
+                                                <p className="font-semibold text-foreground">
+                                                    {seller?.user_email || "Not publicly available"}
+                                                </p>
+                                            </div>
+                                        </div>
+                                        <div className="flex items-center gap-4">
+                                            <div className="rounded-xl bg-muted p-2.5 text-foreground/60">
+                                                <CalendarDays size={18} />
+                                            </div>
+                                            <div>
+                                                <p className="text-xs font-medium uppercase tracking-wider text-foreground/50">Member Since</p>
+                                                <p className="font-semibold text-foreground">
+                                                    {seller?.created_at
+                                                        ? new Date(seller.created_at).toLocaleDateString("en-PH", {
+                                                            month: "long",
+                                                            year: "numeric",
+                                                        })
+                                                        : "Unknown"}
+                                                </p>
+                                            </div>
+                                        </div>
+                                        <div className="flex items-center gap-4">
+                                            <div className="rounded-xl bg-muted p-2.5 text-foreground/60">
+                                                <Layers3 size={18} />
+                                            </div>
+                                            <div>
+                                                <p className="text-xs font-medium uppercase tracking-wider text-foreground/50">Store Inventory</p>
+                                                <p className="font-semibold text-foreground">{moreFromSeller.length + 1} published assets</p>
+                                            </div>
+                                        </div>
                                     </div>
                                 </div>
-                                <div className="flex items-center gap-3">
-                                    <CalendarDays size={16} className="text-accent" />
-                                    <div>
-                                        <p className="text-muted-foreground">Joined</p>
-                                        <p className="font-medium">
-                                            {seller?.created_at
-                                                ? new Date(seller.created_at).toLocaleDateString("en-PH", {
-                                                    month: "short",
-                                                    day: "numeric",
-                                                    year: "numeric",
-                                                })
-                                                : "Unknown"}
-                                        </p>
-                                    </div>
-                                </div>
-                                <div className="flex items-center gap-3">
-                                    <Layers3 size={16} className="text-accent" />
-                                    <div>
-                                        <p className="text-muted-foreground">Listings previewed</p>
-                                        <p className="font-medium">{moreFromSeller.length + 1} assets</p>
-                                    </div>
-                                </div>
+                            </Card>
+
+                            <div className="rounded-3xl border border-dashed border-accent/20 bg-accent/5 p-6">
+                                <p className="text-center text-sm font-medium text-accent">
+                                    Safe Transaction Guaranteed
+                                </p>
+                                <p className="mt-2 text-center text-xs text-foreground/60">
+                                    Pithos ensures all transactions with verified publishers are secure and protected.
+                                </p>
                             </div>
-                        </Card>
+                        </div>
                     </div>
                 );
 
@@ -641,7 +694,7 @@ export default function ProductDetailPage() {
     };
 
     return (
-        <main className="mb-10 flex flex-col gap-8 px-4 pt-6 md:px-14 lg:px-24 xl:px-32 2xl:px-44">
+        <main className="mx-auto mb-10 flex max-w-screen-2xl flex-col gap-8 px-4 py-6 md:px-8 lg:px-12">
             <Button
                 variant="red_ghost"
                 className="w-fit px-0 hover:bg-transparent"
@@ -680,10 +733,11 @@ export default function ProductDetailPage() {
                                             fill
                                             src={currentImage}
                                             alt={product.product_name}
-                                            className="object-contain"
+                                            className="object-contain cursor-zoom-in"
                                             sizes="(max-width: 1280px) 100vw, 900px"
                                             priority
                                             unoptimized
+                                            onClick={() => setIsZoomed(true)}
                                         />
                                     </motion.div>
                                 </AnimatePresence>
@@ -794,7 +848,7 @@ export default function ProductDetailPage() {
                                 ))}
                             </div>
                         ) : (
-                            <Card className="p-6 text-muted-foreground">
+                            <Card className="p-6 text-foreground/70">
                                 No additional published products from this seller yet.
                             </Card>
                         )}
@@ -811,7 +865,7 @@ export default function ProductDetailPage() {
                                 ))}
                             </div>
                         ) : (
-                            <Card className="p-6 text-muted-foreground">
+                            <Card className="p-6 text-foreground/70">
                                 Loading recommendations...
                             </Card>
                         )}
@@ -828,7 +882,7 @@ export default function ProductDetailPage() {
                             <h1 className="text-3xl font-bold leading-tight">
                                 {product.product_name}
                             </h1>
-                            <p className="mt-3 text-muted-foreground">
+                            <p className="mt-3 text-foreground/80">
                                 by {seller?.user_fullname || seller?.user_email?.split("@")[0] || "Pithos Publisher"}
                             </p>
 
@@ -837,7 +891,7 @@ export default function ProductDetailPage() {
                                     <div className="flex gap-1">{renderStars(avgRating, 16, "sidebar")}</div>
                                     <span className="font-semibold">{avgRating.toFixed(1)}</span>
                                 </div>
-                                <span className="text-sm text-muted-foreground">
+                                <span className="text-sm text-foreground/70">
                                     {reviewCount} review{reviewCount === 1 ? "" : "s"}
                                 </span>
                             </div>
@@ -846,7 +900,7 @@ export default function ProductDetailPage() {
                         <div className="space-y-6 p-6">
                             <div className="flex items-end justify-between gap-4">
                                 <div>
-                                    <p className="text-sm text-muted-foreground">Price</p>
+                                    <p className="text-sm text-foreground/70">Price</p>
                                     <p className="text-4xl font-bold">{formatPeso(Number(product.price ?? 0))}</p>
                                 </div>
                                 {isInCart ? (
@@ -905,7 +959,7 @@ export default function ProductDetailPage() {
                                     <PackageOpen size={18} className="mt-0.5 text-accent" />
                                     <div>
                                         <p className="font-medium">Package content</p>
-                                        <p className="text-sm text-muted-foreground">
+                                        <p className="text-sm text-foreground/70">
                                             {packageFileNames.length > 0
                                                 ? `${packageFileNames.length} file${packageFileNames.length === 1 ? "" : "s"
                                                 } ready for download`
@@ -917,7 +971,7 @@ export default function ProductDetailPage() {
                                     <ShieldCheck size={18} className="mt-0.5 text-accent" />
                                     <div>
                                         <p className="font-medium">Direct checkout path</p>
-                                        <p className="text-sm text-muted-foreground">
+                                        <p className="text-sm text-foreground/70">
                                             Buy Now places this item into your cart so you can continue to
                                             checkout flow right away.
                                         </p>
@@ -927,7 +981,7 @@ export default function ProductDetailPage() {
                                     <Download size={18} className="mt-0.5 text-accent" />
                                     <div>
                                         <p className="font-medium">Digital delivery</p>
-                                        <p className="text-sm text-muted-foreground">
+                                        <p className="text-sm text-foreground/70">
                                             No tax added yet. Total uses Philippine Peso pricing only.
                                         </p>
                                     </div>
@@ -937,6 +991,107 @@ export default function ProductDetailPage() {
                     </Card>
                 </aside>
             </div>
+
+            <AnimatePresence>
+                {isZoomed && (
+                    <motion.div
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        exit={{ opacity: 0 }}
+                        className="fixed inset-0 z-50 flex flex-col items-center justify-center bg-black/95 backdrop-blur-md"
+                    >
+                        <div className="relative flex h-full w-full flex-col items-center justify-center p-4 md:p-10">
+                            {/* Close button */}
+                            <button
+                                onClick={() => setIsZoomed(false)}
+                                className="absolute right-6 top-6 z-[60] rounded-full bg-white/10 p-3 text-white transition-all hover:bg-white/20 hover:scale-110 active:scale-95"
+                                aria-label="Close zoom view"
+                            >
+                                <X size={28} />
+                            </button>
+
+                            {/* Main Zoomed Image Container */}
+                            <div className="relative flex h-full w-full items-center justify-center overflow-hidden">
+                                <motion.div
+                                    key={currentImageIndex}
+                                    initial={{ opacity: 0, scale: 0.9 }}
+                                    animate={{ opacity: 1, scale: 1 }}
+                                    exit={{ opacity: 0, scale: 0.9 }}
+                                    transition={{ duration: 0.3 }}
+                                    className="relative h-full w-full max-w-5xl"
+                                    onClick={(e) => e.stopPropagation()}
+                                >
+                                    <Image
+                                        src={images[currentImageIndex]}
+                                        alt={product.product_name}
+                                        fill
+                                        className="object-contain"
+                                        sizes="100vw"
+                                        unoptimized
+                                        priority
+                                    />
+                                </motion.div>
+
+                                {/* Navigation buttons in zoom view */}
+                                {images.length > 1 && (
+                                    <>
+                                        <button
+                                            onClick={(e) => {
+                                                e.stopPropagation();
+                                                handlePrevImage();
+                                            }}
+                                            className="absolute left-4 top-1/2 z-[60] -translate-y-1/2 rounded-full bg-white/10 p-4 text-white backdrop-blur-md transition-all hover:bg-white/20 hover:scale-110 active:scale-95"
+                                        >
+                                            <ChevronLeft size={32} />
+                                        </button>
+                                        <button
+                                            onClick={(e) => {
+                                                e.stopPropagation();
+                                                handleNextImage();
+                                            }}
+                                            className="absolute right-4 top-1/2 z-[60] -translate-y-1/2 rounded-full bg-white/10 p-4 text-white backdrop-blur-md transition-all hover:bg-white/20 hover:scale-110 active:scale-95"
+                                        >
+                                            <ChevronRight size={32} />
+                                        </button>
+                                    </>
+                                )}
+                            </div>
+
+                            {/* Thumbnails in zoom view */}
+                            <div 
+                                className="mt-6 flex gap-3 overflow-x-auto pb-4"
+                                onClick={(e) => e.stopPropagation()}
+                            >
+                                {images.map((image, index) => (
+                                    <button
+                                        key={`zoom-thumb-${index}`}
+                                        onClick={() => setCurrentImageIndex(index)}
+                                        className={`relative h-20 w-20 shrink-0 overflow-hidden rounded-xl border-2 transition-all ${
+                                            currentImageIndex === index
+                                                ? "border-accent scale-110 shadow-lg shadow-accent/20"
+                                                : "border-white/10 opacity-50 hover:opacity-100"
+                                        }`}
+                                    >
+                                        <Image
+                                            fill
+                                            src={image}
+                                            alt={`Thumbnail ${index + 1}`}
+                                            className="object-cover"
+                                            unoptimized
+                                        />
+                                    </button>
+                                ))}
+                            </div>
+
+                            {/* Counter */}
+                            <div className="mt-4 flex items-center gap-2 rounded-full bg-white/10 px-5 py-2 text-sm font-medium text-white backdrop-blur-md">
+                                <Sparkles size={16} className="text-accent" />
+                                {currentImageIndex + 1} / {images.length}
+                            </div>
+                        </div>
+                    </motion.div>
+                )}
+            </AnimatePresence>
         </main>
     );
 }

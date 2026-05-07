@@ -63,17 +63,17 @@ export function ProductCard({
                                         ? 'fill-yellow-400 text-yellow-400'
                                         : i < rating
                                         ? 'fill-yellow-400/50 text-yellow-400'
-                                        : 'text-muted-foreground'
+                                        : 'text-foreground/30'
                                     }`}
                                 />
                             ))}
                         </div>
-                        <span className="text-xs line-clamp-1 md:text-md sm:ml-1 text-muted-foreground">
+                        <span className="text-xs line-clamp-1 md:text-md sm:ml-1 text-foreground/70">
                             {rating} ({reviews})
                         </span>
                     </div>
 
-                    <p className="text-sm text-muted-foreground">{author}</p>
+                    <p className="text-sm text-foreground/80">{author}</p>
 
                     <p className="font-medium text-primary">{price}</p>
                 </div>

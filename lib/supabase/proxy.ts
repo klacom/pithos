@@ -50,33 +50,28 @@ export async function updateSession(request: NextRequest) {
     }
 
     let role: string | null = null;
+    let session: any = null;
 
     if (uid) {
-        const { data } = await supabaseAdmin
-            .from("users")
-            .select("user_role")
-            .eq("id", uid)
-            .single();
+        const [userRes, sessionRes] = await Promise.all([
+            supabaseAdmin.from("users").select("user_role").eq("id", uid).single(),
+            supabaseAdmin.from("user_sessions").select("*").eq("user_id", uid).single(),
+        ]);
 
-        role = data?.user_role ?? null;
+        role = userRes.data?.user_role ?? null;
+        session = sessionRes.data;
     }
 
     // Session Timeout logic starts here
 
-    if (uid && role) {
-        const { data: session } = await supabaseAdmin
-            .from("user_sessions")
-            .select("*")
-            .eq("user_id", uid)
-            .single();
-
+    if (uid && role && session) {
         const { data: policy } = await supabaseAdmin
             .from("session_policies")
             .select("timeout_minutes")
             .eq("role", role)
             .single();
 
-        if (session && policy) {
+        if (policy) {
             const now = new Date();
             const lastActivity = new Date(session.last_activity);
 
