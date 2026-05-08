@@ -13,6 +13,11 @@ type Props = {
   detailSlots: DetailSlot[];
   onDetailFilesAdd: (files: File[]) => void;
   onDetailRemove: (id: string) => void;
+  savedCoverUrl?: string | null;
+  savedCoverPath?: string | null;
+  savedDetailItems?: Array<{ url: string; path: string | null }>;
+  savedDetailCount?: number;
+  onDeleteSavedPhoto?: (objectPath: string) => void | Promise<void>;
   disabled?: boolean;
 };
 
@@ -26,6 +31,11 @@ export default function SellerAssetPhotoPickers({
   detailSlots,
   onDetailFilesAdd,
   onDetailRemove,
+  savedCoverUrl = null,
+  savedCoverPath = null,
+  savedDetailItems = [],
+  savedDetailCount = 0,
+  onDeleteSavedPhoto,
   disabled,
 }: Props) {
   const coverInputRef = useRef<HTMLInputElement>(null);
@@ -56,6 +66,40 @@ export default function SellerAssetPhotoPickers({
             A wide 16:9 image works best.
           </p>
         </div>
+        {savedCoverUrl ? (
+          <div className="rounded-2xl border border-muted/70 bg-background/70 p-3 md:p-4 shadow-sm">
+            <div className="mb-2 flex items-center justify-between gap-3">
+              <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+                Current cover image
+              </p>
+              {savedCoverPath && onDeleteSavedPhoto ? (
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="outline"
+                  title="Delete saved cover image"
+                  className="h-8 w-8 p-0"
+                  disabled={disabled}
+                  onClick={() => {
+                    if (!confirm("Delete this saved cover image?")) return;
+                    void onDeleteSavedPhoto(savedCoverPath);
+                  }}
+                >
+                  <Trash2 size={14} />
+                </Button>
+              ) : null}
+            </div>
+            <div className="relative mx-auto aspect-video w-full max-w-md rounded-xl overflow-hidden border border-muted bg-muted/20">
+              <Image
+                src={savedCoverUrl}
+                alt="Saved cover"
+                fill
+                className="object-cover"
+                unoptimized
+              />
+            </div>
+          </div>
+        ) : null}
         <input
           ref={coverInputRef}
           type="file"
@@ -136,6 +180,45 @@ export default function SellerAssetPhotoPickers({
             </p>
           </div>
         </div>
+        {savedDetailItems.length > 0 ? (
+          <div className="rounded-2xl border border-muted/70 bg-background/70 p-3 md:p-4 shadow-sm">
+            <p className="mb-2 text-xs font-medium uppercase tracking-wide text-muted-foreground">
+              Current gallery ({savedDetailCount})
+            </p>
+            <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+              {savedDetailItems.slice(0, 6).map((item) => (
+                <div
+                  key={item.url}
+                  className="group relative aspect-video rounded-xl overflow-hidden border border-muted bg-muted/20 shadow-sm"
+                >
+                  <Image
+                    src={item.url}
+                    alt="Saved gallery item"
+                    fill
+                    className="object-cover"
+                    unoptimized
+                  />
+                  {item.path && onDeleteSavedPhoto ? (
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant="secondary"
+                      title="Delete saved gallery image"
+                      className="absolute right-2 top-2 h-7 w-7 p-0 opacity-95 group-hover:opacity-100"
+                      disabled={disabled}
+                      onClick={() => {
+                        if (!confirm("Delete this saved gallery image?")) return;
+                        void onDeleteSavedPhoto(item.path);
+                      }}
+                    >
+                      <Trash2 size={14} />
+                    </Button>
+                  ) : null}
+                </div>
+              ))}
+            </div>
+          </div>
+        ) : null}
 
         <input
           ref={detailInputRef}
