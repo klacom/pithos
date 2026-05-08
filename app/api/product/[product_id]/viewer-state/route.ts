@@ -41,16 +41,20 @@ export async function GET(
 
         try {
             // Run all queries in parallel
-            const { data: cartItem } = await supabaseAdmin
+            const { data: cartItem, error: cartError } = await supabaseAdmin
                 .from('cart')
                 .select('id')
                 .eq('user_id', user.id)
                 .eq('product_id', productId)
-                .maybeSingle();
+                .maybeSingle()
 
             console.log("Cart Item: ", cartItem);
+            if (cartError) {
+                console.error("Cart Error: ", cartError);
+            }
 
-            const { data: favorite } = await supabaseAdmin
+
+            const { data: favorite, error: favoriteError } = await supabaseAdmin
                 .from('favorites')
                 .select('id')
                 .eq('user_id', user.id)
@@ -58,22 +62,30 @@ export async function GET(
                 .maybeSingle();
 
             console.log("Favorite: ", favorite);
+            if (favoriteError) {
+                console.error("Favorite Error: ", favoriteError);
+            }
 
-            const { data: ownedProduct } = await supabaseAdmin
+
+            const { data: ownedProduct, error: ownedProductError } = await supabaseAdmin
                 .from('products')
                 .select('product_id')
                 .eq('product_id', productId)
                 .eq('seller_owner_id', user.id)
-                .maybeSingle();
+                .maybeSingle()
 
             console.log("Owned Product: ", ownedProduct);
+            if (ownedProductError) {
+                console.error("Owned Product Error: ", ownedProductError);
+            }
+
 
             // console.log({
             //     userId: user.id,
             //     productId,
             // });
 
-            const { data: purchase } = await supabaseAdmin
+            const { data: purchase, error: purchaseError } = await supabaseAdmin
                 .from('transactions')
                 .select('transaction_id')
                 .eq('buyer_id', user.id)
@@ -82,6 +94,9 @@ export async function GET(
                 .maybeSingle();
 
             console.log("Purchase: ", purchase);
+            if (purchaseError) {
+                console.error("Purchase Error: ", purchaseError);
+            }
 
             // User is actual owner if they created the product (seller)
             const isOwner = !!ownedProduct;
