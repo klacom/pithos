@@ -43,12 +43,15 @@ const AdminMainLayout = ({ children }: { children: ReactNode }) => {
     ];
 
     return (
-        <main className="flex w-full h-full min-h-0">
+        <main className="flex w-full h-full min-h-0 overflow-hidden">
             <SideBar 
                 links={links} 
                 createAudit={createAudit} 
             />
-            {children}
+
+            <section className="flex-1 min-w-0 h-full overflow-y-auto">
+                {children}
+            </section>
         </main>
     );
 };
