@@ -129,7 +129,7 @@ export async function GET(request: NextRequest) {
             rating: Number((rating?.average ?? 0).toFixed(1)),
             reviews: rating?.count ?? 0,
             author:
-                sellerById.get(String(product.seller_owner_id ?? "")) ?? "Unknown seller",
+                sellerById.get(String(product.seller_owner_id ?? "")) ?? "Unknown Seller",
             price: formatPeso(price),
             imageSrc: thumbnails.get(productId) ?? "/pithos/PithosThumbnail.png",
             link: `/product-detail/${productId}`,

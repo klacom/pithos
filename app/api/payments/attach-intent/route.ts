@@ -10,18 +10,13 @@ export async function POST(request: NextRequest) {
             throw new Error("Missing payment method type");
         }
 
-        const normalizedType =
-            paymentMethodType === "paymaya"
-                ? "maya"
-                : paymentMethodType;
-
         console.log("ATTACH PAYLOAD:", {
             type: paymentMethodType,
         });
 
         // 1. Create Payment Method
         const methodResponse = await fetchPayMongoAPI('/payment_methods', 'POST', {
-            type: normalizedType,
+            type: paymentMethodType,
         });
 
         const paymentMethodId = methodResponse.data.id;

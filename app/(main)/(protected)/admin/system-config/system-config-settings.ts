@@ -14,6 +14,9 @@ export type SystemConfig = {
     min_lowercase: number;
     min_numbers: number;
     min_spec_chars: number;
+    support_email?: string;
+    support_phone?: string;
+    support_location?: string;
 };
 
 /**
@@ -22,7 +25,7 @@ export type SystemConfig = {
  */
 export async function getSessionPolicies() {
     const admin = createAdminClient();
-    
+
     // 1. Try to fetch existing policies using the correct column 'role'
     const { data: existingData, error: fetchError } = await admin
         .from('session_policies')
@@ -85,7 +88,7 @@ export async function getSystemConfig() {
 
     const { data, error } = await admin
         .from('system_configs')
-        .select('max_login_attempts, min_char_length, min_uppercase, min_lowercase, min_numbers, min_spec_chars')
+        .select('max_login_attempts, min_char_length, min_uppercase, min_lowercase, min_numbers, min_spec_chars, support_email, support_phone, support_location')
         .single();
 
     if (error && error.code !== 'PGRST116') {
@@ -111,7 +114,10 @@ export async function saveSystemConfig(newConfig: SystemConfig) {
         min_uppercase: Math.max(1, newConfig.min_uppercase),
         min_lowercase: Math.max(1, newConfig.min_lowercase),
         min_numbers: Math.max(1, newConfig.min_numbers),
-        min_spec_chars: Math.max(1, newConfig.min_spec_chars)
+        min_spec_chars: Math.max(1, newConfig.min_spec_chars),
+        support_email: newConfig.support_email,
+        support_phone: newConfig.support_phone,
+        support_location: newConfig.support_location
     };
 
     const { error } = await admin

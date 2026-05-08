@@ -4,17 +4,17 @@ import { createAdminClient } from "@/lib/supabase/admin";
 const sampleReviews = [
   {
     rating: 5,
-    review_text:
+    review_description:
       "Super clean files and easy to integrate. The package contents matched the preview and saved me hours of setup.",
   },
   {
     rating: 4,
-    review_text:
+    review_description:
       "Solid quality overall. The included files were organized well and the textures looked great in my scene.",
   },
   {
     rating: 5,
-    review_text:
+    review_description:
       "Worth it. I used this right away on a client project and the presentation quality was already production-ready.",
   },
 ];
@@ -43,9 +43,9 @@ async function seedReviews(productId: string) {
 
   const payload = sampleUsers.map((buyerId, index) => ({
     product_id: productId,
-    buyer_id: buyerId,
+    reviewer_id: buyerId,
     rating: sampleReviews[index]?.rating ?? 5,
-    review_text: sampleReviews[index]?.review_text ?? "Great asset.",
+    review_description: sampleReviews[index]?.review_description ?? "Great asset.",
   }));
 
   const { error } = await supabase.from("reviews").insert(payload);
@@ -97,7 +97,7 @@ export async function GET(
     }
 
     const buyerIds = [
-      ...new Set((reviews ?? []).map((review) => String(review.buyer_id ?? "")).filter(Boolean)),
+      ...new Set((reviews ?? []).map((review) => String(review.reviewer_id ?? "")).filter(Boolean)),
     ];
 
     const { data: buyers } =
@@ -120,9 +120,9 @@ export async function GET(
     return NextResponse.json({
       reviews: (reviews ?? []).map((review) => ({
         ...review,
-        review_text: review.review_text?.slice(0, 100000) || "", // Limit to 100k characters (~100KB)
+        review_description: review.review_description?.slice(0, 100000) || "", // Limit to 100k characters (~100KB)
         buyer_name:
-          buyerNameById.get(String(review.buyer_id ?? "")) ?? "Verified buyer",
+          buyerNameById.get(String(review.reviewer_id ?? "")) ?? "Verified buyer",
       })),
       avgRating: parseFloat(avgRating.toFixed(1)),
       reviewCount: reviews?.length || 0,

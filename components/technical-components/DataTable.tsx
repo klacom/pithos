@@ -22,6 +22,8 @@ export function DataTable<T>({
     total,
     page,
     setPage,
+    limit = 10,
+    setLimit,
     q,
     setQ,
     debouncedQ,
@@ -48,10 +50,17 @@ export function DataTable<T>({
     const columnDefs: ColumnDef<T>[] = columns.map((col: any) => ({
         accessorKey: col.key,
         header: col.label,
-        cell: ({ row }: any) =>
-            col.render
-                ? col.render(getNestedValue(row.original, col.key), row.original)
-                : getNestedValue(row.original, col.key),
+        cell: ({ row }: any) => {
+            const value = getNestedValue(row.original, col.key);
+            if (col.render) {
+                return col.render(value, row.original);
+            }
+            // Truncate long text if it's a string and no custom render
+            if (typeof value === 'string' && value.length > 50) {
+                return <span title={value}>{value.substring(0, 50)}...</span>;
+            }
+            return value;
+        },
         enableSorting: col.sortable,
         enableColumnFilter: col.filterable
     }))
@@ -62,7 +71,7 @@ export function DataTable<T>({
         getCoreRowModel: getCoreRowModel(),
     })
 
-    const totalPages = Math.ceil(total / 9)
+    const totalPages = Math.ceil(total / limit)
 
     const rows = table.getRowModel()?.rows ?? []
     // console.log("Rows: ", rows);
@@ -310,16 +319,37 @@ export function DataTable<T>({
             {/* Pagination */}
 
 
-            <div className="flex items-center justify-between">
+            <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
 
-                {/* Page Number */}
-                <p className="text-sm text-muted-foreground">
-                    Page <span className="font-medium text-foreground">
-                        {page}
-                    </span> of <span className="font-medium text-foreground">
-                        {totalPages || 1}
-                    </span>
-                </p>
+                <div className="flex items-center gap-4">
+                    {/* Page Number */}
+                    <p className="text-sm text-muted-foreground whitespace-nowrap">
+                        Page <span className="font-medium text-foreground">
+                            {page}
+                        </span> of <span className="font-medium text-foreground">
+                            {totalPages || 1}
+                        </span>
+                    </p>
+
+                    {/* Rows per page selector */}
+                    <div className="flex items-center gap-2">
+                        <span className="text-sm text-muted-foreground whitespace-nowrap">Rows:</span>
+                        <select
+                            value={limit}
+                            onChange={(e) => {
+                                setLimit(Number(e.target.value));
+                                setPage(1);
+                            }}
+                            className="h-8 rounded-md border border-muted bg-background px-2 text-sm outline-none focus:ring-1 focus:ring-primary"
+                        >
+                            {[5, 10, 20, 50].map((size) => (
+                                <option key={size} value={size}>
+                                    {size}
+                                </option>
+                            ))}
+                        </select>
+                    </div>
+                </div>
 
                 {/* Page Buttons */}
                 <div className="flex items-center gap-2">

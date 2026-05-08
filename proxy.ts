@@ -1,7 +1,11 @@
 import { updateSession } from "@/lib/supabase/proxy";
-import { type NextRequest } from "next/server";
+import { type NextRequest, NextResponse } from "next/server";
 
 export async function proxy(request: NextRequest) {
+  if (request.nextUrl.pathname.startsWith("/api/payments/webhook")) {
+    console.log("Skip webhook route: ", request.nextUrl.pathname);
+    return NextResponse.next();
+  }
   return await updateSession(request);
 }
 

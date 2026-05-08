@@ -1,6 +1,6 @@
 // allowed routes per role
 
-const roleRoutes : Record<string, Array<string>> = {
+const roleRoutes: Record<string, Array<string>> = {
     buyer: ["/buyer", "/account", "/shopping-cart"],
     seller: ["/buyer", "/seller", "/account", "/shopping-cart", "/seller-dashboard", "/assets", "/orders", "/success-onboarding"],
     admin: ["/buyer", "/admin", "/admin-dashboard", "/shopping-cart", "/manage-orders", "/manage-products", "/buyers", "/sellers", "/payment-gateways", "/reviews-ratings", "/site-content", "/site-config", "/audit-logs"],
@@ -9,7 +9,9 @@ const roleRoutes : Record<string, Array<string>> = {
 const publicRoutes = [
     '/product-detail',
     '/product-listing',
-    '/unauthorized'
+    '/unauthorized',
+    '/api/payments/webhook',
+    '/webhook'
 ];
 
 // protected routes for all users
@@ -22,13 +24,13 @@ const protectedRoutes = [
     "/shopping-cart",
     "/admin-dashboard",
     "/seller-dashboard",
-    "/assets", 
-    "orders", 
-    "/manage-orders", 
-    "/manage-products", 
-    "/manage-users", 
-    "/payment-gateways", 
-    "/reviews-ratings", 
+    "/assets",
+    "orders",
+    "/manage-orders",
+    "/manage-products",
+    "/manage-users",
+    "/payment-gateways",
+    "/reviews-ratings",
     "/site-content",
     "/buyers",
     "/sellers",
@@ -38,7 +40,7 @@ const protectedRoutes = [
 
 // functions
 
-export function isProtectedRoute(pathName : string){
+export function isProtectedRoute(pathName: string) {
     // if protected return true
     return protectedRoutes.some((route) => pathName.startsWith(route));
 }
@@ -50,6 +52,6 @@ export function getAllowedRoutes(role: string) {
     return roleRoutes[role].concat(publicRoutes) || [];
 }
 
-export function isCurrentRouteRBACProtected(currentRoute : string, role : string){
+export function isCurrentRouteRBACProtected(currentRoute: string, role: string) {
     return roleRoutes[role].some((route) => currentRoute.startsWith(route));
 }

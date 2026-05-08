@@ -107,6 +107,13 @@ export async function deletePayoutMethod(id: string) {
 
     if (!user) throw new Error('Not authenticated')
 
+    // Check if the method being deleted is primary
+    const { data: methodToDelete } = await supabase
+        .from('seller_payout_methods')
+        .select('is_primary')
+        .eq('id', id)
+        .single()
+
     const { error } = await supabase
         .from('seller_payout_methods')
         .delete()
@@ -114,6 +121,23 @@ export async function deletePayoutMethod(id: string) {
         .eq('seller_id', user.id)
 
     if (error) throw error
+
+    // If we deleted the primary method, set another one as primary if available
+    if (methodToDelete?.is_primary) {
+        const { data: nextMethod } = await supabase
+            .from('seller_payout_methods')
+            .select('id')
+            .eq('seller_id', user.id)
+            .limit(1)
+            .single()
+
+        if (nextMethod) {
+            await supabase
+                .from('seller_payout_methods')
+                .update({ is_primary: true })
+                .eq('id', nextMethod.id)
+        }
+    }
 
     await createAudit({
         action_name: 'DELETE_PAYOUT_METHOD',

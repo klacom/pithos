@@ -48,7 +48,7 @@ export default function ShoppingCartPage() {
                 const res = await fetch(`/api/cart/items`, { cache: "no-store" });
                 const cartItems: CartListItem[] = await res.json();
 
-                console.log("Cart Items: ", cartItems)
+                // console.log("Cart Items: ", cartItems)
 
                 if (ignore) return;
 

@@ -1,17 +1,19 @@
 import { useEffect, useState } from "react"
 
 export function useDataTable(
-    entity: string, 
+    entity: string,
     options: {
         searchableColumns?: string[]
         baseFilters?: Record<string, string | number | boolean>
-        enabled? : boolean
-        select? : string
+        enabled?: boolean
+        select?: string
+        limit?: number
     }
 ) {
     const [data, setData] = useState([])
     const [total, setTotal] = useState(0)
     const [page, setPage] = useState(1)
+    const [limit, setLimit] = useState(options.limit || 10)
     const [q, setQ] = useState("")
     const [debouncedQ, setDebouncedQ] = useState("");
     const [sort, setSort] = useState("")
@@ -27,12 +29,13 @@ export function useDataTable(
         if (!options.enabled) return;
 
         const fetchData = async () => {
-            
+
             try {
-                
+
                 // Search Params
                 const params = new URLSearchParams({
                     page: String(page),
+                    limit: String(limit),
                     q: debouncedQ,
                     sort,
                     order,
@@ -40,14 +43,14 @@ export function useDataTable(
                 })
 
                 // Append each searchable columns
-                if(options.searchableColumns){
+                if (options.searchableColumns) {
                     options.searchableColumns.forEach(col => {
                         params.append("search", col);
                     });
                 }
 
                 // Append each base filter - different from normal filter
-                if(options.baseFilters) {
+                if (options.baseFilters) {
                     Object.entries(options.baseFilters).forEach(([key, value]) => {
                         params.append(`base[${key}]`, String(value));
                     });
@@ -65,7 +68,7 @@ export function useDataTable(
                 const res = await fetch(apiLink, {
                     method: "GET"
                 })
-                
+
                 const json = await res.json()
 
                 // if (json && q) setPage(1) 
@@ -75,7 +78,7 @@ export function useDataTable(
             } catch (error) {
                 console.log("API-[entity] error: ", error);
             }
-            
+
         }
 
         fetchData()
@@ -91,6 +94,8 @@ export function useDataTable(
         total,
         page,
         setPage,
+        limit,
+        setLimit,
         q,
         setQ,
         debouncedQ,

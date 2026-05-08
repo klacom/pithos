@@ -35,16 +35,24 @@ export async function POST(request: NextRequest) {
         }
 
         const totalAmountCents = products.reduce((sum, p) => sum + Math.round(p.price * 100), 0);
-        const description = products.length === 1
-            ? `Purchase of ${products[0].product_name}`
+        
+        // Ensure description is never empty and truncated if too long (PayMongo limit is 255)
+        let description = products.length === 1
+            ? `Purchase of ${products[0].product_name || 'Digital Asset'}`
             : `Purchase of ${products.length} items from Pithos`;
+        
+        if (description.length > 255) {
+            description = description.substring(0, 252) + '...';
+        }
+
+        console.log("Creating Payment Intent with description:", description);
 
         // Create Payment Intent
         const intentResponse = await createPaymentIntent({
             amount: totalAmountCents,
             currency: 'PHP',
             payment_method_allowed: ['card', 'gcash', 'paymaya', 'grab_pay'],
-            description,
+            description: description,
             metadata: {
                 buyer_id: buyerId,
                 product_ids: productIds.join(','),

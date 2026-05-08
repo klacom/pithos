@@ -5,46 +5,110 @@ import crypto from 'crypto';
 import { createAudit } from '@/lib/supabase/create-audit';
 
 export async function POST(request: NextRequest) {
+
     const supabase = createAdminClient();
-    const payload = await request.text();
-    const signature = request.headers.get('paymongo-signature');
-    const webhookSecret = process.env.PAYMONGO_WEBHOOK_SECRET;
 
-    // Verify signature if secret is set
-    if (webhookSecret && signature) {
-        const [timestampStr, signatureStr] = signature.split(',');
-        const timestamp = timestampStr.split('=')[1];
-        const receivedSig = signatureStr.split('=')[1];
-        
-        const baseString = timestamp + payload;
-        const computedSig = crypto
-            .createHmac('sha256', webhookSecret)
-            .update(baseString)
-            .digest('hex');
+    const rawBody = await request.text();
 
-        if (computedSig !== receivedSig) {
-            return NextResponse.json({ error: 'Invalid signature' }, { status: 401 });
-        }
+    // DEBUG LOGS
+    console.log("HEADERS:");
+    console.log(Object.fromEntries(request.headers.entries()));
+
+    console.log("RAW BODY:");
+    console.log(rawBody);
+
+    const signatureHeader =
+        request.headers.get('Paymongo-Signature') ||
+        request.headers.get('paymongo-signature');
+
+    console.log("SIGNATURE HEADER:");
+    console.log(signatureHeader);
+
+    const webhookSecret = process.env.NEXT_PUBLIC_PAYMONGO_WEBHOOK_SECRET;
+
+    console.log("WEBHOOK SECRET EXISTS:", !!webhookSecret);
+
+    if (!signatureHeader || !webhookSecret) {
+        return NextResponse.json(
+            { error: 'Missing signature or webhook secret' },
+            { status: 401 }
+        );
+    }
+
+    const elements = signatureHeader.split(',');
+
+    const timestamp = elements
+        .find(v => v.startsWith('t='))
+        ?.replace('t=', '');
+
+    const testSignature = elements
+        .find(v => v.startsWith('te='))
+        ?.replace('te=', '');
+
+    const liveSignature = elements
+        .find(v => v.startsWith('li='))
+        ?.replace('li=', '');
+
+    const receivedSignature = testSignature || liveSignature;
+
+    console.log("TIMESTAMP:", timestamp);
+    console.log("RECEIVED SIGNATURE:", receivedSignature);
+
+    if (!timestamp || !receivedSignature) {
+        return NextResponse.json(
+            { error: 'Invalid signature format' },
+            { status: 401 }
+        );
+    }
+
+    const payloadToSign = `${timestamp}.${rawBody}`;
+
+    const expectedSignature = crypto
+        .createHmac('sha256', webhookSecret)
+        .update(payloadToSign)
+        .digest('hex');
+
+    console.log("EXPECTED SIGNATURE:", expectedSignature);
+
+    if (expectedSignature !== receivedSignature) {
+        return NextResponse.json(
+            { error: 'Invalid signature' },
+            { status: 401 }
+        );
     }
 
     try {
-        const body = JSON.parse(payload);
+
+        const body = JSON.parse(rawBody);
+
         const eventType = body.data.attributes.type;
         const resource = body.data.attributes.data;
 
-        if (eventType === 'payment.paid' || eventType === 'checkout_session.payment.paid') {
-            const payment = eventType === 'payment.paid' ? resource.attributes : resource.attributes.payments[0].attributes;
-            const intentId = payment.payment_intent_id || resource.attributes.payment_intent_id;
-            
-            // 1. Fetch the intent to get metadata (buyer_id, product_ids)
+        if (
+            eventType === 'payment.paid' ||
+            eventType === 'checkout_session.payment.paid'
+        ) {
+
+            const payment =
+                eventType === 'payment.paid'
+                    ? resource.attributes
+                    : resource.attributes.payments[0].attributes;
+
+            const intentId =
+                payment.payment_intent_id ||
+                resource.attributes.payment_intent_id;
+
             const intentResponse = await retrievePaymentIntent(intentId);
+
             const intent = intentResponse.data;
-            const { buyer_id, product_ids } = intent.attributes.metadata;
+
+            const { buyer_id, product_ids } =
+                intent.attributes.metadata;
 
             if (buyer_id && product_ids) {
+
                 const pids = product_ids.split(',');
 
-                // 2. Update transactions to completed
                 await supabase
                     .from('transactions')
                     .update({ status: 'completed' })
@@ -52,14 +116,12 @@ export async function POST(request: NextRequest) {
                     .in('product_id', pids)
                     .eq('status', 'pending');
 
-                // 3. Clear user's cart for these products
                 await supabase
                     .from('cart')
                     .delete()
                     .eq('user_id', buyer_id)
                     .in('product_id', pids);
 
-                // Audit the action
                 await createAudit({
                     action_name: 'PAYMENT_SUCCESS_WEBHOOK',
                     action_description: `Payment confirmed for buyer ${buyer_id}, products: ${product_ids}`,
@@ -72,9 +134,12 @@ export async function POST(request: NextRequest) {
         return NextResponse.json({ received: true });
 
     } catch (error: any) {
-        console.error('Webhook Error:', error);
+
+        console.error("WEBHOOK ERROR:");
+        console.error(error);
+
         return NextResponse.json(
-            { error: error.message || 'Webhook handler failed' },
+            { error: error.message || 'Webhook failed' },
             { status: 500 }
         );
     }

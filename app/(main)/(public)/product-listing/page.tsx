@@ -1,4 +1,4 @@
-import { ProductCard } from "@/components/products/ProductCard"
+import { ProductCard } from "@/components/products/ProductCard";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { ASSET_PHOTOS_BUCKET } from "@/lib/seller/asset-storage";
 import ProductListingFilters from "@/components/products/ProductListingFilters";
@@ -247,14 +247,14 @@ async function fetchPublishedListingProducts(
       subtitle: String(row.product_name ?? "Untitled Asset"),
       rating: avgRating,
       reviews: reviewCount,
-      author: sellerNameById.get(String(row.seller_owner_id ?? "")) ?? "Unknown seller",
+      author: sellerNameById.get(String(row.seller_owner_id ?? "")) ?? "Unknown Seller",
       price:
         price <= 0
           ? "Free"
           : new Intl.NumberFormat("en-PH", {
-              style: "currency",
-              currency: "PHP",
-            }).format(price),
+            style: "currency",
+            currency: "PHP",
+          }).format(price),
       imageSrc: thumbByProductId.get(pid) ?? "/pithos/PithosThumbnail.png",
       link: `/product-detail/${pid}`,
     } satisfies ListingProduct;
@@ -302,9 +302,9 @@ const page = async ({
     minRating: parseNumber(params.minRating),
     sort:
       params.sort === "newest" ||
-      params.sort === "price_asc" ||
-      params.sort === "price_desc" ||
-      params.sort === "rating_desc"
+        params.sort === "price_asc" ||
+        params.sort === "price_desc" ||
+        params.sort === "rating_desc"
         ? params.sort
         : "relevance",
   };

@@ -1,10 +1,24 @@
+"use client";
+
 import Link from "next/link";
 import PithosLogo from "@/components/PithosLogo";
 import { Github, Twitter, Youtube, Mail, MapPin, Phone } from "lucide-react";
+import { useEffect, useState } from "react";
+import { getSystemConfig, SystemConfig } from "@/app/(main)/(protected)/admin/system-config/system-config-settings";
 
 const Footer = () => {
     // const currentYear = new Date().getFullYear();
     const currentYear = 2026;
+    const [config, setConfig] = useState<SystemConfig | null>(null);
+
+    useEffect(() => {
+        const fetchConfig = async () => {
+            const { data } = await getSystemConfig();
+            if (data) setConfig(data);
+        };
+        fetchConfig();
+    }, []);
+
     return (
         <footer className="bg-card border-t w-full">
             <div className="max-w-7xl mx-auto px-4 py-16 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-12">
@@ -47,11 +61,11 @@ const Footer = () => {
                 <div className="flex flex-col gap-6">
                     <h3 className="font-bold text-lg">Company</h3>
                     <ul className="flex flex-col gap-3 text-sm text-muted-foreground">
-                        <li><Link href="#" className="hover:text-primary transition-colors">About Pithos</Link></li>
-                        <li><Link href="#" className="hover:text-primary transition-colors">Become a Seller</Link></li>
-                        <li><Link href="#" className="hover:text-primary transition-colors">Affiliate Program</Link></li>
-                        <li><Link href="#" className="hover:text-primary transition-colors">Privacy Policy</Link></li>
-                        <li><Link href="#" className="hover:text-primary transition-colors">Terms of Service</Link></li>
+                        <li><Link href="/company/about" className="hover:text-primary transition-colors">About Pithos</Link></li>
+                        <li><Link href="/company/become-seller" className="hover:text-primary transition-colors">Become a Seller</Link></li>
+                        <li><Link href="/company/affiliate" className="hover:text-primary transition-colors">Affiliate Program</Link></li>
+                        <li><Link href="/company/privacy" className="hover:text-primary transition-colors">Privacy Policy</Link></li>
+                        <li><Link href="/company/terms" className="hover:text-primary transition-colors">Terms of Service</Link></li>
                     </ul>
                 </div>
 
@@ -61,15 +75,15 @@ const Footer = () => {
                     <ul className="flex flex-col gap-4 text-sm text-muted-foreground">
                         <li className="flex items-center gap-3">
                             <Mail size={16} className="text-primary" />
-                            <span>support@pithos.com</span>
+                            <span>{config?.support_email || "support@pithos.com"}</span>
                         </li>
                         <li className="flex items-center gap-3">
                             <Phone size={16} className="text-primary" />
-                            <span>+63 (02) 8123-4567</span>
+                            <span>{config?.support_phone || "+63 (02) 8123-4567"}</span>
                         </li>
                         <li className="flex items-center gap-3">
                             <MapPin size={16} className="text-primary" />
-                            <span>Manila, Philippines</span>
+                            <span>{config?.support_location || "Manila, Philippines"}</span>
                         </li>
                     </ul>
                 </div>

@@ -19,7 +19,7 @@ export async function GET(
     const filters: Record<string, string[]> = {};
     const baseFilters: Record<string, string> = {};
 
-    const limit = 9
+    const limit = Number(searchParams.get("limit") ?? 9)
     const from = (page - 1) * limit
     const to = from + limit - 1
 

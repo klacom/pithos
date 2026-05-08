@@ -5,13 +5,14 @@ import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { Search } from "@deemlol/next-icons";
 import { Button } from "../../ui/button";
 
-import { Search as SearchIcon } from "lucide-react";
+import { Search as SearchIcon, Loader2 } from "lucide-react";
 
 const NavSearchBar = () => {
     const router = useRouter();
     const pathname = usePathname();
     const sp = useSearchParams();
     const [searchContent, setSearchContent] = useState("");
+    const [isSearching, setIsSearching] = useState(false);
     const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
     const currentParamsString = useMemo(() => sp?.toString() ?? "", [sp]);
@@ -24,6 +25,7 @@ const NavSearchBar = () => {
     }, [currentParamsString]);
 
     const pushWithQuery = (qRaw: string) => {
+        setIsSearching(true);
         const q = qRaw.trim();
         const onListing = (pathname ?? "") === "/product-listing";
         const params = new URLSearchParams(onListing ? sp?.toString() : "");
@@ -34,6 +36,9 @@ const NavSearchBar = () => {
         const base = "/product-listing";
         const target = `${base}${qs ? `?${qs}` : ""}`;
         router.push(target);
+
+        // Reset searching state after a short delay or when pathname changes
+        setTimeout(() => setIsSearching(false), 500);
     };
 
     const runSearch = () => {
@@ -48,13 +53,20 @@ const NavSearchBar = () => {
     useEffect(() => {
         // Only auto-navigate while typing when we're already on product listing.
         if ((pathname ?? "") !== "/product-listing") return;
+
         if (timerRef.current) clearTimeout(timerRef.current);
+
+        const currentQ = sp?.get("q") ?? "";
+        if (currentQ.trim() === searchContent.trim()) {
+            setIsSearching(false);
+            return;
+        }
+
+        setIsSearching(true);
         timerRef.current = setTimeout(() => {
-            // Avoid pushing the same query repeatedly.
-            const currentQ = sp?.get("q") ?? "";
-            if (currentQ.trim() === searchContent.trim()) return;
             pushWithQuery(searchContent);
-        }, 350);
+        }, 500);
+
         return () => {
             if (timerRef.current) clearTimeout(timerRef.current);
         };
@@ -64,11 +76,15 @@ const NavSearchBar = () => {
     return (
         <div className="relative group w-full lg:w-[480px]">
             <div className="absolute inset-y-0 left-4 flex items-center pointer-events-none">
-                <SearchIcon className="h-4 w-4 text-primary group-focus-within:text-primary transition-colors" />
+                {isSearching ? (
+                    <Loader2 className="h-4 w-4 text-primary animate-spin" />
+                ) : (
+                    <SearchIcon className="h-4 w-4 text-primary group-focus-within:text-primary transition-colors" />
+                )}
             </div>
             <input
                 placeholder="Search for 3D models, textures, or tools..."
-                className="w-full h-10 pl-11 pr-4 rounded-full border border-primary bg-background text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-accent focus:border-accent transition-all"
+                className="w-full h-10 pl-11 pr-10 rounded-full border border-primary bg-background text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-accent focus:border-accent transition-all"
                 type="text"
                 value={searchContent}
                 onChange={(e) => setSearchContent(e.currentTarget.value)}
@@ -76,6 +92,11 @@ const NavSearchBar = () => {
                     if (e.key === "Enter") runSearch();
                 }}
             />
+            {isSearching && (
+                <div className="absolute inset-y-0 right-4 flex items-center pointer-events-none">
+                    <span className="text-[10px] text-muted-foreground animate-pulse">Searching...</span>
+                </div>
+            )}
         </div>
     )
 }

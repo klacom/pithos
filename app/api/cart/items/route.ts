@@ -140,13 +140,13 @@ export async function GET() {
                 productId,
                 title: String(product.product_name ?? "Untitled asset"),
                 subtitle: String(product.product_description ?? "").trim(),
-                sellerName:
-                    sellerById.get(String(product.seller_owner_id ?? "")) ?? "Unknown seller",
+                sellerName: sellerById.get(String(product.seller_owner_id ?? "")) ?? "Unknown Seller",
                 price,
                 priceLabel: formatPeso(price),
                 imageSrc: thumbnails.get(productId) ?? "/pithos/PithosThumbnail.png",
                 addedAt: String(row.created_at ?? new Date().toISOString()),
                 productStatus: String(product.product_status ?? "published"),
+                isFavorite: Boolean(false),
             } satisfies CartListItem;
         })
         .filter((item): item is CartListItem => Boolean(item));

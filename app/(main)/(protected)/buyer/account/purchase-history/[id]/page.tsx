@@ -109,7 +109,7 @@ export default function OrderDetailsPage() {
         if (!transaction?.product_id) return;
 
         try {
-            const res = await fetch(`/api/products/${transaction.product_id}/download`);
+            const res = await fetch(`/api/product/${transaction.product_id}/download`);
             const data = await res.json();
 
             if (!res.ok) throw new Error(data.error);

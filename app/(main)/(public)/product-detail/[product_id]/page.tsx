@@ -210,7 +210,7 @@ export default function ProductDetailPage() {
                 const [productRes, reviewsRes, viewerStateRes] = await Promise.all([
                     fetch(`/api/product/${product_id}`),
                     fetch(`/api/product/${product_id}/reviews`),
-                    fetch(`/api/products/${product_id}/viewer-state`),
+                    fetch(`/api/product/${product_id}/viewer-state`),
                 ]);
 
                 if (!productRes.ok) {
@@ -225,7 +225,7 @@ export default function ProductDetailPage() {
                     fetch(
                         `/api/seller/${productData.product.seller_owner_id}/products?exclude=${product_id}&limit=4`,
                     ),
-                    fetch(`/api/products/suggested?exclude=${product_id}&limit=4`),
+                    fetch(`/api/product/suggested?exclude=${product_id}&limit=4`),
                 ]);
 
                 const sellerProductsData = sellerProductsRes.ok
@@ -237,6 +237,7 @@ export default function ProductDetailPage() {
 
                 if (ignore) return;
 
+                console.log("Viewer State:", viewerState);
                 setProduct(productData.product);
                 setImages(productData.images ?? ["/pithos/PithosThumbnail.png"]);
                 setPackageFileNames(productData.packageFileNames ?? []);
@@ -361,7 +362,7 @@ export default function ProductDetailPage() {
 
         setIsBusy("download");
         try {
-            const res = await fetch(`/api/products/${product_id}/download`);
+            const res = await fetch(`/api/product/${product_id}/download`);
             const data = await res.json();
 
             if (!res.ok) throw new Error(data.error);
@@ -416,32 +417,32 @@ export default function ProductDetailPage() {
 
                         <Card className="p-6">
                             <div className="space-y-4">
-                                    <div className="flex items-center justify-between gap-4 border-b pb-3">
-                                        <span className="text-sm text-foreground/70">Category</span>
-                                        <span className="font-medium">{parsedDescription.category}</span>
-                                    </div>
-                                    <div className="flex items-center justify-between gap-4 border-b pb-3">
-                                        <span className="text-sm text-foreground/70">Published</span>
-                                        <span className="font-medium">
-                                            {new Date(product.created_at).toLocaleDateString("en-PH", {
-                                                month: "short",
-                                                day: "numeric",
-                                                year: "numeric",
-                                            })}
-                                        </span>
-                                    </div>
-                                    <div className="flex items-center justify-between gap-4 border-b pb-3">
-                                        <span className="text-sm text-foreground/70">Status</span>
-                                        <span className="font-medium capitalize">
-                                            {product.product_status || "published"}
-                                        </span>
-                                    </div>
-                                    <div className="flex items-center justify-between gap-4 border-b pb-3">
-                                        <span className="text-sm text-foreground/70">Publisher</span>
-                                        <span className="font-medium">
-                                            {seller?.user_fullname || seller?.user_email?.split("@")[0] || "Pithos Publisher"}
-                                        </span>
-                                    </div>
+                                <div className="flex items-center justify-between gap-4 border-b pb-3">
+                                    <span className="text-sm text-foreground/70">Category</span>
+                                    <span className="font-medium">{parsedDescription.category}</span>
+                                </div>
+                                <div className="flex items-center justify-between gap-4 border-b pb-3">
+                                    <span className="text-sm text-foreground/70">Published</span>
+                                    <span className="font-medium">
+                                        {new Date(product.created_at).toLocaleDateString("en-PH", {
+                                            month: "short",
+                                            day: "numeric",
+                                            year: "numeric",
+                                        })}
+                                    </span>
+                                </div>
+                                <div className="flex items-center justify-between gap-4 border-b pb-3">
+                                    <span className="text-sm text-foreground/70">Status</span>
+                                    <span className="font-medium capitalize">
+                                        {product.product_status || "published"}
+                                    </span>
+                                </div>
+                                <div className="flex items-center justify-between gap-4 border-b pb-3">
+                                    <span className="text-sm text-foreground/70">Publisher</span>
+                                    <span className="font-medium">
+                                        {seller?.user_fullname || seller?.user_email?.split("@")[0] || "Pithos Publisher"}
+                                    </span>
+                                </div>
                                 <div className="space-y-3 pt-1">
                                     <span className="text-sm text-foreground/70">Highlights</span>
                                     <div className="flex flex-wrap gap-2">
@@ -652,8 +653,8 @@ export default function ProductDetailPage() {
                                         Publisher Background
                                     </div>
                                     <p className="leading-relaxed text-foreground/80">
-                                        This publisher is a trusted member of the Pithos community, 
-                                        specializing in high-quality digital assets for creators. 
+                                        This publisher is a trusted member of the Pithos community,
+                                        specializing in high-quality digital assets for creators.
                                         All assets from this seller are reviewed for quality and performance.
                                     </p>
                                 </div>
@@ -1103,19 +1104,18 @@ export default function ProductDetailPage() {
                             </div>
 
                             {/* Thumbnails in zoom view */}
-                            <div 
-                                className="mt-6 flex gap-3 overflow-x-auto pb-4"
+                            <div
+                                className="mt-6 flex gap-3 pb-4"
                                 onClick={(e) => e.stopPropagation()}
                             >
                                 {images.map((image, index) => (
                                     <button
                                         key={`zoom-thumb-${index}`}
                                         onClick={() => setCurrentImageIndex(index)}
-                                        className={`relative h-20 w-20 shrink-0 overflow-hidden rounded-xl border-2 transition-all ${
-                                            currentImageIndex === index
-                                                ? "border-accent scale-110 shadow-lg shadow-accent/20"
-                                                : "border-white/10 opacity-50 hover:opacity-100"
-                                        }`}
+                                        className={`relative h-20 w-20 shrink-0 overflow-hidden rounded-xl border-2 transition-all ${currentImageIndex === index
+                                            ? "border-accent scale-110 shadow-lg shadow-accent/20"
+                                            : "border-white/10 opacity-50 hover:opacity-100"
+                                            }`}
                                     >
                                         <Image
                                             fill

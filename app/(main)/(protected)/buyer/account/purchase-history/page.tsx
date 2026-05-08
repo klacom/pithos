@@ -127,7 +127,7 @@ const page = () => {
                     if (!productId) return;
 
                     try {
-                        const res = await fetch(`/api/products/${productId}/download`);
+                        const res = await fetch(`/api/product/${productId}/download`);
                         const data = await res.json();
 
                         if (!res.ok) throw new Error(data.error);

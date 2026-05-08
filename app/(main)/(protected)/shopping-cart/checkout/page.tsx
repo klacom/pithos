@@ -99,7 +99,7 @@ function CheckoutContent() {
                 return;
             }
 
-            if (selectedPayment === 'gcash' || selectedPayment === 'paymaya') {
+            if (selectedPayment === 'gcash' || selectedPayment === 'paymaya' || selectedPayment === 'maya') {
                 const attachRes = await fetch("/api/payments/attach-intent", {
                     method: "POST",
                     headers: { "Content-Type": "application/json" },
