@@ -25,7 +25,7 @@ export async function POST(request: NextRequest) {
     console.log("SIGNATURE HEADER:");
     console.log(signatureHeader);
 
-    const webhookSecret = process.env.PAYMONGO_WEBHOOK_SECRET;
+    const webhookSecret = process.env.NEXT_PUBLIC_PAYMONGO_WEBHOOK_SECRET;
 
     console.log("WEBHOOK SECRET EXISTS:", !!webhookSecret);
 
