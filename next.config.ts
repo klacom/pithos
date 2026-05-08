@@ -21,8 +21,11 @@ const nextConfig: NextConfig = {
         ],
     },
     experimental: {
+        // Dev/proxy request body ceiling for large multipart uploads.
+        proxyClientMaxBodySize: 100 * 1024 * 1024,
         serverActions: {
-            bodySizeLimit: '50mb',
+            // Allow multipart overhead so 50 MB asset uploads do not fail parsing.
+            bodySizeLimit: '100mb',
         },
     },
 };

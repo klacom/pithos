@@ -13,7 +13,6 @@ import {
     archiveSellerProduct,
     deleteSellerProductPhoto,
     updateSellerProduct,
-    uploadSellerProductMedia,
     getSellerProductMediaSummary,
 } from "@/app/(main)/(protected)/seller/assets/actions";
 import type {
@@ -90,6 +89,40 @@ export default function AssetsPageClient({
             fd.append("package", packageFile);
         }
         return fd;
+    };
+
+    const uploadMediaInChunks = async (
+        productId: string,
+        media: SellerUploadMedia,
+        packageFile: File | null,
+    ) => {
+        const uploadChunk = async (fd: FormData) => {
+            fd.append("productId", productId);
+            const res = await fetch("/api/seller/product-media", {
+                method: "POST",
+                body: fd,
+            });
+            const data = await res.json().catch(() => ({}));
+            if (!res.ok) {
+                throw new Error(data?.error ?? "Upload failed");
+            }
+            if (data?.error) {
+                throw new Error(data.error);
+            }
+        };
+
+        // Upload package separately so Server Action body-size checks
+        // don't reject combined payloads near 50 MB.
+        if (packageFile) {
+            const packageOnly = new FormData();
+            packageOnly.append("package", packageFile);
+            await uploadChunk(packageOnly);
+        }
+
+        if (media.cover || media.detailFiles.length > 0) {
+            const mediaOnly = appendMediaToFormData(media, null);
+            await uploadChunk(mediaOnly);
+        }
     };
 
     return (
@@ -188,12 +221,11 @@ export default function AssetsPageClient({
                                     media.cover != null ||
                                     media.detailFiles.length > 0;
                                 if (hasUpload) {
-                                    const fd = appendMediaToFormData(media, packageFile);
-                                    const { error: uploadError } =
-                                        await uploadSellerProductMedia(editingProductId, fd);
-                                    if (uploadError) {
+                                    try {
+                                        await uploadMediaInChunks(editingProductId, media, packageFile);
+                                    } catch (uploadError) {
                                         throw new Error(
-                                            `Listing updated but file upload failed: ${uploadError}`,
+                                            `Listing updated but file upload failed: ${uploadError instanceof Error ? uploadError.message : "unknown upload error"}`,
                                         );
                                     }
                                 }
@@ -218,12 +250,11 @@ export default function AssetsPageClient({
                                     media.cover != null ||
                                     media.detailFiles.length > 0;
                                 if (hasUpload) {
-                                    const fd = appendMediaToFormData(media, packageFile);
-                                    const { error: uploadError } =
-                                        await uploadSellerProductMedia(productId, fd);
-                                    if (uploadError) {
+                                    try {
+                                        await uploadMediaInChunks(productId, media, packageFile);
+                                    } catch (uploadError) {
                                         throw new Error(
-                                            `Listing saved but upload failed: ${uploadError}`,
+                                            `Listing saved but upload failed: ${uploadError instanceof Error ? uploadError.message : "unknown upload error"}`,
                                         );
                                     }
                                 }

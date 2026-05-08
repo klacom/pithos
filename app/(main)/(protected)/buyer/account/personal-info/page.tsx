@@ -12,7 +12,7 @@ import { toast } from "sonner";
 import { Upload, X } from "lucide-react";
 
 const MAX_SIZE = 5 * 1024 * 1024; // 5MB
-const ALLOWED_TYPES = ["image/jpg", "image/jpeg", "image/png"];
+const ALLOWED_TYPES = ["image/jpg", "image/jpeg", "image/png", "image/webp"];
 
 export default function PersonalInfoPage() {
     const { user, loading } = useAuth();
@@ -57,7 +57,7 @@ export default function PersonalInfoPage() {
         }
 
         if (!ALLOWED_TYPES.includes(file.type)) {
-            toast.error("Invalid file type. Only JPG, JPEG, and PNG are allowed.");
+            toast.error("Invalid file type. Only JPG, JPEG, PNG, and WEBP are allowed.");
             return;
         }
 
@@ -122,7 +122,7 @@ export default function PersonalInfoPage() {
             <div className='flex flex-col lg:flex-row gap-8'>
                 <div className='flex flex-col gap-4 w-full lg:w-1/4'>
                     <h1 className='font-bold text-2xl'>Profile Picture</h1>
-                    <p className='text-muted-foreground'>Update your profile picture. (Max 5MB, JPG/PNG only)</p>
+                    <p className='text-muted-foreground'>Update your profile picture. (Max 5MB, JPG/PNG/WEBP)</p>
                 </div>
                 <div className='flex flex-col gap-4 w-full lg:w-3/4'>
                     <Card className='w-full p-6 flex flex-col gap-6 bg-primary-foreground border-muted'>
@@ -157,7 +157,7 @@ export default function PersonalInfoPage() {
                                     ref={fileInputRef}
                                     type="file"
                                     className="hidden"
-                                    accept="image/jpg,image/jpeg,image/png"
+                                    accept="image/jpg,image/jpeg,image/png,image/webp"
                                     onChange={handleFileChange}
                                 />
                                 <Button 

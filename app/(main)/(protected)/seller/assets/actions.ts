@@ -18,7 +18,6 @@ import {
 import {
   validateImageFile,
   validateImageFiles,
-  formatMaxImageSizeLabel,
 } from "@/lib/upload-validation";
 import { sanitizeText, sanitizeHtmlServer } from "@/lib/sanitization-server";
 
@@ -88,17 +87,6 @@ export async function createSellerProduct(
   }
   const productId = data?.product_id != null ? String(data.product_id) : null;
 
-  // Audit log for product creation
-  try {
-    await createAudit({
-      action_name: "PRODUCT_CREATED",
-      action_description: `Seller created product: ${input.title.trim()} (Status: ${input.isDraft ? 'draft' : 'published'}, Price: ${input.price})`,
-      affected_resources: `product:${productId}`,
-      actor: uid,
-    });
-  } catch (auditError) {
-    console.error("Audit log failed for product creation:", auditError);
-  }
 
   revalidatePath("/seller/assets");
   revalidatePath("/seller/view-assets");
@@ -164,17 +152,7 @@ export async function updateSellerProduct(
     return { error: error.message };
   }
 
-  // Audit log for product update
-  try {
-    await createAudit({
-      action_name: "PRODUCT_UPDATED",
-      action_description: `Seller updated product ID ${input.productId}: ${input.title.trim()} (Status: ${targetStatus}, Price: ${input.price})`,
-      affected_resources: `product:${input.productId}`,
-      actor: uid,
-    });
-  } catch (auditError) {
-    console.error("Audit log failed for product update:", auditError);
-  }
+
 
   revalidatePath("/seller/assets");
   revalidatePath("/seller/view-assets");
@@ -267,25 +245,10 @@ export async function uploadSellerProductMedia(
       if (pkgErr.error) return pkgErr;
     }
 
-    return uploadSellerAssetPhotos(supabase, productId, {
+    const result = await uploadSellerAssetPhotos(supabase, productId, {
       cover,
       detailFiles,
     });
-
-    // Audit log for media upload (only if successful)
-    if (!result.error) {
-      try {
-        const fileCount = (cover ? 1 : 0) + detailFiles.length + (packageFile ? 1 : 0);
-        await createAudit({
-          action_name: "PRODUCT_MEDIA_UPLOADED",
-          action_description: `Seller uploaded ${fileCount} file(s) to product ID ${productId} (${cover ? 'cover, ' : ''}${detailFiles.length} detail image(s)${packageFile ? ', package file' : ''})`,
-          affected_resources: `product:${productId}`,
-          actor: uid,
-        });
-      } catch (auditError) {
-        console.error("Audit log failed for media upload:", auditError);
-      }
-    }
     return result;
   } catch (e) {
     const message =
@@ -327,17 +290,7 @@ export async function archiveSellerProduct(
       return { error: error.message };
     }
 
-    // Audit log for product deletion
-    try {
-      await createAudit({
-        action_name: "PRODUCT_DELETED",
-        action_description: `Seller deleted product ID ${productId}`,
-        affected_resources: `product:${productId}`,
-        actor: uid,
-      });
-    } catch (auditError) {
-      console.error("Audit log failed for product deletion:", auditError);
-    }
+  
   } catch (e) {
     const message =
       e instanceof Error ? e.message : "Server configuration error";
