@@ -21,7 +21,7 @@ const Page = () => {
     const [loading, setLoading] = useState(true)
     const [isSavingAll, setIsSavingAll] = useState(false)
     const [isCreating, setIsCreating] = useState<string | null>(null)
-    
+
     // Refs for calling save() on each banner component
     const bannerRefs = useRef<{ [key: string]: any }>({})
 
@@ -89,17 +89,14 @@ const Page = () => {
     return (
         <div className="flex flex-col min-h-screen bg-muted/30">
             {/* Top Bar */}
-            <div className="sticky top-0 z-20 bg-background/80 backdrop-blur-md border-b px-8 py-4 flex items-center justify-between">
+            <div className="sticky top-0 z-20 bg-background/80 backdrop-blur-md border-b p-4 flex items-center justify-between">
                 <div className="flex items-center gap-3">
-                    <div className="p-2 bg-primary/10 rounded-lg">
-                        <Layout className="h-6 w-6 text-primary" />
-                    </div>
-                    <h1 className="text-2xl font-black tracking-tight">Site Content Manager</h1>
+                    <h1 className="text-2xl font-bold">Site Content Manager</h1>
                 </div>
                 <div className="flex items-center gap-4">
-                    <Button 
-                        variant="outline" 
-                        onClick={fetchBlocks} 
+                    <Button
+                        variant="outline"
+                        onClick={fetchBlocks}
                         disabled={loading}
                         className="rounded-full px-6"
                     >
@@ -108,9 +105,9 @@ const Page = () => {
                 </div>
             </div>
 
-            <div className="flex flex-col lg:flex-row gap-8 p-8 max-w-[1600px] mx-auto w-full">
+            <div className="flex flex-col lg:flex-row gap-8 p-4 min-h-0 h-full overflow-y-auto max-w-[1600px] mx-auto w-full">
                 {/* Left Column: Banner List */}
-                <div className="flex-1 space-y-8">
+                <div className="flex-1 space-y-8 min-h-0 h-full overflow-y-auto">
                     {loading ? (
                         <div className="flex flex-col items-center justify-center py-20 gap-4">
                             <Loader2 className="h-10 w-10 text-primary animate-spin" />
@@ -131,21 +128,21 @@ const Page = () => {
                             {blocks.map((block) => (
                                 <div key={block.id} className="scroll-mt-24">
                                     {block.type === "small_banner" && (
-                                        <ConfigureSmallBanner 
-                                            block={block} 
-                                            ref={el => bannerRefs.current[block.id] = el} 
+                                        <ConfigureSmallBanner
+                                            block={block}
+                                            ref={(el: any) => bannerRefs.current[block.id] = el}
                                         />
                                     )}
                                     {block.type === "big_banner" && (
-                                        <ConfigureBigBanner 
-                                            block={block} 
-                                            ref={el => bannerRefs.current[block.id] = el} 
+                                        <ConfigureBigBanner
+                                            block={block}
+                                            ref={(el: any) => bannerRefs.current[block.id] = el}
                                         />
                                     )}
                                     {block.type === "list_banner" && (
-                                        <ConfigureListBanner 
-                                            block={block} 
-                                            ref={el => bannerRefs.current[block.id] = el} 
+                                        <ConfigureListBanner
+                                            block={block}
+                                            ref={(el: any) => bannerRefs.current[block.id] = el}
                                         />
                                     )}
                                 </div>
@@ -155,27 +152,27 @@ const Page = () => {
                 </div>
 
                 {/* Right Column: Sticky Controls */}
-                <div className="lg:w-[380px] shrink-0">
+                <div className="lg:w-[380px] shrink-0 min-h-0 h-full overflow-y-auto">
                     <div className="sticky top-24 space-y-6">
                         {/* Creation Panel */}
-                        <Card className="p-6 border-2 border-primary/10 shadow-xl rounded-3xl bg-background overflow-hidden relative">
+                        <Card className="p-6 border-2 border-muted shadow-md rounded-3xl bg-card overflow-hidden relative">
                             <div className="absolute top-0 right-0 p-8 -mr-4 -mt-4 opacity-5 pointer-events-none">
                                 <Sparkles className="h-32 w-32" />
                             </div>
-                            
+
                             <h2 className="text-lg font-black mb-6 flex items-center gap-2">
                                 <PackagePlus className="h-5 w-5 text-primary" />
                                 Create New Content
                             </h2>
 
                             <div className="grid gap-3">
-                                <Button 
-                                    variant="outline" 
-                                    className="h-auto py-4 px-4 justify-start gap-4 rounded-2xl border-2 hover:border-primary/50 hover:bg-primary/5 transition-all group"
+                                <Button
+                                    variant="outline"
+                                    className="h-auto py-4 px-4 justify-start gap-4 rounded-2xl border-2 hover:border-primary hover:bg-primary transition-all group"
                                     onClick={() => handleCreateBanner("small_banner")}
                                     disabled={!!isCreating}
                                 >
-                                    <div className="p-2 bg-blue-100 text-blue-600 rounded-xl group-hover:scale-110 transition-transform">
+                                    <div className="p-2 bg-red-100 text-red-600 rounded-xl group-hover:scale-110 transition-transform">
                                         <Layers className="h-5 w-5" />
                                     </div>
                                     <div className="text-left">
@@ -185,13 +182,13 @@ const Page = () => {
                                     {isCreating === "small_banner" && <Loader2 className="ml-auto h-4 w-4 animate-spin" />}
                                 </Button>
 
-                                <Button 
-                                    variant="outline" 
-                                    className="h-auto py-4 px-4 justify-start gap-4 rounded-2xl border-2 hover:border-primary/50 hover:bg-primary/5 transition-all group"
+                                <Button
+                                    variant="outline"
+                                    className="h-auto py-4 px-4 justify-start gap-4 rounded-2xl border-2 hover:border-primary hover:bg-primary transition-all group"
                                     onClick={() => handleCreateBanner("big_banner")}
                                     disabled={!!isCreating}
                                 >
-                                    <div className="p-2 bg-amber-100 text-amber-600 rounded-xl group-hover:scale-110 transition-transform">
+                                    <div className="p-2 bg-red-100 text-red-600 rounded-xl group-hover:scale-110 transition-transform">
                                         <Layout className="h-5 w-5" />
                                     </div>
                                     <div className="text-left">
@@ -201,13 +198,13 @@ const Page = () => {
                                     {isCreating === "big_banner" && <Loader2 className="ml-auto h-4 w-4 animate-spin" />}
                                 </Button>
 
-                                <Button 
-                                    variant="outline" 
-                                    className="h-auto py-4 px-4 justify-start gap-4 rounded-2xl border-2 hover:border-primary/50 hover:bg-primary/5 transition-all group"
+                                <Button
+                                    variant="outline"
+                                    className="h-auto py-4 px-4 justify-start gap-4 rounded-2xl border-2 hover:border-primary hover:bg-primary transition-all group"
                                     onClick={() => handleCreateBanner("list_banner")}
                                     disabled={!!isCreating}
                                 >
-                                    <div className="p-2 bg-emerald-100 text-emerald-600 rounded-xl group-hover:scale-110 transition-transform">
+                                    <div className="p-2 bg-red-100 text-red-600 rounded-xl group-hover:scale-110 transition-transform">
                                         <List className="h-5 w-5" />
                                     </div>
                                     <div className="text-left">
@@ -221,7 +218,7 @@ const Page = () => {
 
                         {/* Save Panel */}
                         {blocks.length > 0 && (
-                            <Card className="p-6 border-2 border-primary shadow-xl rounded-3xl bg-primary text-primary-foreground overflow-hidden relative">
+                            <Card className="p-6 border-2 border-muted shadow-md rounded-3xl bg-card text-primary overflow-hidden relative">
                                 <div className="relative z-10">
                                     <div className="flex items-center gap-3 mb-4">
                                         <div className="p-2 bg-white/20 rounded-xl">
@@ -232,11 +229,12 @@ const Page = () => {
                                             <p className="text-[10px] opacity-80">You have {blocks.length} blocks being edited</p>
                                         </div>
                                     </div>
-                                    
-                                    <Button 
-                                        className="w-full bg-white text-primary hover:bg-white/90 font-black rounded-2xl py-6 shadow-lg transition-all active:scale-95"
+
+                                    <Button
+                                        className="w-full bg-accent font-black rounded-2xl py-6 shadow-lg transition-all active:scale-95"
                                         onClick={handleSaveAll}
                                         disabled={isSavingAll}
+                                        variant="red_default"
                                     >
                                         {isSavingAll ? (
                                             <>
@@ -247,7 +245,7 @@ const Page = () => {
                                             "SAVE ALL CHANGES"
                                         )}
                                     </Button>
-                                    
+
                                     <div className="mt-4 flex items-start gap-2 text-[9px] opacity-70 italic leading-tight">
                                         <AlertCircle className="h-3 w-3 shrink-0" />
                                         Saving will update the homepage immediately for all users.
