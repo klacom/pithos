@@ -259,55 +259,90 @@ export function LoginForm({
                 {/* Login Card */}
                 <Card className="w-full">
 
-                {/* Card Header */}
-                <CardHeader>
-                    <div className="text-xs text-muted-foreground hover:underline w-fit mb-4 block cursor-pointer" onClick={async () => {
-                        if (showMfa || showMfaSetup) {
-                            await handleCancelMfa();
-                        } else {
-                            await supabase.auth.signOut({ scope: 'local' });
-                            window.location.href = "/";
-                        }
-                    }}>
-                        &lt; Return
-                    </div>
-                    <div className="flex flex-col gap-2 items-start">
-                        <CardTitle className="text-2xl">Login</CardTitle>
-                        <CardDescription>
-                            {showMfaSetup ? "Your authenticator app secret - you can use this to set up additional devices" : (showMfa ? "Enter the current 6-digit code from your authenticator app (one-time use only)" : "Enter your email below to login to your account")}
-                        </CardDescription>
-                    </div>
-                </CardHeader>
+                    {/* Card Header */}
+                    <CardHeader>
+                        <div className="text-xs text-muted-foreground hover:underline w-fit mb-4 block cursor-pointer" onClick={async () => {
+                            if (showMfa || showMfaSetup) {
+                                await handleCancelMfa();
+                            } else {
+                                await supabase.auth.signOut({ scope: 'local' });
+                                window.location.href = "/";
+                            }
+                        }}>
+                            &lt; Return
+                        </div>
+                        <div className="flex flex-col gap-2 items-start">
+                            <CardTitle className="text-2xl">Login</CardTitle>
+                            <CardDescription>
+                                {showMfaSetup ? "Your authenticator app secret - you can use this to set up additional devices" : (showMfa ? "Enter the current 6-digit code from your authenticator app (one-time use only)" : "Enter your email below to login to your account")}
+                            </CardDescription>
+                        </div>
+                    </CardHeader>
 
-                {/* Card Content */}
-                <CardContent>
+                    {/* Card Content */}
+                    <CardContent>
 
-                    {/* Form */}
-                    <div className="flex flex-col gap-6">
-                        {showMfaSetup ? (
-                            <div className="grid gap-4">
-                                <div className="text-center">
-                                    <h3 className="font-semibold text-lg">Your Authenticator Secret</h3>
-                                    <p className="text-sm text-muted-foreground">Use this secret to setup your authenticator app on additional devices.</p>
-                                </div>
-                                <div className="flex justify-center">
-                                    <div className="w-48 h-48 bg-white p-2 rounded-md flex items-center justify-center">
-                                        <img
-                                            src={qrCode || ''}
-                                            alt="MFA QR Code"
-                                            className="w-full h-full"
+                        {/* Form */}
+                        <div className="flex flex-col gap-6">
+                            {showMfaSetup ? (
+                                <div className="grid gap-4">
+                                    <div className="text-center">
+                                        <h3 className="font-semibold text-lg">Your Authenticator Secret</h3>
+                                        <p className="text-sm text-muted-foreground">Use this secret to setup your authenticator app on additional devices.</p>
+                                    </div>
+                                    <div className="flex justify-center">
+                                        <div className="w-48 h-48 bg-white p-2 rounded-md flex items-center justify-center">
+                                            <img
+                                                src={qrCode || ''}
+                                                alt="MFA QR Code"
+                                                className="w-full h-full"
+                                            />
+                                        </div>
+                                    </div>
+                                    <div className="text-center">
+                                        <p className="text-sm text-muted-foreground mb-2">Or enter this secret manually:</p>
+                                        <div className="bg-muted p-2 rounded font-mono text-xs break-all">
+                                            {secret || ""}
+                                        </div>
+                                    </div>
+                                    <div className="grid gap-2">
+                                        <div className="flex justify-between items-center">
+                                            <Label htmlFor="mfaCode">Verification Code</Label>
+                                            <span className={cn("text-xs font-mono", timeRemaining <= 5 ? "text-red-500 font-bold" : "text-muted-foreground")}>
+                                                {timeRemaining}s
+                                            </span>
+                                        </div>
+                                        <Input
+                                            id="mfaCode"
+                                            type="text"
+                                            placeholder="Enter 6-digit code"
+                                            required
+                                            value={mfaCode}
+                                            onChange={(e) => setMfaCode(e.target.value)}
+                                            onKeyDown={(e) => {
+                                                if (e.key === "Enter") {
+                                                    e.preventDefault();
+                                                    if (showMfaSetup) {
+                                                        handleVerifySetup(e as any);
+                                                    } else {
+                                                        handleLogin(e as any);
+                                                    }
+                                                }
+                                            }}
+                                            maxLength={6}
                                         />
+                                        <div className="h-1 w-full bg-muted overflow-hidden rounded-full mt-1">
+                                            <div
+                                                className={cn("h-full transition-all duration-1000 ease-linear", timeRemaining <= 5 ? "bg-red-500" : "bg-primary")}
+                                                style={{ width: `${(timeRemaining / 30) * 100}%` }}
+                                            />
+                                        </div>
                                     </div>
                                 </div>
-                                <div className="text-center">
-                                    <p className="text-sm text-muted-foreground mb-2">Or enter this secret manually:</p>
-                                    <div className="bg-muted p-2 rounded font-mono text-xs break-all">
-                                        {secret || ""}
-                                    </div>
-                                </div>
+                            ) : showMfa ? (
                                 <div className="grid gap-2">
                                     <div className="flex justify-between items-center">
-                                        <Label htmlFor="mfaCode">Verification Code</Label>
+                                        <Label htmlFor="mfaCode">One-Time Code</Label>
                                         <span className={cn("text-xs font-mono", timeRemaining <= 5 ? "text-red-500 font-bold" : "text-muted-foreground")}>
                                             {timeRemaining}s
                                         </span>
@@ -315,10 +350,11 @@ export function LoginForm({
                                     <Input
                                         id="mfaCode"
                                         type="text"
-                                        placeholder="Enter 6-digit code"
+                                        placeholder="Enter current 6-digit code"
                                         required
                                         value={mfaCode}
                                         onChange={(e) => setMfaCode(e.target.value)}
+                                        maxLength={6}
                                         onKeyDown={(e) => {
                                             if (e.key === "Enter") {
                                                 e.preventDefault();
@@ -329,7 +365,6 @@ export function LoginForm({
                                                 }
                                             }
                                         }}
-                                        maxLength={6}
                                     />
                                     <div className="h-1 w-full bg-muted overflow-hidden rounded-full mt-1">
                                         <div
@@ -338,152 +373,117 @@ export function LoginForm({
                                         />
                                     </div>
                                 </div>
-                            </div>
-                        ) : showMfa ? (
-                            <div className="grid gap-2">
-                                <div className="flex justify-between items-center">
-                                    <Label htmlFor="mfaCode">One-Time Code</Label>
-                                    <span className={cn("text-xs font-mono", timeRemaining <= 5 ? "text-red-500 font-bold" : "text-muted-foreground")}>
-                                        {timeRemaining}s
-                                    </span>
-                                </div>
-                                <Input
-                                    id="mfaCode"
-                                    type="text"
-                                    placeholder="Enter current 6-digit code"
-                                    required
-                                    value={mfaCode}
-                                    onChange={(e) => setMfaCode(e.target.value)}
-                                    maxLength={6}
-                                    onKeyDown={(e) => {
-                                        if (e.key === "Enter") {
-                                            e.preventDefault();
-                                            if (showMfaSetup) {
-                                                handleVerifySetup(e as any);
-                                            } else {
-                                                handleLogin(e as any);
-                                            }
-                                        }
-                                    }}
-                                />
-                                <div className="h-1 w-full bg-muted overflow-hidden rounded-full mt-1">
-                                    <div
-                                        className={cn("h-full transition-all duration-1000 ease-linear", timeRemaining <= 5 ? "bg-red-500" : "bg-primary")}
-                                        style={{ width: `${(timeRemaining / 30) * 100}%` }}
-                                    />
-                                </div>
-                            </div>
-                        ) : (
-                            <>
-                                {/* Email Input */}
-                                <div className="grid gap-2">
-                                    <Label htmlFor="email">Email</Label>
-                                    <Input
-                                        id="email"
-                                        type="email"
-                                        placeholder="Enter your email"
-                                        required
-                                        value={email}
-                                        onChange={(e) => setEmail(e.target.value)}
-                                        onKeyDown={(e) => {
-                                            if (e.key === "Enter") {
-                                                e.preventDefault();
-                                                if (showMfaSetup) {
-                                                    handleVerifySetup(e as any);
-                                                } else {
-                                                    handleLogin(e as any);
+                            ) : (
+                                <>
+                                    {/* Email Input */}
+                                    <div className="grid gap-2">
+                                        <Label htmlFor="email">Email</Label>
+                                        <Input
+                                            id="email"
+                                            type="email"
+                                            placeholder="Enter your email"
+                                            required
+                                            value={email}
+                                            onChange={(e) => setEmail(e.target.value)}
+                                            onKeyDown={(e) => {
+                                                if (e.key === "Enter") {
+                                                    e.preventDefault();
+                                                    if (showMfaSetup) {
+                                                        handleVerifySetup(e as any);
+                                                    } else {
+                                                        handleLogin(e as any);
+                                                    }
                                                 }
-                                            }
-                                        }}
-                                    />
-                                </div>
-
-                                {/* Password INput */}
-                                <div className="grid gap-2">
-                                    <div className="flex items-center">
-                                        <Label htmlFor="password">Password</Label>
+                                            }}
+                                        />
                                     </div>
-                                    <Input
-                                        id="password"
-                                        type="password"
-                                        placeholder="Enter your password"
-                                        required
-                                        value={password}
-                                        onChange={(e) => setPassword(e.target.value)}
-                                        onKeyDown={(e) => {
-                                            if (e.key === "Enter") {
-                                                e.preventDefault();
-                                                if (showMfaSetup) {
-                                                    handleVerifySetup(e as any);
-                                                } else {
-                                                    handleLogin(e as any);
-                                                }
-                                            }
-                                        }}
-                                    />
-                                    <Link
-                                        href="/auth/forgot-password"
-                                        className="ml-auto inline-block text-sm underline-offset-4 hover:underline"
-                                    >
-                                        Forgot your password?
-                                    </Link>
-                                </div>
 
-                                {/* Captcha */}
-                                {/* <div className="w-full flex justify-center">
+                                    {/* Password INput */}
+                                    <div className="grid gap-2">
+                                        <div className="flex items-center">
+                                            <Label htmlFor="password">Password</Label>
+                                        </div>
+                                        <Input
+                                            id="password"
+                                            type="password"
+                                            placeholder="Enter your password"
+                                            required
+                                            value={password}
+                                            onChange={(e) => setPassword(e.target.value)}
+                                            onKeyDown={(e) => {
+                                                if (e.key === "Enter") {
+                                                    e.preventDefault();
+                                                    if (showMfaSetup) {
+                                                        handleVerifySetup(e as any);
+                                                    } else {
+                                                        handleLogin(e as any);
+                                                    }
+                                                }
+                                            }}
+                                        />
+                                        <Link
+                                            href="/auth/forgot-password"
+                                            className="ml-auto inline-block text-sm underline-offset-4 hover:underline"
+                                        >
+                                            Forgot your password?
+                                        </Link>
+                                    </div>
+
+                                    {/* Captcha */}
+                                    {/* <div className="w-full flex justify-center">
                                     <Turnstile
                                         siteKey={process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY!}
                                         onSuccess={(token) => setCaptchaToken(token)}
 
                                     />
                                 </div> */}
-                            </>
-                        )}
-                        {error && (
-                            <div className=" rounded-lg border border-red-300 bg-red-50 px-3 py-2 text-sm text-red-700 dark:border-red-700 dark:bg-red-950 dark:text-red-100">
-                                {error}
-                            </div>
-                        )}
-                        <div className="flex flex-col gap-2">
-                            {!showMfa && (
-                                <div className="w-full flex justify-center">
-                                    <Turnstile
-                                        siteKey={process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY!}
-                                        onSuccess={(token) => setCaptchaToken(token)}
-                                    />
+                                </>
+                            )}
+                            {error && (
+                                <div className=" rounded-lg border border-red-300 bg-red-50 px-3 py-2 text-sm text-red-700 dark:border-red-700 dark:bg-red-950 dark:text-red-100">
+                                    {error}
                                 </div>
                             )}
-                            <Button className="w-full" disabled={
-                                isLoading ||
-                                (showMfa && mfaCode.length !== 6)
-                                // || (!showMfa && !captchaToken)
-                            } onClick={showMfaSetup ? handleVerifySetup : handleLogin}>
-                                {isLoading ? (showMfa ? "Verifying..." : "Logging in...") : (showMfaSetup ? "Continue to Login" : (showMfa ? "Verify Code" : "Login"))}
-                            </Button>
-                            {(showMfa || showMfaSetup) && (
-                                <Button variant="outline" className="w-full" onClick={handleCancelMfa} disabled={isLoading}>
-                                    Cancel
+                            <div className="flex flex-col gap-2">
+                                {showMfa && (
+                                    <div className="w-full flex justify-center">
+                                        <Turnstile
+                                            siteKey={process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY!}
+                                            onSuccess={(token) => setCaptchaToken(token)}
+                                        />
+                                    </div>
+                                )}
+                                <Button className="w-full" disabled={
+                                    isLoading ||
+                                    (showMfa && mfaCode.length !== 6)
+                                    // || (!showMfa && !captchaToken)
+                                } onClick={showMfaSetup ? handleVerifySetup : handleLogin}>
+                                    {isLoading ? (showMfa ? "Verifying..." : "Logging in...") : (showMfaSetup ? "Continue to Login" : (showMfa ? "Verify Code" : "Login"))}
                                 </Button>
-                            )}
-                        </div>
-                    </div>
-                    {!showMfa && (
-                        <>
-                            {/* <Separator /> */}
-                            {/* <SocialAuthButtons /> */}
-                            <div className="mt-4 text-center text-sm">
-                                Don&apos;t have an account?{" "}
-                                <Link
-                                    href="/auth/sign-up"
-                                    className="underline underline-offset-4"
-                                >
-                                    Sign up
-                                </Link>
+                                {(showMfa || showMfaSetup) && (
+                                    <Button variant="outline" className="w-full" onClick={handleCancelMfa} disabled={isLoading}>
+                                        Cancel
+                                    </Button>
+                                )}
                             </div>
-                        </>
-                    )}
-                </CardContent>
-</Card>
+                        </div>
+                        {!showMfa && (
+                            <>
+                                {/* <Separator /> */}
+                                {/* <SocialAuthButtons /> */}
+                                <div className="mt-4 text-center text-sm">
+                                    Don&apos;t have an account?{" "}
+                                    <Link
+                                        href="/auth/sign-up"
+                                        className="underline underline-offset-4"
+                                    >
+                                        Sign up
+                                    </Link>
+                                </div>
+                            </>
+                        )}
+                    </CardContent>
+                </Card>
             </div>
 
             <AlertDialog open={showTimeoutModal} onOpenChange={setShowTimeoutModal}>
@@ -498,7 +498,7 @@ export function LoginForm({
                         </AlertDialogDescription>
                     </AlertDialogHeader>
                     <AlertDialogFooter className="mt-6">
-                        <AlertDialogAction 
+                        <AlertDialogAction
                             className="h-12 w-full bg-accent text-accent-foreground hover:bg-accent/90 transition-all text-lg font-bold shadow-lg shadow-accent/20"
                             onClick={() => setShowTimeoutModal(false)}
                         >

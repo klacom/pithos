@@ -4,6 +4,7 @@ import { useParams, useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { ArrowLeft, Sparkles, ShieldCheck, FileText, Users, Handshake } from "lucide-react";
 import Link from "next/link";
+import Footer from "@/components/main-components/footer/Footer";
 
 const COMPANY_PAGES = {
     about: {
@@ -150,10 +151,10 @@ export default function CompanyPage() {
     const Icon = page.icon;
 
     return (
-        <main className="mx-auto max-w-4xl px-4 py-16 flex flex-col gap-8">
+        <div className="mx-auto max-w-4xl px-4 py-16 flex flex-col gap-8">
             <Button
-                variant="ghost"
-                className="w-fit px-0 hover:bg-transparent -ml-2"
+                variant="red_ghost"
+                className="w-fit px-0 hover:bg-transparent hover:text-primary -ml-2"
                 onClick={() => router.back()}
             >
                 <ArrowLeft size={16} className="mr-2" />
@@ -173,6 +174,6 @@ export default function CompanyPage() {
             <div className="prose prose-slate max-w-none text-foreground leading-relaxed">
                 {page.content}
             </div>
-        </main>
+        </div>
     );
 }

@@ -7,7 +7,7 @@ export async function updateUserName(fullName: string) {
 
     try {
         const { data: { user }, error: userError } = await supabase.auth.getUser();
-        
+
         if (userError) throw userError;
         if (!user) throw new Error("User not authenticated");
 
@@ -15,7 +15,13 @@ export async function updateUserName(fullName: string) {
             data: { full_name: fullName }
         });
 
+        const { error: errorPublic } = await supabase
+            .from("users")
+            .update({ user_fullname: fullName })
+            .eq("id", user.id);
+
         if (error) throw error;
+        if (errorPublic) throw errorPublic;
 
         return { success: true };
     } catch (error: any) {
@@ -29,7 +35,7 @@ export async function updateUserAvatar(avatarUrl: string) {
 
     try {
         const { data: { user }, error: userError } = await supabase.auth.getUser();
-        
+
         if (userError) throw userError;
         if (!user) throw new Error("User not authenticated");
 
@@ -51,7 +57,7 @@ export async function changePassword(currentPassword: string, newPassword: strin
 
     try {
         const { data: { user }, error: userError } = await supabase.auth.getUser();
-        
+
         if (userError) throw userError;
         if (!user) throw new Error("User not authenticated");
 
@@ -84,7 +90,7 @@ export async function getBuyerTransactions() {
 
     try {
         const { data: { user }, error: userError } = await supabase.auth.getUser();
-        
+
         if (userError) throw userError;
         if (!user) throw new Error("User not authenticated");
 
@@ -97,7 +103,7 @@ export async function getBuyerTransactions() {
         if (transactionsError) throw transactionsError;
 
         const productIds = transactions?.map(t => t.product_id) || [];
-        
+
         if (productIds.length === 0) {
             return { success: true, data: [] };
         }
@@ -110,7 +116,7 @@ export async function getBuyerTransactions() {
         if (productsError) throw productsError;
 
         const sellerIds = products?.map(p => p.seller_owner_id).filter(Boolean) || [];
-        
+
         let users: any[] = [];
         if (sellerIds.length > 0) {
             const { data: usersData } = await supabase
@@ -123,7 +129,7 @@ export async function getBuyerTransactions() {
         const enrichedTransactions = transactions?.map(transaction => {
             const product = products?.find(p => p.product_id === transaction.product_id);
             const seller = users?.find(u => u.id === product?.seller_owner_id);
-            
+
             return {
                 ...transaction,
                 products: {
@@ -145,7 +151,7 @@ export async function getTransactionById(transactionId: string) {
 
     try {
         const { data: { user }, error: userError } = await supabase.auth.getUser();
-        
+
         if (userError) throw userError;
         if (!user) throw new Error("User not authenticated");
 

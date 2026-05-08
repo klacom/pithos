@@ -11,7 +11,8 @@ const publicRoutes = [
     '/product-listing',
     '/unauthorized',
     '/api/payments/webhook',
-    '/webhook'
+    '/webhook',
+    '/company'
 ];
 
 // protected routes for all users
