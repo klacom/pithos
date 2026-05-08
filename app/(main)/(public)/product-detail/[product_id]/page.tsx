@@ -14,6 +14,7 @@ import {
     FileText,
     Heart,
     Layers3,
+    Loader2,
     Mail,
     PackageOpen,
     ShieldCheck,
@@ -144,6 +145,7 @@ export default function ProductDetailPage() {
     const [isFavorite, setIsFavorite] = useState(false);
     const [isOwner, setIsOwner] = useState(false);
     const [hasPurchased, setHasPurchased] = useState(false);
+    const [isProcessing, setIsProcessing] = useState(false);
     const [isBusy, setIsBusy] = useState<"cart" | "favorite" | "buy" | "download" | null>(null);
     const [isLoading, setIsLoading] = useState(true);
     const [isZoomed, setIsZoomed] = useState(false);
@@ -262,6 +264,7 @@ export default function ProductDetailPage() {
                 setIsFavorite(Boolean(viewerState?.isFavorite));
                 setIsOwner(Boolean(viewerState?.isOwner));
                 setHasPurchased(Boolean(viewerState?.hasPurchased));
+                setIsProcessing(Boolean(viewerState?.isProcessing));
             } catch (error) {
                 console.error(error);
                 if (!ignore) {
@@ -1112,6 +1115,27 @@ export default function ProductDetailPage() {
                                         <Download size={18} />
                                         {isBusy === "download" ? "Downloading..." : "Download Asset"}
                                     </Button>
+                                ) : isProcessing ? (
+                                    <div className="flex flex-col gap-3">
+                                        <Button
+                                            disabled
+                                            className="h-12 w-full bg-yellow-100 text-yellow-700 border-yellow-200 hover:bg-yellow-100"
+                                        >
+                                            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                                            Order Processing...
+                                        </Button>
+                                        <p className="text-[10px] text-center text-muted-foreground italic">
+                                            You have a pending order for this asset. Please wait for confirmation.
+                                        </p>
+                                        <Button
+                                            disabled
+                                            variant="outline"
+                                            className="h-12 w-full opacity-50"
+                                        >
+                                            <Download size={18} />
+                                            Download (Locked)
+                                        </Button>
+                                    </div>
                                 ) : (
                                     <>
                                         <Button

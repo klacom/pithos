@@ -117,7 +117,7 @@ export async function getSellerDashboardData(): Promise<SellerDashboardSnapshot>
   let recognizedRevenuePhp = 0;
   let pendingRevenuePhp = 0;
   for (const o of activeOrders) {
-    const amt = transactionAmountPhp(o);
+    const amt = transactionAmountPhp(o) * 0.8; // Seller gets 80%
     if (isRecognizedSale(o.status)) recognizedRevenuePhp += amt;
     else pendingRevenuePhp += amt;
   }
@@ -162,7 +162,7 @@ export async function getSellerDashboardData(): Promise<SellerDashboardSnapshot>
     if (!isRecognizedSale(o.status)) continue;
     const mk = monthKey(o.created_at);
     if (mk && byMonth.has(mk)) {
-      byMonth.set(mk, (byMonth.get(mk) ?? 0) + transactionAmountPhp(o));
+      byMonth.set(mk, (byMonth.get(mk) ?? 0) + (transactionAmountPhp(o) * 0.8)); // Seller gets 80%
     }
   }
 

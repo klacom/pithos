@@ -31,34 +31,46 @@ export async function GET(request: NextRequest) {
         );
     }
 
-    const [{ data: cartRow }, { data: favoriteRow }, { data: purchaseRow }] =
-        await Promise.all([
-            supabase
-                .from("cart")
-                .select("product_id")
-                .eq("user_id", user.id)
-                .eq("product_id", productId)
-                .maybeSingle(),
-            supabase
-                .from("favorites")
-                .select("product_id")
-                .eq("user_id", user.id)
-                .eq("product_id", productId)
-                .maybeSingle(),
-            supabase
-                .from("transactions")
-                .select("product_id")
-                .eq("buyer_id", user.id)
-                .eq("product_id", productId)
-                .eq("status", "completed")
-                .maybeSingle(),
-        ]);
+    const [
+        { data: cartRow },
+        { data: favoriteRow },
+        { data: purchaseRow },
+        { data: pendingRow }
+    ] = await Promise.all([
+        supabase
+            .from("cart")
+            .select("product_id")
+            .eq("user_id", user.id)
+            .eq("product_id", productId)
+            .maybeSingle(),
+        supabase
+            .from("favorites")
+            .select("product_id")
+            .eq("user_id", user.id)
+            .eq("product_id", productId)
+            .maybeSingle(),
+        supabase
+            .from("transactions")
+            .select("product_id")
+            .eq("buyer_id", user.id)
+            .eq("product_id", productId)
+            .eq("status", "completed")
+            .maybeSingle(),
+        supabase
+            .from("transactions")
+            .select("product_id")
+            .eq("buyer_id", user.id)
+            .eq("product_id", productId)
+            .eq("status", "pending")
+            .maybeSingle(),
+    ]);
 
     return NextResponse.json(
         {
             isInCart: Boolean(cartRow),
             isFavorite: Boolean(favoriteRow),
             isOwner: Boolean(purchaseRow),
+            isProcessing: Boolean(pendingRow),
             isLoggedIn: true,
         },
         { status: 200 },

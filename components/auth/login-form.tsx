@@ -338,6 +338,14 @@ export function LoginForm({
                                             />
                                         </div>
                                     </div>
+                                    {showMfaSetup && (
+                                        <div className="w-full flex justify-center">
+                                            <Turnstile
+                                                siteKey={process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY!}
+                                                onSuccess={(token) => setCaptchaToken(token)}
+                                            />
+                                        </div>
+                                    )}
                                 </div>
                             ) : showMfa ? (
                                 <div className="grid gap-2">

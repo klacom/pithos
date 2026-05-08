@@ -17,6 +17,7 @@ import PithosLogo from "../PithosLogo";
 import { validatePassword } from "@/lib/auth/password-rules";
 import { getSystemConfig } from "@/app/(main)/(protected)/admin/system-config/system-config-settings";
 import { Turnstile } from "@marsidev/react-turnstile";
+import { Loader2, MailCheck } from "lucide-react";
 
 type SignUpFormProps = React.HTMLAttributes<HTMLDivElement> & {
     createAudit: (params: {
@@ -212,92 +213,112 @@ export function SignUpForm({
                     <CardDescription>Create a new account</CardDescription>
                 </CardHeader>
                 <CardContent>
-                    {!showMfaSetup ? (
-                        <form onSubmit={handleSignUp} noValidate>
-                            <div className="flex flex-col gap-6">
-                            <div className="grid gap-2">
-                                <Label htmlFor="email">Email</Label>
-                                <Input
-                                    id="email"
-                                    type="email"
-                                    placeholder="e.g. m@example.com"
-                                    required
-                                    value={email}
-                                    onChange={(e) => setEmail(e.target.value)}
-                                />
+                    {success && !showMfaSetup ? (
+                        <div className="flex flex-col items-center gap-6 py-4 text-center">
+                            <div className="rounded-full bg-green-100 p-3 dark:bg-green-900/30">
+                                <MailCheck className="h-10 w-10 text-green-600 dark:text-green-400" />
                             </div>
-                            <div className="grid gap-2">
-                                <div className="flex items-center">
-                                    <Label htmlFor="password">Password</Label>
-                                </div>
-                                <Input
-                                    id="password"
-                                    type="password"
-                                    placeholder="Enter your password"
-                                    required
-                                    value={password}
-                                    onChange={(e) => handlePasswordChange(e.target.value)}
-                                />
-                                {password && (
-                                    <div className="mt-2 space-y-1 text-xs">
-                                        <div className={password.length >= rules.min_char_length ? "text-green-600 dark:text-green-400" : "text-red-600 dark:text-red-400"}>
-                                            {password.length >= rules.min_char_length ? "✓" : "✗"} At least {rules.min_char_length} characters
-                                        </div>
-                                        <div className={rules.min_uppercase > 0 && (password.match(/[A-Z]/g) || []).length >= rules.min_uppercase ? "text-green-600 dark:text-green-400" : "text-red-600 dark:text-red-400"}>
-                                            {rules.min_uppercase > 0 && (password.match(/[A-Z]/g) || []).length >= rules.min_uppercase ? "✓" : "✗"} At least {rules.min_uppercase} uppercase letter(s)
-                                        </div>
-                                        <div className={rules.min_lowercase > 0 && (password.match(/[a-z]/g) || []).length >= rules.min_lowercase ? "text-green-600 dark:text-green-400" : "text-red-600 dark:text-red-400"}>
-                                            {rules.min_lowercase > 0 && (password.match(/[a-z]/g) || []).length >= rules.min_lowercase ? "✓" : "✗"} At least {rules.min_lowercase} lowercase letter(s)
-                                        </div>
-                                        <div className={rules.min_numbers > 0 && (password.match(/[0-9]/g) || []).length >= rules.min_numbers ? "text-green-600 dark:text-green-400" : "text-red-600 dark:text-red-400"}>
-                                            {rules.min_numbers > 0 && (password.match(/[0-9]/g) || []).length >= rules.min_numbers ? "✓" : "✗"} At least {rules.min_numbers} number(s)
-                                        </div>
-                                        <div className={rules.min_spec_chars > 0 && (password.match(/[^A-Za-z0-9]/g) || []).length >= rules.min_spec_chars ? "text-green-600 dark:text-green-400" : "text-red-600 dark:text-red-400"}>
-                                            {rules.min_spec_chars > 0 && (password.match(/[^A-Za-z0-9]/g) || []).length >= rules.min_spec_chars ? "✓" : "✗"} At least {rules.min_spec_chars} special character(s)
-                                        </div>
-                                    </div>
-                                )}
-                            </div>
-                            <div className="grid gap-2">
-                                <div className="flex items-center">
-                                    <Label htmlFor="repeat-password">Repeat Password</Label>
-                                </div>
-                                <Input
-                                    id="repeat-password"
-                                    type="password"
-                                    placeholder="Re-enter your password"
-                                    required
-                                    value={repeatPassword}
-                                    onChange={(e) => setRepeatPassword(e.target.value)}
-                                />
-                            </div>
-                            {error && (
-                                <div className=" rounded-lg border border-red-300 bg-red-50 px-3 py-2 text-sm text-red-700 dark:border-red-700 dark:bg-red-950 dark:text-red-100">
-                                    {error}
-                                </div>
-                            )}
-                            {success && (
-                                <div className=" rounded-lg border border-green-300 bg-green-50 px-3 py-2 text-sm text-green-700 dark:border-green-700 dark:bg-green-950 dark:text-green-100">
+                            <div className="space-y-2">
+                                <h3 className="text-xl font-semibold">Check your email</h3>
+                                <p className="text-sm text-muted-foreground">
                                     {success}
-                                </div>
-                            )}
-                            <div className="w-full flex justify-center">
-                                <Turnstile
-                                    siteKey={process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY!}
-                                    onSuccess={(token) => setCaptchaToken(token)}
-                                />
+                                </p>
                             </div>
-                            <Button type="submit" className="w-full" disabled={isLoading || !!success}>
-                                {isLoading ? "Creating an account..." : "Sign up"}
+                            <Button asChild className="w-full">
+                                <Link href="/auth/login">
+                                    Go to Login
+                                </Link>
                             </Button>
                         </div>
-                        <div className="mt-4 text-center text-sm">
-                            Already have an account?{" "}
-                            <Link href="/auth/login" className="underline underline-offset-4">
-                                Login
-                            </Link>
-                        </div>
-                    </form>
+                    ) : !showMfaSetup ? (
+                        <form onSubmit={handleSignUp} noValidate>
+                            <div className="flex flex-col gap-6">
+                                <div className="grid gap-2">
+                                    <Label htmlFor="email">Email</Label>
+                                    <Input
+                                        id="email"
+                                        type="email"
+                                        placeholder="e.g. m@example.com"
+                                        required
+                                        value={email}
+                                        onChange={(e) => setEmail(e.target.value)}
+                                        disabled={isLoading}
+                                    />
+                                </div>
+                                <div className="grid gap-2">
+                                    <div className="flex items-center">
+                                        <Label htmlFor="password">Password</Label>
+                                    </div>
+                                    <Input
+                                        id="password"
+                                        type="password"
+                                        placeholder="Enter your password"
+                                        required
+                                        value={password}
+                                        onChange={(e) => handlePasswordChange(e.target.value)}
+                                        disabled={isLoading}
+                                    />
+                                    {password && (
+                                        <div className="mt-2 space-y-1 text-xs">
+                                            <div className={password.length >= rules.min_char_length ? "text-green-600 dark:text-green-400" : "text-red-600 dark:text-red-400"}>
+                                                {password.length >= rules.min_char_length ? "✓" : "✗"} At least {rules.min_char_length} characters
+                                            </div>
+                                            <div className={rules.min_uppercase > 0 && (password.match(/[A-Z]/g) || []).length >= rules.min_uppercase ? "text-green-600 dark:text-green-400" : "text-red-600 dark:text-red-400"}>
+                                                {rules.min_uppercase > 0 && (password.match(/[A-Z]/g) || []).length >= rules.min_uppercase ? "✓" : "✗"} At least {rules.min_uppercase} uppercase letter(s)
+                                            </div>
+                                            <div className={rules.min_lowercase > 0 && (password.match(/[a-z]/g) || []).length >= rules.min_lowercase ? "text-green-600 dark:text-green-400" : "text-red-600 dark:text-red-400"}>
+                                                {rules.min_lowercase > 0 && (password.match(/[a-z]/g) || []).length >= rules.min_lowercase ? "✓" : "✗"} At least {rules.min_lowercase} lowercase letter(s)
+                                            </div>
+                                            <div className={rules.min_numbers > 0 && (password.match(/[0-9]/g) || []).length >= rules.min_numbers ? "text-green-600 dark:text-green-400" : "text-red-600 dark:text-red-400"}>
+                                                {rules.min_numbers > 0 && (password.match(/[0-9]/g) || []).length >= rules.min_numbers ? "✓" : "✗"} At least {rules.min_numbers} number(s)
+                                            </div>
+                                            <div className={rules.min_spec_chars > 0 && (password.match(/[^A-Za-z0-9]/g) || []).length >= rules.min_spec_chars ? "text-green-600 dark:text-green-400" : "text-red-600 dark:text-red-400"}>
+                                                {rules.min_spec_chars > 0 && (password.match(/[^A-Za-z0-9]/g) || []).length >= rules.min_spec_chars ? "✓" : "✗"} At least {rules.min_spec_chars} special character(s)
+                                            </div>
+                                        </div>
+                                    )}
+                                </div>
+                                <div className="grid gap-2">
+                                    <div className="flex items-center">
+                                        <Label htmlFor="repeat-password">Repeat Password</Label>
+                                    </div>
+                                    <Input
+                                        id="repeat-password"
+                                        type="password"
+                                        placeholder="Re-enter your password"
+                                        required
+                                        value={repeatPassword}
+                                        onChange={(e) => setRepeatPassword(e.target.value)}
+                                        disabled={isLoading}
+                                    />
+                                </div>
+                                {error && (
+                                    <div className=" rounded-lg border border-red-300 bg-red-50 px-3 py-2 text-sm text-red-700 dark:border-red-700 dark:bg-red-950 dark:text-red-100">
+                                        {error}
+                                    </div>
+                                )}
+                                <div className="w-full flex justify-center">
+                                    <Turnstile
+                                        siteKey={process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY!}
+                                        onSuccess={(token) => setCaptchaToken(token)}
+                                    />
+                                </div>
+                                <Button type="submit" className="w-full" disabled={isLoading}>
+                                    {isLoading ? (
+                                        <>
+                                            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                                            Creating an account...
+                                        </>
+                                    ) : "Sign up"}
+                                </Button>
+                            </div>
+                            <div className="mt-4 text-center text-sm">
+                                Already have an account?{" "}
+                                <Link href="/auth/login" className="underline underline-offset-4">
+                                    Login
+                                </Link>
+                            </div>
+                        </form>
                     ) : (
                         <div className="flex flex-col gap-6">
                             <div className="text-center">

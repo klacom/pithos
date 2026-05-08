@@ -56,7 +56,7 @@ const Page = () => {
             const results = await Promise.all(
                 policies.map(policy => saveSessionPolicy(policy.role, policy.timeout_minutes))
             );
-            
+
             const allSuccess = results.every(res => res.success);
             if (allSuccess) {
                 toast.success("All session policies updated successfully!");
@@ -72,7 +72,7 @@ const Page = () => {
 
     const handlePolicyChange = (role: string, value: string) => {
         const timeout = parseInt(value) || 0;
-        setPolicies(prev => prev.map(p => 
+        setPolicies(prev => prev.map(p =>
             p.role === role ? { ...p, timeout_minutes: timeout } : p
         ));
     };
@@ -114,10 +114,10 @@ const Page = () => {
     };
 
     const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-        const { name, value } = e.target;
+        const { name, value, type } = e.target;
         setConfig(prev => ({
             ...prev,
-            [name]: parseInt(value) || 0
+            [name]: type === "number" ? parseInt(value) || 0 : value
         }));
     };
 
@@ -137,7 +137,7 @@ const Page = () => {
 
             {/* Content Container */}
             <div className="flex flex-col gap-6 min-h-0 overflow-y-auto">
-                <div className="flex flex-col gap-20 pt-4">
+                <div className="flex flex-col gap-4 pt-4">
                     {/* Login and Password Section */}
                     <div className='flex gap-4 items-start'>
                         <div className='flex flex-col gap-4 w-1/4 sticky top-0 bg-primary-foreground border border-muted rounded-lg p-4'>
@@ -241,11 +241,69 @@ const Page = () => {
                         </div>
                     </div>
 
+                    {/* Company Details Section */}
+                    <div className='flex gap-4 items-start'>
+                        <div className='flex flex-col gap-4 w-1/4 sticky top-0 bg-primary-foreground border border-muted rounded-lg p-4'>
+                            <h1 className='font-bold text-2xl'>Company Details</h1>
+                            <p>Update your company's contact information that appears in the footer.</p>
+                            <Button className='w-fit' onClick={handleSave} disabled={saving}>
+                                {saving ? "Saving..." : "Save"}
+                            </Button>
+                        </div>
+
+                        <div className='flex flex-col gap-4 w-3/4'>
+                            <div className='flex flex-col gap-4 w-full p-4 bg-primary-foreground border border-muted rounded-lg'>
+                                <h2 className='font-semibold text-xl'>Footer Information</h2>
+                                <hr />
+                                <div className="flex flex-col gap-4">
+                                    <Card className="flex flex-col gap-4 p-4 border border-muted shadow-none bg-background/50">
+                                        <div className='flex flex-col gap-1'>
+                                            <p className='text-sm font-medium'>Support Email</p>
+                                            <InputTextField
+                                                name="support_email"
+                                                type="email"
+                                                value={config.support_email || ""}
+                                                onChange={handleChange}
+                                                placeholder="e.g. support@pithos.com"
+                                            />
+                                        </div>
+                                    </Card>
+
+                                    <Card className="flex flex-col gap-4 p-4 border border-muted shadow-none bg-background/50">
+                                        <div className='flex flex-col gap-1'>
+                                            <p className='text-sm font-medium'>Support Phone</p>
+                                            <InputTextField
+                                                name="support_phone"
+                                                type="text"
+                                                value={config.support_phone || ""}
+                                                onChange={handleChange}
+                                                placeholder="e.g. +1 234 567 890"
+                                            />
+                                        </div>
+                                    </Card>
+
+                                    <Card className="flex flex-col gap-4 p-4 border border-muted shadow-none bg-background/50">
+                                        <div className='flex flex-col gap-1'>
+                                            <p className='text-sm font-medium'>Office Location</p>
+                                            <InputTextField
+                                                name="support_location"
+                                                type="text"
+                                                value={config.support_location || ""}
+                                                onChange={handleChange}
+                                                placeholder="e.g. 123 Street, City, Country"
+                                            />
+                                        </div>
+                                    </Card>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
                     {/* Session Timeout Policies Section */}
-                        <div className='flex gap-4 items-start'>
-                            {/* Title */}
-                            <div className='flex flex-col gap-4 w-1/4 sticky top-0 bg-primary-foreground border border-muted rounded-lg p-4'>
-                                <h1 className='font-bold text-2xl'>Session Timeout</h1>
+                    <div className='flex gap-4 items-start'>
+                        {/* Title */}
+                        <div className='flex flex-col gap-4 w-1/4 sticky top-0 bg-primary-foreground border border-muted rounded-lg p-4'>
+                            <h1 className='font-bold text-2xl'>Session Timeout</h1>
                             <p className="text-sm">Set the inactivity timeout (in minutes) for each user role. A warning will be shown efore expiration depending on the timeout duration (e.g 25 minutes if session timeout is 30 minutes).</p>
                             <Button className='w-fit' onClick={handleSaveAllPolicies} disabled={saving}>
                                 {saving ? "Saving..." : "Save All Policies"}
@@ -267,34 +325,34 @@ const Page = () => {
                                                 <div className="space-y-1">
                                                     <h3 className="font-medium">Inactivity Timeout (Minutes)</h3>
                                                     <InputTextField
-                                                            type="number"
-                                                            min={1}
-                                                            max={1440}
-                                                            value={policy.timeout_minutes}
-                                                            onChange={(e) => handlePolicyChange(policy.role, e.target.value)}
-                                                            placeholder={`Enter minutes for ${policy.role}`}
-                                                        />
-                                                    </div>
-                                                    <p className="text-sm text-accent">
-                                                        Note: User will be warned when {
-                                                            policy.timeout_minutes <= 1 ? "30 seconds" :
-                                                            policy.timeout_minutes <= 5 ? "1 minute" :
-                                                            policy.timeout_minutes <= 10 ? "5 minutes" :
-                                                            policy.timeout_minutes <= 20 ? "10 minutes" :
-                                                            policy.timeout_minutes <= 25 ? "20 minutes" :
-                                                            policy.timeout_minutes <= 30 ? "25 minutes" :
-                                                            "5 minutes"
-                                                        } remains (at {
-                                                            policy.timeout_minutes <= 1 ? "30 seconds" :
-                                                            policy.timeout_minutes <= 5 ? `${policy.timeout_minutes - 1} ${policy.timeout_minutes - 1 === 1 ? 'minute' : 'minutes'}` :
-                                                            policy.timeout_minutes <= 10 ? `${policy.timeout_minutes - 5} minutes` :
-                                                            policy.timeout_minutes <= 20 ? `${policy.timeout_minutes - 10} minutes` :
-                                                            policy.timeout_minutes <= 25 ? `${policy.timeout_minutes - 20} minutes` :
-                                                            policy.timeout_minutes <= 30 ? `${policy.timeout_minutes - 25} minutes` :
-                                                            `${policy.timeout_minutes - 5} minutes`
-                                                        } of inactivity).
-                                                    </p>
+                                                        type="number"
+                                                        min={1}
+                                                        max={1440}
+                                                        value={policy.timeout_minutes}
+                                                        onChange={(e) => handlePolicyChange(policy.role, e.target.value)}
+                                                        placeholder={`Enter minutes for ${policy.role}`}
+                                                    />
                                                 </div>
+                                                <p className="text-sm text-accent">
+                                                    Note: User will be warned when {
+                                                        policy.timeout_minutes <= 1 ? "30 seconds" :
+                                                            policy.timeout_minutes <= 5 ? "1 minute" :
+                                                                policy.timeout_minutes <= 10 ? "5 minutes" :
+                                                                    policy.timeout_minutes <= 20 ? "10 minutes" :
+                                                                        policy.timeout_minutes <= 25 ? "20 minutes" :
+                                                                            policy.timeout_minutes <= 30 ? "25 minutes" :
+                                                                                "5 minutes"
+                                                    } remains (at {
+                                                        policy.timeout_minutes <= 1 ? "30 seconds" :
+                                                            policy.timeout_minutes <= 5 ? `${policy.timeout_minutes - 1} ${policy.timeout_minutes - 1 === 1 ? 'minute' : 'minutes'}` :
+                                                                policy.timeout_minutes <= 10 ? `${policy.timeout_minutes - 5} minutes` :
+                                                                    policy.timeout_minutes <= 20 ? `${policy.timeout_minutes - 10} minutes` :
+                                                                        policy.timeout_minutes <= 25 ? `${policy.timeout_minutes - 20} minutes` :
+                                                                            policy.timeout_minutes <= 30 ? `${policy.timeout_minutes - 25} minutes` :
+                                                                                `${policy.timeout_minutes - 5} minutes`
+                                                    } of inactivity).
+                                                </p>
+                                            </div>
                                         </Card>
                                     ))}
                                     {policies.length === 0 && (

@@ -53,12 +53,12 @@ const page = () => {
                         columns={[
                             {
                                 key: "id", label: "Log ID", sortable: true, render: (_: any, row: any) => (
-                                    <p className="font-mono text-xs">{row.id}</p>
+                                    <p className="font-mono text-[10px] truncate max-w-[100px]">{row.id}</p>
                                 )
                             },
                             {
                                 key: "created_at", label: "Timestamp", sortable: true, render: (_: any, row: any) => (
-                                    <p className="font-mono text-xs">{row.created_at}</p>
+                                    <p className="font-mono text-[10px] truncate max-w-[150px]">{row.created_at}</p>
                                 )
                             },
                             { key: "action_name", label: "Action Name", filterable: true },

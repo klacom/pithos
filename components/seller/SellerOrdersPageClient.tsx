@@ -310,8 +310,8 @@ export default function SellerOrdersPageClient() {
 
       <p className="text-muted-foreground self-center mt-4">
         <i>
-          Pithos has a commission percentage of 30/70, wheareas the 30% of the
-          assets revenue goes to Pithos, and the rest (70%) goes to the asset
+          Pithos has a commission percentage of 20/80, wheareas the 20% of the
+          assets revenue goes to Pithos, and the rest (80%) goes to the asset
           sellers.
         </i>{" "}
         <Link href="#" className="text-medium text-accent">

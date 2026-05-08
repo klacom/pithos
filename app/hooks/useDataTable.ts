@@ -13,7 +13,7 @@ export function useDataTable(
     const [data, setData] = useState([])
     const [total, setTotal] = useState(0)
     const [page, setPage] = useState(1)
-    const [limit, setLimit] = useState(options.limit || 10)
+    const [limit, setLimit] = useState(options.limit || 8)
     const [q, setQ] = useState("")
     const [debouncedQ, setDebouncedQ] = useState("");
     const [sort, setSort] = useState("")

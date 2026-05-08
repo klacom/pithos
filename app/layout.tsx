@@ -47,7 +47,7 @@ export default function RootLayout({
                         <ActivityTrackerWrapper />
                         {children}
                         <CookieConsent />
-                        <Toaster />
+                        <Toaster closeButton />
                     </AuthProvider>
                 </ThemeProvider>
             </body>

@@ -22,7 +22,7 @@ export function DataTable<T>({
     total,
     page,
     setPage,
-    limit = 10,
+    limit = 8,
     setLimit,
     q,
     setQ,
@@ -55,11 +55,12 @@ export function DataTable<T>({
             if (col.render) {
                 return col.render(value, row.original);
             }
-            // Truncate long text if it's a string and no custom render
-            if (typeof value === 'string' && value.length > 50) {
-                return <span title={value}>{value.substring(0, 50)}...</span>;
-            }
-            return value;
+            // Truncate long text and prevent overflow
+            return (
+                <div className="max-w-[200px] truncate" title={String(value)}>
+                    {String(value)}
+                </div>
+            );
         },
         enableSorting: col.sortable,
         enableColumnFilter: col.filterable
@@ -219,11 +220,11 @@ export function DataTable<T>({
                 </div>
 
                 {/* Table wrapper */}
-                <div className="w-full border border-muted rounded-lg overflow-y-hidden overflow-x-auto p-4">
+                <div className="w-full border border-muted rounded-lg overflow-auto h-full p-4">
 
-                    <table className="min-w-full border-collapse *:*:*:border *:*:*:border-muted w-full">
+                    <table className="min-w-full border-collapse *:*:*:border *:*:*:border-muted w-full table-fixed">
 
-                        <thead className="">
+                        <thead className="sticky top-0 z-10">
                             {table.getHeaderGroups().map((hg) => (
                                 <tr key={hg.id} className="bg-primary-foreground">
                                     {hg.headers.map((header) => {
@@ -231,7 +232,7 @@ export function DataTable<T>({
                                             <th
                                                 key={header.id}
                                                 onClick={() => (header.column.columnDef.enableColumnFilter ? filterFunction(header) : sortFunction(header))}
-                                                className={`${header.column.columnDef.enableSorting || header.column.columnDef.enableColumnFilter
+                                                className={`p-0 ${header.column.columnDef.enableSorting || header.column.columnDef.enableColumnFilter
                                                     ? "cursor-pointer hover:bg-secondary active:bg-primary-foreground"
                                                     : "cursor-default opacity-50"
                                                     }`}
@@ -281,7 +282,7 @@ export function DataTable<T>({
                             ))}
                         </thead>
 
-                        <tbody className="*:*:p-4">
+                        <tbody className="">
                             {loading ? (
                                 <tr>
                                     <td colSpan={columns.length} className="text-center py-10 text-muted-foreground">
@@ -298,7 +299,7 @@ export function DataTable<T>({
                                 table.getRowModel().rows.map((row) => (
                                     <tr key={row.id}>
                                         {row.getVisibleCells().map((cell) => (
-                                            <td key={cell.id}>
+                                            <td key={cell.id} className="p-4 truncate max-w-0">
                                                 {flexRender(
                                                     cell.column.columnDef.cell,
                                                     cell.getContext()
@@ -319,7 +320,7 @@ export function DataTable<T>({
             {/* Pagination */}
 
 
-            <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
+            <div className="flex flex-col sm:flex-row items-center justify-end gap-4">
 
                 <div className="flex items-center gap-4">
                     {/* Page Number */}
@@ -330,25 +331,6 @@ export function DataTable<T>({
                             {totalPages || 1}
                         </span>
                     </p>
-
-                    {/* Rows per page selector */}
-                    <div className="flex items-center gap-2">
-                        <span className="text-sm text-muted-foreground whitespace-nowrap">Rows:</span>
-                        <select
-                            value={limit}
-                            onChange={(e) => {
-                                setLimit(Number(e.target.value));
-                                setPage(1);
-                            }}
-                            className="h-8 rounded-md border border-muted bg-background px-2 text-sm outline-none focus:ring-1 focus:ring-primary"
-                        >
-                            {[5, 10, 20, 50].map((size) => (
-                                <option key={size} value={size}>
-                                    {size}
-                                </option>
-                            ))}
-                        </select>
-                    </div>
                 </div>
 
                 {/* Page Buttons */}

@@ -13,6 +13,7 @@ import { unlockUser } from "./actions";
 import { formatDate } from "@/lib/functions";
 import { capitalizeFirstLetter } from "@/lib/functions";
 import { useMemo } from "react";
+import { ShoppingCart, Store, LockOpen } from "lucide-react";
 
 // User Table Types
 type User = {
@@ -57,31 +58,59 @@ const ActionButtons = (
         row,
         table,
         setPageTitle,
-        setSelectedUser
+        setSelectedUser,
+        setViewType
     }: any) => {
     const [isUnlocking, setIsUnlocking] = useState(false);
 
     return (
         <div className="flex flex-row gap-2 w-full justify-center">
+            {/* View Buyer Detail */}
             <Button
-                variant={'default'}
-                size="sm"
+                variant={"default"}
+                size="icon"
+                title="View Buyer Detail"
                 onClick={() => {
-                    if (row.user_role === "admin") return;
-                    // TODO: open detail page depending on row.role
+                    if (row.user_role === "admin") {
+                        setSelectedUser(row);
+                        setViewType("buyer");
+                        setPageTitle(`View Admin Buyer Activity`);
+                        return;
+                    }
+
                     setSelectedUser(row);
-                    setPageTitle(`View ${capitalizeFirstLetter(row.user_role)} Details`);
+                    setViewType("buyer");
+                    setPageTitle(`View ${capitalizeFirstLetter(row.user_role)} Buyer Details`);
                 }}
             >
-                View Details
+                <ShoppingCart className="w-4 h-4" />
             </Button>
 
+            {/* View Seller Detail */}
+            {row.user_role === "seller" && (
+                <Button
+                    variant={"default"}
+                    size="icon"
+                    title="View Seller Detail"
+                    onClick={() => {
+                        setSelectedUser(row);
+                        setViewType("seller");
+                        setPageTitle(`View Seller Details`);
+                    }}
+                >
+                    <Store className="w-4 h-4" />
+                </Button>
+            )}
+
+            {/* Unlock */}
             <Button
-                variant={'red_default'}
-                size="sm"
+                variant={"red_default"}
+                size="icon"
+                title="Unlock User"
                 disabled={!row.is_locked || isUnlocking}
                 onClick={async () => {
                     setIsUnlocking(true);
+
                     try {
                         const result = await unlockUser(row.id);
 
@@ -98,7 +127,7 @@ const ActionButtons = (
                     }
                 }}
             >
-                {isUnlocking ? "Unlocking..." : "Unlock"}
+                <LockOpen className="w-4 h-4" />
             </Button>
         </div>
     );
@@ -113,6 +142,7 @@ const Page = () => {
 
     // User Details
     const [selectedUser, setSelectedUser] = useState<User | null>(null);
+    const [viewType, setViewType] = useState<"buyer" | "seller" | null>(null);
 
     // Table for Users (General)
     const table = useDataTable("users", {
@@ -185,7 +215,7 @@ const Page = () => {
         },
         {
             key: "created_at", label: "Joined At", sortable: true, render: (_: any, row: any) => (
-                <p>{formatDate(row.created_at)}</p>
+                <p className="text-sm">{formatDate(row.created_at)}</p>
             )
         },
         {
@@ -212,9 +242,10 @@ const Page = () => {
                 table={table}
                 setSelectedUser={setSelectedUser}
                 setPageTitle={setPageTitle}
+                setViewType={setViewType}
             />
         },
-    ], [table, setSelectedUser, setPageTitle]);
+    ], [table, setSelectedUser, setPageTitle, setViewType]);
 
 
 
@@ -295,8 +326,8 @@ const Page = () => {
                         {/* Content */}
                         <div className="bg-primary-foreground border border-muted rounded-lg p-4 w-9/12 relative flex-col">
 
-                            {/* Buyer Content */}
-                            {selectedUser.user_role === "buyer" && (
+                            {/* Buyer Content - Shown for all roles if viewType is buyer */}
+                            {viewType === "buyer" && (
                                 <Tabs items={[
                                     {
                                         label: "Transactions",
@@ -391,8 +422,8 @@ const Page = () => {
                                 ]} />
                             )}
 
-                            {/* Seller Content */}
-                            {selectedUser.user_role === "seller" && (
+                            {/* Seller Content - Shown only if viewType is seller */}
+                            {viewType === "seller" && (
                                 <Tabs items={[
                                     {
                                         label: "Products",

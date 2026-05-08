@@ -278,6 +278,7 @@ export default function SellerDashboardClient() {
                     {/* Revenue Breakdown */}
                     <div className="bg-card border border-muted rounded-xl p-4 w-full">
                         <h2 className="font-bold text-lg">Revenue breakdown</h2>
+                        <p className="text-[10px] text-muted-foreground italic mb-2">Earnings shown are your 80% share after the 20% platform fee.</p>
 
                         <div className="mt-3 text-sm space-y-2">
                             <div className="flex justify-between gap-4">

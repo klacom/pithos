@@ -243,7 +243,7 @@ export default function OrderDetailsPage() {
                                 <span>{formatPrice(price)}</span>
                             </div>
                             <div className="flex justify-between w-full max-w-xs text-muted-foreground">
-                                <span>Platform Fee (30%)</span>
+                                <span>Platform Fee (20%)</span>
                                 <span>{formatPrice(platformFee)}</span>
                             </div>
                             <div className="flex justify-between w-full max-w-xl font-semibold text-lg pt-2 border-t border-muted">

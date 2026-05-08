@@ -148,7 +148,7 @@ export async function GET(
         {
             data,
             total: count,
-            error: error ? error.message : null, 
+            error: error ? error.message : null,
         },
         {
             status: error ? 500 : 200,
