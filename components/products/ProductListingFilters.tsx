@@ -65,7 +65,7 @@ export default function ProductListingFilters(props: {
 
   return (
     <div className="flex flex-col gap-3">
-      <div className="grid grid-cols-2 md:grid-cols-6 gap-3 items-end">
+      <div className="grid grid-cols-2 md:grid-cols-7 gap-3 items-end">
         <div className="col-span-2 md:col-span-2 flex flex-col gap-1">
           <Label className="text-xs text-muted-foreground">Category</Label>
           <select
@@ -132,7 +132,24 @@ export default function ProductListingFilters(props: {
           </select>
         </div>
 
-        <div className="col-span-2 md:col-span-6 flex flex-wrap items-center gap-3 pt-1">
+        <div className="flex items-center h-10">
+          <Button
+            type="button"
+            className="w-full h-10"
+            onClick={() => {
+              push([
+                ["q", props.value.q],
+                ["minPrice", minPrice.trim()],
+                ["maxPrice", maxPrice.trim()],
+                ["minRating", minRating.trim()],
+              ]);
+            }}
+          >
+            Set Filter
+          </Button>
+        </div>
+
+        <div className="col-span-2 md:col-span-7 flex flex-wrap items-center gap-3 pt-1">
           <div className="flex items-center gap-2">
             <Checkbox
               id="onSale"

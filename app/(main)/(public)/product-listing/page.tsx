@@ -1,7 +1,7 @@
-import { ProductCard } from "@/components/ProductCard"
+import { ProductCard } from "@/components/products/ProductCard"
 import { createAdminClient } from "@/lib/supabase/admin";
 import { ASSET_PHOTOS_BUCKET } from "@/lib/seller/asset-storage";
-import ProductListingFilters from "@/components/product-listing/ProductListingFilters";
+import ProductListingFilters from "@/components/products/ProductListingFilters";
 import { Suspense } from "react";
 
 type ListingProduct = {
@@ -205,10 +205,11 @@ async function fetchPublishedListingProducts(
   if (sellerIds.length > 0) {
     const { data: users } = await admin
       .from("users")
-      .select("id, user_fullname")
+      .select("id, user_fullname, user_email")
       .in("id", sellerIds);
     for (const u of users ?? []) {
-      sellerNameById.set(String(u.id), String(u.user_fullname ?? "Unknown seller"));
+      const name = String(u.user_fullname || u.user_email?.split("@")[0] || "Unknown seller");
+      sellerNameById.set(String(u.id), name);
     }
   }
 
@@ -314,27 +315,7 @@ const page = async ({
     fetchPublishedListingProducts(filters, GRID_SIZE),
   ]);
 
-  const hasAnyFilter =
-    Boolean(filters.q) ||
-    Boolean(filters.category) ||
-    filters.minPrice != null ||
-    filters.maxPrice != null ||
-    filters.onSale ||
-    filters.minRating != null ||
-    filters.sort !== "relevance";
-
   const slots: ListingProduct[] = [...fetched];
-  if (!hasAnyFilter) {
-    let fallbackIndex = 0;
-    while (slots.length < GRID_SIZE) {
-      const base = STATIC_FALLBACK[fallbackIndex % STATIC_FALLBACK.length];
-      slots.push({
-        ...base,
-        id: `${base.id}-${fallbackIndex + 1}`,
-      });
-      fallbackIndex += 1;
-    }
-  }
 
   const selectedCategoryName =
     filters.category
@@ -409,11 +390,13 @@ const page = async ({
         </h1>
 
         <div className="flex items-center gap-4 text-sm text-muted-foreground">
-          <span>{slots.length} results</span>
+          <span className="text-muted-foreground">
+            {slots.length} {slots.length === 1 ? "result" : "results"}
+          </span>
 
           <div className="flex items-center gap-2">
-            <span className="h-2 w-2 rounded-full bg-accent"></span>
-            Active
+            <div className="h-2 w-2 rounded-full bg-green-500" />
+            <span className="text-green-600 dark:text-green-400 font-medium">active</span>
           </div>
         </div>
       </div>
@@ -435,7 +418,7 @@ const page = async ({
             </>
           ) : (
             <>
-              Showing all <span className="text-white font-medium">available</span> items
+              Showing all <span className="text-primary font-medium">available</span> items
             </>
           )}
         </p>

@@ -135,9 +135,11 @@ export function ListBanner({ content }: Props) {
 
             const { data: userData } = await supabase
                 .from("users")
-                .select("user_fullname")
+                .select("user_fullname, user_email")
                 .eq("id", row.seller_owner_id)
                 .single();
+
+            const author = String(userData?.user_fullname || userData?.user_email?.split("@")[0] || "Unknown seller");
 
             return {
                 id: pid,
@@ -145,7 +147,7 @@ export function ListBanner({ content }: Props) {
                 subtitle: row.product_name,
                 rating: parseFloat(rating.toFixed(1)),
                 reviews: reviews?.length || 0,
-                author: userData?.user_fullname || "Unknown seller",
+                author,
                 price: row.price <= 0 ? "Free" : `₱${row.price}`,
                 imageSrc,
                 link: `/product-detail/${pid}`

@@ -114,14 +114,14 @@ export async function GET() {
 
     const { data: sellers } =
         sellerIds.length > 0
-            ? await admin.from("users").select("id, user_fullname").in("id", sellerIds)
+            ? await admin.from("users").select("id, user_fullname, user_email").in("id", sellerIds)
             : { data: [] };
 
     const sellerById = new Map(
-        (sellers ?? []).map((seller) => [
-            String(seller.id),
-            String(seller.user_fullname ?? "Unknown seller"),
-        ]),
+        (sellers ?? []).map((seller) => {
+            const name = String(seller.user_fullname || seller.user_email?.split("@")[0] || "Unknown seller");
+            return [String(seller.id), name];
+        }),
     );
 
     const productById = new Map(

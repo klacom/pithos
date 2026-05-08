@@ -209,8 +209,8 @@ export default function UploadAssetForm({
     const savedMedia = isEditMode ? existingMediaSummary : null;
 
     return (
-        <div className="w-full max-w-4xl mx-auto p-6 md:p-8 rounded-2xl border border-muted/80 bg-card shadow-sm">
-            <div className="flex flex-col gap-8">
+        <div className="w-full max-w-4xl mx-auto p-6 md:p-8 rounded-2xl border border-muted/80 bg-card shadow-sm h-full overflow-y-auto">
+            <div className="flex flex-col gap-8 pb-10">
                 <div className="flex flex-wrap items-start justify-between gap-4 pb-2 border-b border-muted/60">
                     <div className="space-y-1">
                         <h2 className="text-2xl font-semibold tracking-tight">
