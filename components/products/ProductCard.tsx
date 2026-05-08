@@ -12,7 +12,7 @@ interface AssetCardProps {
     author: string;
     price: string;
     imageSrc: string;
-    is3D?: boolean;
+    category?: string;
     link: string;
   }
 
@@ -24,7 +24,7 @@ export function ProductCard({
     author = "Manufactura K4",
     price = "Free",
     imageSrc = "/sample-pics/427910050_10160735009917626_224300477084609345_n.jpg",
-    is3D = true,
+    category,
     link = "/"
     }: AssetCardProps) {
     return (
@@ -44,12 +44,10 @@ export function ProductCard({
 
                 {/* Metadata / content below image */}
                 <div className="space-y-2 p-4">
-                    {is3D && (
                     <div className="flex items-center gap-1.5 text-xs font-medium text-muted-foreground">
                         <div className="rounded bg-primary/10 px-1.5 py-0.5 text-primary"><Box/></div>
-                        <span>3D</span>
+                        <span>{category || "3D"}</span>
                     </div>
-                    )}
 
                     <h3 className="line-clamp-2 text-base font-semibold">{subtitle}</h3>
 

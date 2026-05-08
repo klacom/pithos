@@ -14,6 +14,7 @@ type ListingProduct = {
   price: string;
   imageSrc: string;
   link: string;
+  category: string;
 };
 
 const STATIC_FALLBACK: ListingProduct[] = [];
@@ -187,6 +188,9 @@ async function fetchPublishedListingProducts(
   const productIds = rows.map((r) => String(r.product_id));
   const ratingById = await getRatingStats(productIds);
 
+  const { data: categories } = await admin.from("categories").select("id, name");
+  const categoryMap = new Map(categories?.map((c) => [c.id, c.name]));
+
   let mapped = rows.map((row) => {
     const price = Number(row.price ?? 0);
     const pid = String(row.product_id);
@@ -204,11 +208,12 @@ async function fetchPublishedListingProducts(
         price <= 0
           ? "Free"
           : new Intl.NumberFormat("en-PH", {
-              style: "currency",
-              currency: "PHP",
-            }).format(price),
+            style: "currency",
+            currency: "PHP",
+          }).format(price),
       imageSrc: thumbByProductId.get(pid) ?? "/pithos/PithosThumbnail.png",
       link: `/product-detail/${pid}`,
+      category: categoryMap.get(row.category_id) || "Asset",
     } satisfies ListingProduct;
   });
 
@@ -254,9 +259,9 @@ const page = async ({
     minRating: parseNumber(params.minRating),
     sort:
       params.sort === "newest" ||
-      params.sort === "price_asc" ||
-      params.sort === "price_desc" ||
-      params.sort === "rating_desc"
+        params.sort === "price_asc" ||
+        params.sort === "price_desc" ||
+        params.sort === "rating_desc"
         ? params.sort
         : "relevance",
   };
@@ -424,6 +429,7 @@ const page = async ({
               author={item.author}
               price={item.price}
               imageSrc={item.imageSrc}
+              category={item.category}
               link={item.link}
             />
           ))}

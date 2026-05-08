@@ -2,8 +2,6 @@
 
 import { useEffect, useMemo, useRef, useState } from "react"
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
-import { Search } from "@deemlol/next-icons";
-import { Button } from "../../ui/button";
 
 import { Search as SearchIcon, Loader2 } from "lucide-react";
 
@@ -84,7 +82,7 @@ const NavSearchBar = () => {
             </div>
             <input
                 placeholder="Search for 3D models, textures, or tools..."
-                className="w-full h-10 pl-11 pr-10 rounded-full border border-primary bg-background text-sm text-foreground ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground/60 focus:outline-none focus:ring-2 focus:ring-accent focus:border-accent transition-all"
+                className="w-full h-10 pl-11 pr-10 rounded-full border border-muted bg-background text-sm text-foreground ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground/60 focus:outline-none focus:ring-0 focus:ring-accent focus:border-accent transition-all"
                 type="text"
                 value={searchContent}
                 onChange={(e) => setSearchContent(e.currentTarget.value)}

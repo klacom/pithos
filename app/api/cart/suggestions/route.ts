@@ -85,7 +85,7 @@ export async function GET(request: NextRequest) {
     const admin = createAdminClient();
     const { data: products } = await admin
         .from("products")
-        .select("product_id, product_name, product_description, price, seller_owner_id")
+        .select("product_id, product_name, product_description, price, seller_owner_id, category_id")
         .eq("product_status", "published")
         .limit(Math.max(limit + excludeIds.length, limit + 2));
 
@@ -98,6 +98,9 @@ export async function GET(request: NextRequest) {
         getRatingStats(productIds),
         getThumbnailMap(productIds),
     ]);
+
+    const { data: categories } = await admin.from("categories").select("id, name");
+    const categoryMap = new Map(categories?.map((c) => [c.id, c.name]));
 
     const sellerIds = [
         ...new Set(
@@ -132,6 +135,7 @@ export async function GET(request: NextRequest) {
                 sellerById.get(String(product.seller_owner_id ?? "")) ?? "Unknown seller",
             price: formatPeso(price),
             imageSrc: thumbnails.get(productId) ?? "/pithos/PithosThumbnail.png",
+            category: categoryMap.get(product.category_id) || "Asset",
             link: `/product-detail/${productId}`,
         };
     });

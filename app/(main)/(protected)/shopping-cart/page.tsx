@@ -488,7 +488,18 @@ export default function ShoppingCartPage() {
                 {suggestedProducts.length > 0 ? (
                     <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-5">
                         {suggestedProducts.map((product) => (
-                            <ProductCard key={product.id} {...product} />
+                            <ProductCard
+                                key={product.id}
+                                title={product.title}
+                                subtitle={product.subtitle}
+                                rating={product.rating}
+                                reviews={product.reviews}
+                                author={product.author}
+                                price={product.price}
+                                imageSrc={product.imageSrc}
+                                category={product.category}
+                                link={product.link}
+                            />
                         ))}
                     </div>
                 ) : (

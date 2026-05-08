@@ -85,10 +85,10 @@ function SuccessContent() {
                         </h1>
                         <p className="text-muted-foreground text-lg max-w-md">
                             {allCompleted
-                                ? "Thank you for your purchase! Your assets are now ready for download."
+                                ? "Thank you for your purchase! Your assets are now ready for download. We've also sent you an email."
                                 : anyFailed
-                                    ? "We're sorry, but your transaction could not be completed. Please check your payment details."
-                                    : "Your order is being processed by the payment gateway. This might take a while, please don't close this page."}
+                                    ? "We're sorry, but your transaction could not be completed. Please check your payment details. We've also sent you an email."
+                                    : "Your order is being processed by the payment gateway. This might take a while, please don't close this page within 30 seconds. Check your email otherwise."}
                         </p>
                     </div>
 

@@ -64,7 +64,18 @@ export function InfiniteProductList() {
 
             <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
                 {products.map((product, idx) => (
-                    <ProductCard key={`${product.id}-${idx}`} {...product} />
+                    <ProductCard
+                        key={`${product.id}-${idx}`}
+                        title={product.title}
+                        subtitle={product.subtitle}
+                        rating={product.rating}
+                        reviews={product.reviews}
+                        author={product.author}
+                        price={product.price}
+                        imageSrc={product.imageSrc}
+                        category={product.category}
+                        link={product.link}
+                    />
                 ))}
                 
                 {(isLoading || hasMore) && (

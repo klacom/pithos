@@ -351,8 +351,8 @@ const ConfigureListBanner = forwardRef(({ block }: Props, ref) => {
                                 Array.from({ length: 5 }).map((_, i) => <ProductCardSkeleton key={i} />)
                             ) : paginatedSearchProducts.length > 0 ? (
                                 paginatedSearchProducts.map((product) => (
-                                    <div 
-                                        key={product.id} 
+                                    <div
+                                        key={product.id}
                                         className="relative group/card cursor-pointer"
                                         onClick={() => handleAddProduct(product.id)}
                                     >
@@ -449,7 +449,17 @@ const ConfigureListBanner = forwardRef(({ block }: Props, ref) => {
                         ) : previewProducts.length > 0 ? (
                             previewProducts.map((product) => (
                                 <div key={product.id} className="relative group">
-                                    <ProductCard {...product} />
+                                    <ProductCard
+                                        title={product.title}
+                                        subtitle={product.subtitle}
+                                        rating={product.rating}
+                                        reviews={product.reviews}
+                                        author={product.author}
+                                        price={product.price}
+                                        imageSrc={product.imageSrc}
+                                        category={product.category}
+                                        link={product.link}
+                                    />
                                     {form.listType === "featured" && (
                                         <button
                                             onClick={() => handleRemoveProduct(product.id)}

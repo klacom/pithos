@@ -69,7 +69,7 @@ export default async function BuyerFavoritesPage() {
   // 2. Fetch product details
   const { data: products, error: productsError } = await admin
     .from("products")
-    .select("*")
+    .select("*, categories(name)")
     .in("product_id", validProductIds);
 
   if (productsError) {
@@ -128,7 +128,7 @@ export default async function BuyerFavoritesPage() {
       const { data: files } = await admin.storage
         .from(ASSET_PHOTOS_BUCKET)
         .list(`${pid}/photos/thumbnail`);
-      
+
       let imageSrc = "/pithos/PithosThumbnail.png";
       if (files && files.length > 0) {
         const { data: pubUrl } = admin.storage
@@ -145,7 +145,7 @@ export default async function BuyerFavoritesPage() {
           .select("user_fullname, user_email")
           .eq("id", p.seller_owner_id)
           .single();
-        
+
         if (seller) {
           author = seller.user_fullname || seller.user_email?.split("@")[0] || "Unknown seller";
         }
@@ -160,6 +160,7 @@ export default async function BuyerFavoritesPage() {
         author,
         price: p.price <= 0 ? "Free" : `₱${p.price.toLocaleString()}`,
         imageSrc,
+        category: p.categories?.name || "Asset",
         link: `/product-detail/${p.product_id}`,
       };
     })
@@ -184,7 +185,17 @@ export default async function BuyerFavoritesPage() {
       <div className="grid gap-6 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
         {mappedProducts.map((product) => (
           <div key={product.id} className="relative group">
-            <ProductCard {...product} />
+            <ProductCard
+              title={product.title}
+              subtitle={product.subtitle}
+              rating={product.rating}
+              reviews={product.reviews}
+              author={product.author}
+              price={product.price}
+              imageSrc={product.imageSrc}
+              category={product.category}
+              link={product.link}
+            />
           </div>
         ))}
       </div>

@@ -58,6 +58,7 @@ type RelatedProduct = {
     price: string;
     imageSrc: string;
     link: string;
+    category?: string;
 };
 
 type ProductData = {
@@ -431,14 +432,14 @@ export default function ProductDetailPage() {
 
             setReviews(prev => [newReview, ...prev]);
             setReviewCount(prev => prev + 1);
-            
+
             // Recalculate average rating
             const newAvgRating = (avgRating * reviewCount + reviewForm.rating) / (reviewCount + 1);
             setAvgRating(newAvgRating);
 
             // Reset form
             setReviewForm({ rating: 5, review_description: "" });
-            
+
             toast.success("Review submitted successfully!");
         } catch (error: any) {
             console.error("Review submission failed:", error);
@@ -638,9 +639,9 @@ export default function ProductDetailPage() {
                                             </label>
                                             <Textarea
                                                 value={reviewForm.review_description}
-                                                onChange={(e) => setReviewForm(prev => ({ 
-                                                    ...prev, 
-                                                    review_description: e.target.value 
+                                                onChange={(e) => setReviewForm(prev => ({
+                                                    ...prev,
+                                                    review_description: e.target.value
                                                 }))}
                                                 placeholder="Share your thoughts about this product..."
                                                 className="min-h-[100px] resize-none"
@@ -1039,7 +1040,18 @@ export default function ProductDetailPage() {
                         {moreFromSeller.length > 0 ? (
                             <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
                                 {moreFromSeller.map((item) => (
-                                    <ProductCard key={item.id} {...item} />
+                                    <ProductCard
+                                        key={item.id}
+                                        title={item.title}
+                                        subtitle={item.subtitle}
+                                        rating={item.rating}
+                                        reviews={item.reviews}
+                                        author={item.author}
+                                        price={item.price}
+                                        imageSrc={item.imageSrc}
+                                        category={item.category}
+                                        link={item.link}
+                                    />
                                 ))}
                             </div>
                         ) : (
@@ -1056,7 +1068,18 @@ export default function ProductDetailPage() {
                         {youMightLike.length > 0 ? (
                             <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
                                 {youMightLike.map((item) => (
-                                    <ProductCard key={item.id} {...item} />
+                                    <ProductCard
+                                        key={item.id}
+                                        title={item.title}
+                                        subtitle={item.subtitle}
+                                        rating={item.rating}
+                                        reviews={item.reviews}
+                                        author={item.author}
+                                        price={item.price}
+                                        imageSrc={item.imageSrc}
+                                        category={item.category}
+                                        link={item.link}
+                                    />
                                 ))}
                             </div>
                         ) : (

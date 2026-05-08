@@ -11,12 +11,19 @@ export type MappedProduct = {
   price: string;
   imageSrc: string;
   link: string;
+  category?: string;
 };
 
 export async function mapProductRows(
   supabase: SupabaseClient,
   rows: any[]
 ): Promise<MappedProduct[]> {
+  // Fetch categories once to map category_id to name
+  const { data: categories } = await supabase
+    .from("categories")
+    .select("id, name");
+  const categoryMap = new Map(categories?.map(c => [c.id, c.name]));
+
   return Promise.all(
     rows.map(async (row) => {
       const pid = row.product_id;
@@ -27,9 +34,12 @@ export async function mapProductRows(
         .select("rating")
         .eq("product_id", pid);
 
-      const rating = reviews?.length
+      const rawRating = reviews?.length
         ? reviews.reduce((acc, r) => acc + (Number(r.rating) || 0), 0) / reviews.length
         : 0;
+      
+      // Round to 1 decimal place
+      const rating = Math.round(rawRating * 10) / 10;
 
       // Get thumbnail URL
       const { data: files } = await supabase.storage
@@ -65,12 +75,13 @@ export async function mapProductRows(
         id: pid,
         title: row.product_name,
         subtitle: row.product_name,
-        rating: parseFloat(rating.toFixed(1)),
+        rating,
         reviews: reviews?.length || 0,
         author,
         price: row.price <= 0 ? "Free" : `₱${row.price.toLocaleString()}`,
         imageSrc,
         link: `/product-detail/${pid}`,
+        category: categoryMap.get(row.category_id) || "Asset",
       };
     })
   );

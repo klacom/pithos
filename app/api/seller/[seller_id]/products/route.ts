@@ -47,7 +47,7 @@ export async function GET(
         // Fetch products from seller
         let query = supabase
             .from("products")
-            .select("product_id, product_name, product_description, price, seller_owner_id, created_at")
+            .select("product_id, product_name, product_description, price, seller_owner_id, created_at, category_id")
             .eq("seller_owner_id", seller_id)
             .eq("product_status", "published")
             .limit(limit + 1); // +1 to account for excluded product
@@ -62,6 +62,9 @@ export async function GET(
         if (!products) {
             return NextResponse.json({ products: [] }, { status: 200 })
         }
+
+        const { data: categories } = await supabase.from("categories").select("id, name");
+        const categoryMap = new Map(categories?.map((c) => [c.id, c.name]));
 
         // Filter out the excluded product
         const filteredProducts = products.filter(p => String(p.product_id) !== exclude).slice(0, limit);
@@ -121,6 +124,7 @@ export async function GET(
                             currency: "PHP",
                         }).format(price),
                 imageSrc: thumbByProductId.get(pid) ?? "/pithos/PithosThumbnail.png",
+                category: categoryMap.get(product.category_id) || "Asset",
                 link: `/product-detail/${pid}`,
             };
         });

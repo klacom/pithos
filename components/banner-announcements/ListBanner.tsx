@@ -29,21 +29,23 @@ export function ListBanner({ content }: Props) {
         if (content.listType === "featured") return null;
         const baseUrl = "/product-listing"
         const params = new URLSearchParams()
-        
+
         switch (content.listType) {
             case "views":
-                params.set("sort", "relevance") // Or any default sort
+                // No direct "views" sort in product-listing, use newest as default for "Popular"
+                params.set("sort", "newest")
                 break
             case "ratings":
                 params.set("sort", "rating_desc")
                 break
             case "favorites":
-                params.set("sort", "relevance") 
+                // Use relevance or newest for favorites list type
+                params.set("sort", "relevance")
                 break
             default:
                 break
         }
-        
+
         const qs = params.toString()
         return qs ? `${baseUrl}?${qs}` : baseUrl
     }, [content.listType])
@@ -59,7 +61,7 @@ export function ListBanner({ content }: Props) {
                         .from("products")
                         .select("*")
                         .in("product_id", content.selectedProductIds);
-                    
+
                     if (data) {
                         const mapped = await mapProductRows(supabase, data);
                         // Maintain order
@@ -120,7 +122,7 @@ export function ListBanner({ content }: Props) {
                 </div>
 
                 {seeMoreLink && (
-                    <Link 
+                    <Link
                         href={seeMoreLink}
                         className="text-sm font-bold text-red-500 hover:underline transition uppercase tracking-wider"
                     >
@@ -131,7 +133,18 @@ export function ListBanner({ content }: Props) {
 
             <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
                 {products.map((product) => (
-                    <ProductCard key={product.id} {...product} />
+                    <ProductCard
+                        key={product.id}
+                        title={product.title}
+                        subtitle={product.subtitle}
+                        rating={product.rating}
+                        reviews={product.reviews}
+                        author={product.author}
+                        price={product.price}
+                        imageSrc={product.imageSrc}
+                        category={product.category}
+                        link={product.link}
+                    />
                 ))}
             </div>
         </section>
