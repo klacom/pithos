@@ -76,6 +76,9 @@ export default function AssetsGrid({
           <Button
             size="icon"
             variant="outline"
+            title={viewMode === "grid" ? "Switch to list view" : "Switch to grid view"}
+            aria-label={viewMode === "grid" ? "Switch to list view" : "Switch to grid view"}
+            aria-pressed={viewMode === "list"}
             onClick={() =>
               setViewMode(viewMode === "grid" ? "list" : "grid")
             }
@@ -86,21 +89,30 @@ export default function AssetsGrid({
       </div>
 
       {/* GRID */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+      <div
+        className={
+          viewMode === "grid"
+            ? "grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4"
+            : "grid grid-cols-1 gap-3"
+        }
+      >
         {filteredAssets.map((asset) => (
-          <AssetCard
-            key={asset.id}
-            asset={asset}
-            onDelete={onDelete}
-            onEdit={onEdit}
-          />
+          <div key={asset.id} className={viewMode === "list" ? "max-w-none" : ""}>
+            <AssetCard
+              asset={asset}
+              onDelete={onDelete}
+              onEdit={onEdit}
+            />
+          </div>
         ))}
 
         {/* ADD CARD */}
         <button
           type="button"
           onClick={() => onAddNew?.()}
-          className="border-dashed border-2 rounded-lg flex flex-col items-center justify-center min-h-[200px] cursor-pointer hover:bg-muted/30 transition-colors text-left"
+          className={`border-dashed border-2 rounded-lg flex flex-col items-center justify-center cursor-pointer hover:bg-muted/30 transition-colors text-left ${
+            viewMode === "list" ? "min-h-[120px]" : "min-h-[200px]"
+          }`}
         >
           <Plus size={32} />
           <p>Add New Asset</p>
