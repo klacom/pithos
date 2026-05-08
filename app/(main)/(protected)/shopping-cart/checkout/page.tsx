@@ -10,8 +10,9 @@ import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { toast } from "sonner";
 import { CartListItem } from "@/app/shop-actions";
+import { Suspense } from "react";
 
-export default function CheckoutPage() {
+function CheckoutContent() {
     const [selectedPayment, setSelectedPayment] = useState<string | null>(null);
     const [cartItems, setCartItems] = useState<CartListItem[]>([]);
     const [loading, setLoading] = useState(true);
@@ -48,7 +49,7 @@ export default function CheckoutPage() {
             }
         }
         loadItems();
-    }, [directProductId]);
+    }, [directProductId, selectedIdsParam]);
 
     const totalAmount = useMemo(() => {
         return cartItems.reduce((sum, item) => sum + item.price, 0);
@@ -285,5 +286,17 @@ export default function CheckoutPage() {
                 </div>
             </div>
         </main >
+    );
+}
+
+export default function CheckoutPage() {
+    return (
+        <Suspense fallback={
+            <div className="flex min-h-screen items-center justify-center">
+                <Loader2 className="h-8 w-8 animate-spin text-primary" />
+            </div>
+        }>
+            <CheckoutContent />
+        </Suspense>
     );
 }

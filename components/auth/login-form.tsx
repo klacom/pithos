@@ -13,10 +13,21 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import Link from "next/link";
+import { useRouter, useSearchParams } from "next/navigation";
 import { useState, useEffect } from "react";
 import PithosLogo from "../PithosLogo";
 import { getSystemConfig } from "@/app/(main)/(protected)/admin/system-config/system-config-settings";
 import { Turnstile } from "@marsidev/react-turnstile";
+import {
+    AlertDialog,
+    AlertDialogAction,
+    AlertDialogContent,
+    AlertDialogDescription,
+    AlertDialogFooter,
+    AlertDialogHeader,
+    AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import { Clock } from "lucide-react";
 
 type LoginFormProps = React.HTMLAttributes<HTMLDivElement> & {
     createAudit: (params: {
@@ -44,8 +55,19 @@ export function LoginForm({
     const [qrCode, setQrCode] = useState<string | null>(null);
     const [secret, setSecret] = useState<string | null>(null);
     const [timeRemaining, setTimeRemaining] = useState(30);
+    const [showTimeoutModal, setShowTimeoutModal] = useState(false);
     const supabase = createClient();
-    // const router = useRouter();
+    const searchParams = useSearchParams();
+    const router = useRouter();
+
+    // Check for session timeout reason
+    useEffect(() => {
+        if (searchParams.get("reason") === "timeout") {
+            setShowTimeoutModal(true);
+            // Clean up the URL
+            router.replace("/auth/login");
+        }
+    }, [searchParams, router]);
 
     // Force sign out if they hit the login page (prevents lingering AAL1 sessions)
     useEffect(() => {
@@ -56,11 +78,16 @@ export function LoginForm({
     useEffect(() => {
         if (!showMfa && !showMfaSetup) return;
         const updateTimer = () => {
-            const remaining = 30 - Math.floor((Date.now() / 1000) % 30);
+            // Use a slight offset if the user experiences a consistent delay
+            // Most TOTP apps are synced to the nearest 30s window of the Unix epoch
+            const now = Date.now();
+            const remaining = 30 - Math.floor((now / 1000) % 30);
             setTimeRemaining(remaining);
         };
-        updateTimer(); // Initial call
-        const interval = setInterval(updateTimer, 1000);
+        updateTimer();
+        // Update more frequently (every 100ms) to ensure smooth countdown 
+        // and better sync with the actual second transition
+        const interval = setInterval(updateTimer, 100);
         return () => clearInterval(interval);
     }, [showMfa, showMfaSetup]);
 
@@ -220,16 +247,17 @@ export function LoginForm({
     };
 
     return (
-        <div className={cn("flex flex-col gap-6 items-center", className)} {...props}>
+        <>
+            <div className={cn("flex flex-col gap-6 items-center", className)} {...props}>
 
-            {/* Logo */}
-            <div className="flex items-center gap-3 text-4xl font-bold uppercase">
-                <PithosLogo size={60} color="foreground" />
-                <span className="font-inter tracking-wide text-foreground">PITHOS</span>
-            </div>
+                {/* Logo */}
+                <div className="flex items-center gap-3 text-4xl font-bold uppercase">
+                    <PithosLogo size={60} color="foreground" />
+                    <span className="font-inter tracking-wide text-foreground">PITHOS</span>
+                </div>
 
-            {/* Login Card */}
-            <Card className="w-full">
+                {/* Login Card */}
+                <Card className="w-full">
 
                 {/* Card Header */}
                 <CardHeader>
@@ -417,7 +445,7 @@ export function LoginForm({
                             </div>
                         )}
                         <div className="flex flex-col gap-2">
-                            {showMfa && (
+                            {!showMfa && (
                                 <div className="w-full flex justify-center">
                                     <Turnstile
                                         siteKey={process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY!}
@@ -455,7 +483,30 @@ export function LoginForm({
                         </>
                     )}
                 </CardContent>
-            </Card>
-        </div>
+</Card>
+            </div>
+
+            <AlertDialog open={showTimeoutModal} onOpenChange={setShowTimeoutModal}>
+                <AlertDialogContent className="border-border bg-background shadow-2xl max-w-md">
+                    <AlertDialogHeader className="gap-3">
+                        <AlertDialogTitle className="flex items-center gap-2 text-accent text-2xl font-bold">
+                            <Clock className="h-6 w-6" />
+                            Session Expired
+                        </AlertDialogTitle>
+                        <AlertDialogDescription className="text-lg leading-relaxed text-foreground">
+                            You have been logged out due to session timeout. Please sign in again to continue.
+                        </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter className="mt-6">
+                        <AlertDialogAction 
+                            className="h-12 w-full bg-accent text-accent-foreground hover:bg-accent/90 transition-all text-lg font-bold shadow-lg shadow-accent/20"
+                            onClick={() => setShowTimeoutModal(false)}
+                        >
+                            Got it
+                        </AlertDialogAction>
+                    </AlertDialogFooter>
+                </AlertDialogContent>
+            </AlertDialog>
+        </>
     );
 }

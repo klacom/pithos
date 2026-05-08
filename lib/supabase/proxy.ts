@@ -73,7 +73,7 @@ export async function updateSession(request: NextRequest) {
                 .eq("role", role)
                 .single();
 
-            const timeoutMinutes = policy?.timeout_minutes || 2; // Default to 2 mins
+            const timeoutMinutes = policy?.timeout_minutes || 30; // Default to 30 mins safe default
             
             const now = new Date();
             const lastActivity = new Date(session.last_activity);
@@ -92,7 +92,13 @@ export async function updateSession(request: NextRequest) {
                 } else {
                     // Truly inactive, logout the user
                     await supabase.auth.signOut();
-                    return NextResponse.redirect(new URL("/auth/login", request.url));
+                    // IMPORTANT: When logging out in middleware, we MUST clear the session data
+                    // and redirect to login immediately to prevent any further logic execution.
+                    const response = NextResponse.redirect(new URL("/auth/login", request.url));
+                    // Clear the session cookies manually to be extra safe
+                    response.cookies.delete('sb-access-token');
+                    response.cookies.delete('sb-refresh-token');
+                    return response;
                 }
             } else {
                 // Sliding session: Update activity timestamp on page navigation
@@ -102,13 +108,31 @@ export async function updateSession(request: NextRequest) {
                     .eq("user_id", uid);
             }
         } else {
-            // No session record exists for this authenticated user, create one
-            await supabaseAdmin
-                .from("user_sessions")
-                .insert({ 
-                    user_id: uid, 
-                    last_activity: new Date().toISOString() 
-                });
+            // No session record exists for this authenticated user.
+            // Check if they just signed in recently (last 30 seconds).
+            // If they signed in a long time ago but have no session record, 
+            // it means their session was deleted due to timeout.
+            const lastSignIn = user.last_sign_in_at ? new Date(user.last_sign_in_at) : null;
+            const now = new Date();
+            const signedInSecondsAgo = lastSignIn ? (now.getTime() - lastSignIn.getTime()) / 1000 : 999999;
+
+            if (signedInSecondsAgo < 30) {
+                // User just logged in, create the initial session record
+                await supabaseAdmin
+                    .from("user_sessions")
+                    .insert({ 
+                        user_id: uid, 
+                        last_activity: now.toISOString() 
+                    });
+            } else {
+                // Session likely timed out and record was deleted. 
+                // Redirect to login to prevent bypass.
+                await supabase.auth.signOut();
+                const response = NextResponse.redirect(new URL("/auth/login", request.url));
+                response.cookies.delete('sb-access-token');
+                response.cookies.delete('sb-refresh-token');
+                return response;
+            }
         }
     }
 

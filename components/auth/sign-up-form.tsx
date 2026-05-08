@@ -71,11 +71,13 @@ export function SignUpForm({
     useEffect(() => {
         if (!showMfaSetup) return;
         const updateTimer = () => {
-            const remaining = 30 - Math.floor((Date.now() / 1000) % 30);
+            const now = Date.now();
+            const remaining = 30 - Math.floor((now / 1000) % 30);
             setTimeRemaining(remaining);
         };
-        updateTimer(); // Initial call
-        const interval = setInterval(updateTimer, 1000);
+        updateTimer();
+        // Update more frequently (every 100ms) for better sync
+        const interval = setInterval(updateTimer, 100);
         return () => clearInterval(interval);
     }, [showMfaSetup]);
 

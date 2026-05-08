@@ -1,7 +1,8 @@
-import { ProductCard } from "@/components/products/ProductCard";
+import { ProductCard } from "@/components/ProductCard"
 import { createAdminClient } from "@/lib/supabase/admin";
 import { ASSET_PHOTOS_BUCKET } from "@/lib/seller/asset-storage";
-import ProductListingFilters from "@/components/products/ProductListingFilters";
+import ProductListingFilters from "@/components/product-listing/ProductListingFilters";
+import { Suspense } from "react";
 
 type ListingProduct = {
   id: string;
@@ -439,18 +440,20 @@ const page = async ({
           )}
         </p>
 
-        <ProductListingFilters
-          categories={categories}
-          value={{
-            q: filters.q,
-            category: filters.category,
-            minPrice: params.minPrice ?? "",
-            maxPrice: params.maxPrice ?? "",
-            onSale: filters.onSale,
-            minRating: filters.minRating != null ? String(filters.minRating) : "",
-            sort: filters.sort,
-          }}
-        />
+        <Suspense fallback={<div className="h-20 bg-secondary/20 animate-pulse rounded-lg" />}>
+          <ProductListingFilters
+            categories={categories}
+            value={{
+              q: filters.q,
+              category: filters.category,
+              minPrice: params.minPrice ?? "",
+              maxPrice: params.maxPrice ?? "",
+              onSale: filters.onSale,
+              minRating: filters.minRating != null ? String(filters.minRating) : "",
+              sort: filters.sort,
+            }}
+          />
+        </Suspense>
 
         {activeChips.length > 0 ? (
           <div className="flex flex-wrap gap-2">

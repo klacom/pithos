@@ -11,15 +11,38 @@ export async function POST() {
         return new Response("Unauthorized", { status: 401 });
     }
 
-    const role = user.user_metadata?.role || "buyer";
+    // 1. Get user role from public.users table (same as middleware)
+    const { data: userData } = await supabaseAdmin
+        .from("users")
+        .select("user_role")
+        .eq("id", user.id)
+        .single();
 
+    const role = userData?.user_role || "buyer";
+
+    // 2. Get session policy for this role
     const { data: policy } = await supabaseAdmin
         .from("session_policies")
         .select("timeout_minutes")
         .eq("role", role)
         .single();
 
-    const timeoutMinutes = policy?.timeout_minutes || 30; // Default 30 mins as requested
+    const dbTimeout = policy?.timeout_minutes || 30;
+    const timeoutMinutes = Math.min(dbTimeout, 30); // Enforce 30 min maximum
+
+    // 3. Calculate warning threshold based on custom scale
+    let warningMinutes = 1;
+    if (timeoutMinutes === 1) {
+        warningMinutes = 0.5; // 30 seconds
+    } else if (timeoutMinutes >= 2 && timeoutMinutes <= 5) {
+        warningMinutes = 1;
+    } else if (timeoutMinutes >= 6 && timeoutMinutes <= 15) {
+        warningMinutes = 5;
+    } else if (timeoutMinutes >= 16 && timeoutMinutes <= 25) {
+        warningMinutes = 15;
+    } else if (timeoutMinutes >= 26 && timeoutMinutes <= 30) {
+        warningMinutes = 25;
+    }
 
     const { data: session } = await supabaseAdmin
         .from("user_sessions")
@@ -36,6 +59,13 @@ export async function POST() {
         if (diffMinutes > timeoutMinutes) {
             // Force logout in Supabase
             await supabaseServer.auth.signOut();
+            
+            // Delete the session record so middleware doesn't see an old one on refresh
+            await supabaseAdmin
+                .from("user_sessions")
+                .delete()
+                .eq("user_id", user.id);
+
             return new Response("Unauthorized", { status: 401 });
         }
     }
@@ -55,7 +85,7 @@ export async function POST() {
     return new Response(JSON.stringify({ 
         ok: true, 
         timeoutMinutes,
-        warningMinutes: Math.max(1, timeoutMinutes - 5)
+        warningMinutes
     }), {
         headers: { "Content-Type": "application/json" }
     });

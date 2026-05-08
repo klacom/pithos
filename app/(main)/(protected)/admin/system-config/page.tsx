@@ -137,7 +137,7 @@ const Page = () => {
 
             {/* Content Container */}
             <div className="flex flex-col gap-6 min-h-0 overflow-y-auto">
-                <div className="flex flex-col gap-4 pt-4">
+                <div className="flex flex-col gap-20 pt-4">
                     {/* Login and Password Section */}
                     <div className='flex gap-4 items-start'>
                         <div className='flex flex-col gap-4 w-1/4 sticky top-0 bg-primary-foreground border border-muted rounded-lg p-4'>
@@ -248,7 +248,7 @@ const Page = () => {
                                 <h1 className='font-bold text-2xl'>Session Timeout</h1>
                             <p className="text-sm">Set the inactivity timeout (in minutes) for each user role. A warning will be shown efore expiration depending on the timeout duration (e.g 25 minutes if session timeout is 30 minutes).</p>
                             <Button className='w-fit' onClick={handleSaveAllPolicies} disabled={saving}>
-                                {saving ? "Saving..." : "Save"}
+                                {saving ? "Saving..." : "Save All Policies"}
                             </Button>
                         </div>
 
@@ -267,15 +267,24 @@ const Page = () => {
                                                 <div className="space-y-1">
                                                     <h3 className="font-medium">Inactivity Timeout (Minutes)</h3>
                                                     <InputTextField
-                                                        type="number"
-                                                        min={1}
-                                                        value={policy.timeout_minutes}
-                                                        onChange={(e) => handlePolicyChange(policy.role, e.target.value)}
-                                                        placeholder={`Enter minutes for ${policy.role}`}
-                                                    />
+                                                            type="number"
+                                                            min={1}
+                                                            max={30}
+                                                            value={policy.timeout_minutes}
+                                                            onChange={(e) => handlePolicyChange(policy.role, e.target.value)}
+                                                            placeholder={`Enter minutes for ${policy.role}`}
+                                                        />
+                                                    </div>
+                                                    <p className="text-sm text-accent">
+                                                        Note: User will be warned at {
+                                                            policy.timeout_minutes === 1 ? "30 seconds" :
+                                                            (policy.timeout_minutes >= 2 && policy.timeout_minutes <= 5) ? "1 minute" :
+                                                            (policy.timeout_minutes >= 6 && policy.timeout_minutes <= 15) ? "5 minutes" :
+                                                            (policy.timeout_minutes >= 16 && policy.timeout_minutes <= 25) ? "15 minutes" :
+                                                            "25 minutes"
+                                                        }.
+                                                    </p>
                                                 </div>
-                                                <p className="text-sm text-accent">Note: User will be warned at {Math.max(1, policy.timeout_minutes - 5)} minutes.</p>
-                                            </div>
                                         </Card>
                                     ))}
                                     {policies.length === 0 && (
