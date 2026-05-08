@@ -3,7 +3,7 @@ import type { NextConfig } from "next";
 const isDev = process.env.NODE_ENV === 'development';
 
 const nextConfig: NextConfig = {
-    cacheComponents: true,
+    // cacheComponents: true,
     images: {
         dangerouslyAllowLocalIP: isDev,
         remotePatterns: [

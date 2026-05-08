@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server"
 import { createAdminClient } from "@/lib/supabase/admin"
 import { ASSET_PHOTOS_BUCKET } from "@/lib/seller/asset-storage"
+import { unstable_noStore as noStore } from 'next/cache';
 
 const supabase = createAdminClient();
 
@@ -35,6 +36,7 @@ async function getRatingStats(productIds: string[]): Promise<
 }
 
 export async function GET(req: Request) {
+    noStore();
     try {
         const url = new URL(req.url);
         const exclude = url.searchParams.get("exclude") || "";

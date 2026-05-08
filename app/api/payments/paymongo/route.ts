@@ -1,7 +1,9 @@
 import { getBalance, listPayments, checkKeys, listWebhooks } from '@/lib/payments/paymongo/paymongo';
 import { NextRequest, NextResponse } from 'next/server';
+import { unstable_noStore as noStore } from 'next/cache';
 
 export async function GET(request: NextRequest) {
+    noStore();
     try {
         const searchParams = request.nextUrl.searchParams;
         const type = searchParams.get('type');

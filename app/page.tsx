@@ -5,8 +5,9 @@ import NavBarLoader from "@/components/main-components/navbar/NavBarLoader";
 import Footer from "@/components/main-components/footer/Footer";
 import HomeBlocks from "@/components/banner-announcements/HomePageBlocks";
 import { HomePageSkeleton } from "@/components/homepage/HomePageSkeleton";
-
+import { unstable_noStore as noStore } from 'next/cache';
 export default function Home() {
+    noStore();
     return (
         <main className="min-h-screen flex flex-col items-center">
             <Suspense fallback={<NavBar role={null} />}>
