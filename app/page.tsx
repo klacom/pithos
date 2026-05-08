@@ -1,45 +1,25 @@
-import { DeployButton } from "@/components/deploy-button";
-import { EnvVarWarning } from "@/components/env-var-warning";
-import { AuthButton } from "@/components/auth-button";
-import { Hero } from "@/components/hero";
-import { ThemeSwitcher } from "@/components/theme-switcher";
-import { ConnectSupabaseSteps } from "@/components/tutorial/connect-supabase-steps";
-import { SignUpUserSteps } from "@/components/tutorial/sign-up-user-steps";
-import { hasEnvVars } from "@/lib/utils";
-import Link from "next/link";
+// app/page.tsx
 import { Suspense } from "react";
-import NavBar from "@/components/NavBar";
+import NavBar from "@/components/main-components/navbar/NavBar";
+import NavBarLoader from "@/components/main-components/navbar/NavBarLoader";
+import Footer from "@/components/main-components/footer/Footer";
+import HomeBlocks from "@/components/banner-announcements/HomePageBlocks";
+import { HomePageSkeleton } from "@/components/homepage/HomePageSkeleton";
 
 export default function Home() {
-  return (
-    <main className="min-h-screen flex flex-col items-center">
-      <NavBar />
-      <div className="flex-1 w-full flex flex-col gap-20 items-center">
-        
-        <div className="flex-1 flex flex-col gap-20 max-w-5xl p-5">
-          <Hero />
-          <main className="flex-1 flex flex-col gap-6 px-4">
-            <h2 className="font-medium text-xl mb-4">Next steps</h2>
-            {hasEnvVars ? <SignUpUserSteps /> : <ConnectSupabaseSteps />}
-          </main>
-        </div>
+    return (
+        <main className="min-h-screen flex flex-col items-center">
+            <Suspense fallback={<NavBar role={null} />}>
+                <NavBarLoader />
+            </Suspense>
 
+            <div className="flex-1 w-full flex flex-col gap-5 items-center px-4 md:px-8 lg:px-16 max-w-7xl mx-auto">
+                <Suspense fallback={<HomePageSkeleton />}>
+                    <HomeBlocks />
+                </Suspense>
+            </div>
 
-
-        <footer className="w-full flex items-center justify-center border-t mx-auto text-center text-xs gap-8 py-16">
-          <p>
-            Powered by{" "}
-            <a
-              href="https://supabase.com/?utm_source=create-next-app&utm_medium=template&utm_term=nextjs"
-              target="_blank"
-              className="font-bold hover:underline"
-              rel="noreferrer"
-            >
-              Supabase
-            </a>
-          </p>
-        </footer>
-      </div>
-    </main>
-  );
+            <Footer />
+        </main>
+    );
 }
