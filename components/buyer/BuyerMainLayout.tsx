@@ -1,6 +1,6 @@
 import { ReactNode } from "react"
 import SideBar from "../main-components/sidebar/SideBar";
-import { User, Shield, ShoppingBag } from "lucide-react";
+import { User, Shield, ShoppingBag, Heart } from "lucide-react";
 import { createAudit } from "@/lib/supabase/create-audit";
 
 type LinkItem = {
@@ -26,6 +26,11 @@ const BuyerMainLayout = ({ children }: { children: ReactNode }) => {
             href: '/buyer/account/purchase-history',
             label: 'Purchase History',
             icon: <ShoppingBag size={iconSize} />,
+        },
+        {
+            href: '/buyer/favorites',
+            label: 'Liked Products',
+            icon: <Heart size={iconSize} />,
         },
     ];
 

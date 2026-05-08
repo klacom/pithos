@@ -19,7 +19,7 @@ export default function AssetCard({ asset, onEdit, onDelete }: Props) {
   const router = useRouter();
 
   const handleView = () => {
-    router.push(`/seller/view-assets?id=${asset.id}`);
+    router.push(`/product-detail/${asset.id}`);
   };
 
   return (

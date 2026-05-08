@@ -96,7 +96,7 @@ export default function SellerDashboardClient() {
                     </Button>
                     {draftTarget ? (
                         <Button asChild>
-                            <Link href={`/seller/view-assets?id=${draftTarget.productId}`}>
+                            <Link href={`/product-detail/${draftTarget.productId}`}>
                                 Open draft
                             </Link>
                         </Button>
@@ -156,7 +156,7 @@ export default function SellerDashboardClient() {
                                     </div>
                                     <Button size="icon" variant="red_default" asChild>
                                         <Link
-                                            href={`/seller/view-assets?id=${a.productId}`}
+                                            href={`/product-detail/${a.productId}`}
                                             aria-label={`View ${a.title}`}
                                         >
                                             <Eye size={18} />
@@ -267,7 +267,7 @@ export default function SellerDashboardClient() {
                         {snap?.activeAsset && (
                             <Button variant="outline" size="sm" className="mt-4 w-full" asChild>
                                 <Link
-                                    href={`/seller/view-assets?id=${snap.activeAsset.productId}`}
+                                    href={`/product-detail/${snap.activeAsset.productId}`}
                                 >
                                     View listing
                                 </Link>

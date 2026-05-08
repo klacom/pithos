@@ -61,6 +61,15 @@ export async function GET(
   try {
     const { product_id } = await params;
 
+    // Validate UUID format
+    const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+    if (!uuidRegex.test(product_id)) {
+      return NextResponse.json(
+        { reviews: [], avgRating: 0, reviewCount: 0 },
+        { status: 200 },
+      );
+    }
+
     let { data: reviews, error } = await supabase
       .from("reviews")
       .select("*")

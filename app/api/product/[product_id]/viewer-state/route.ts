@@ -8,6 +8,17 @@ export async function GET(
 ) {
     const productId = (await params).product_id;
 
+    // Validate UUID format
+    const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+    if (!uuidRegex.test(productId)) {
+        return NextResponse.json({
+            isInCart: false,
+            isFavorite: false,
+            isOwner: false,
+            isLoggedIn: false
+        });
+    }
+
     console.log("Product ID: ", productId);
 
     const supabaseAdmin = createAdminClient();

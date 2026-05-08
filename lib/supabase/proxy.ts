@@ -16,7 +16,7 @@ export async function updateSession(request: NextRequest) {
                 },
                 setAll(cookiesToSet) {
                     supabaseResponse = NextResponse.next({ request });
-
+                    
                     cookiesToSet.forEach(({ name, value, options }) =>
                         supabaseResponse.cookies.set(name, value, options)
                     );
@@ -30,15 +30,15 @@ export async function updateSession(request: NextRequest) {
     // Get user safely, not using claims
     const { data: { user } } = await supabase.auth.getUser();
     const uid = user?.id;
-
+    
     // console.log("UID from proxy getUser:", uid);
     // console.log("Data of User from proxy getUser:", user);
 
     const pathname = request.nextUrl.pathname;
-    console.log("pathname:", pathname);
+
     // Skip Api routes
     if (pathname.startsWith("/api")) {
-        return supabaseResponse;
+        return NextResponse.next()
     }
 
     if (pathname.startsWith("/auth")) {
@@ -74,11 +74,11 @@ export async function updateSession(request: NextRequest) {
                 .single();
 
             const timeoutMinutes = Math.min(policy?.timeout_minutes || 30, 1440); // Enforce 24 hour maximum (1440 mins)
-
+            
             const now = new Date();
             const lastActivity = new Date(session.last_activity);
             const lastSignIn = user.last_sign_in_at ? new Date(user.last_sign_in_at) : null;
-
+            
             const diffMinutes = (now.getTime() - lastActivity.getTime()) / 60000;
 
             if (diffMinutes > timeoutMinutes) {
@@ -120,9 +120,9 @@ export async function updateSession(request: NextRequest) {
                 // User just logged in, create the initial session record
                 await supabaseAdmin
                     .from("user_sessions")
-                    .insert({
-                        user_id: uid,
-                        last_activity: now.toISOString()
+                    .insert({ 
+                        user_id: uid, 
+                        last_activity: now.toISOString() 
                     });
             } else {
                 // Session likely timed out and record was deleted. 

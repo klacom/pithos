@@ -1,4 +1,4 @@
-import { ProductCard } from "@/components/products/ProductCard";
+import { ProductCard } from "@/components/products/ProductCard"
 import { createAdminClient } from "@/lib/supabase/admin";
 import { ASSET_PHOTOS_BUCKET } from "@/lib/seller/asset-storage";
 import ProductListingFilters from "@/components/products/ProductListingFilters";
@@ -16,43 +16,9 @@ type ListingProduct = {
   link: string;
 };
 
-const STATIC_FALLBACK: ListingProduct[] = [
-  {
-    id: "fallback-1",
-    title: "Stellar Sci-Fi Pack",
-    subtitle: "Character Assets",
-    rating: 4.5,
-    reviews: 120,
-    author: "Lark Bolotaolo",
-    price: "$67.00",
-    imageSrc: "/sample-pics/458478537_7645885715447813_4009544347800371450_n.jpg",
-    link: "/product-detail",
-  },
-  {
-    id: "fallback-2",
-    title: "ROCK & BOULDERS 2",
-    subtitle: "Rock and Boulders 2",
-    rating: 4.7,
-    reviews: 611,
-    author: "Manufactura K4",
-    price: "Free",
-    imageSrc: "/sample-pics/427910050_10160735009917626_224300477084609345_n.jpg",
-    link: "/product-detail",
-  },
-  {
-    id: "fallback-3",
-    title: "Fantasy Props",
-    subtitle: "Weapons & Items",
-    rating: 4.6,
-    reviews: 340,
-    author: "Mythic Studio",
-    price: "$8",
-    imageSrc: "/sample-pics/448095782_7941547522555651_2170753001983639848_n.jpg",
-    link: "/product-detail",
-  },
-];
+const STATIC_FALLBACK: ListingProduct[] = [];
 
-type ListingCategory = { id: string; name: string };
+import { listCategories, type ListingCategory } from "@/lib/public/categories";
 
 type ProductFilters = {
   q: string;
@@ -95,21 +61,7 @@ function buildProductListingHref(
   return qs ? `/product-listing?${qs}` : "/product-listing";
 }
 
-async function listCategories(): Promise<ListingCategory[]> {
-  const admin = createAdminClient();
-  const { data, error } = await admin
-    .from("categories")
-    .select("id, name")
-    .order("name", { ascending: true });
-  if (error || !data) {
-    if (error) console.error("categories fetch:", error.message);
-    return [];
-  }
-  return (data as Array<{ id: string; name: string }>).map((c) => ({
-    id: String(c.id),
-    name: String(c.name ?? ""),
-  }));
-}
+
 
 async function getRatingStats(productIds: string[]): Promise<
   Map<string, { avg: number; count: number }>
@@ -247,14 +199,14 @@ async function fetchPublishedListingProducts(
       subtitle: String(row.product_name ?? "Untitled Asset"),
       rating: avgRating,
       reviews: reviewCount,
-      author: sellerNameById.get(String(row.seller_owner_id ?? "")) ?? "Unknown Seller",
+      author: sellerNameById.get(String(row.seller_owner_id ?? "")) ?? "Unknown seller",
       price:
         price <= 0
           ? "Free"
           : new Intl.NumberFormat("en-PH", {
-            style: "currency",
-            currency: "PHP",
-          }).format(price),
+              style: "currency",
+              currency: "PHP",
+            }).format(price),
       imageSrc: thumbByProductId.get(pid) ?? "/pithos/PithosThumbnail.png",
       link: `/product-detail/${pid}`,
     } satisfies ListingProduct;
@@ -302,9 +254,9 @@ const page = async ({
     minRating: parseNumber(params.minRating),
     sort:
       params.sort === "newest" ||
-        params.sort === "price_asc" ||
-        params.sort === "price_desc" ||
-        params.sort === "rating_desc"
+      params.sort === "price_asc" ||
+      params.sort === "price_desc" ||
+      params.sort === "rating_desc"
         ? params.sort
         : "relevance",
   };
