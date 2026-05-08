@@ -3,14 +3,18 @@ import ShoppingCartBtn from "./ShoppingCartBtn";
 import SwitchToDBorHomeBtn from "./SwitchToDBorHomeBtn";
 import { AuthButton } from "./AuthButton";
 
+import { cn } from "@/lib/utils";
+
 export function NavbarActions({
     showCart,
     dbLink,
     role,
+    className,
+    themeVariant = "dropdown"
 }: any) {
     return (
-        <div className="flex gap-2 items-center">
-            <ThemeSwitcher />
+        <div className={cn("flex gap-2 items-center text-foreground", className)}>
+            <ThemeSwitcher variant={themeVariant} />
             {showCart && <ShoppingCartBtn />}
 
             {dbLink && (

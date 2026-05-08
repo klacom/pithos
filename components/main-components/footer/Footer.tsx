@@ -24,12 +24,12 @@ const Footer = () => {
             <div className="max-w-7xl mx-auto px-4 py-16 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-12">
 
                 {/* Brand Section */}
-                <div className="flex flex-col gap-6">
+                <div className="flex flex-col items-center text-center md:items-start md:text-left gap-6">
                     <Link href="/" className="flex items-center gap-2 font-bold uppercase text-xl">
                         <PithosLogo size={32} color="foreground" />
                         Pithos
                     </Link>
-                    <p className="text-sm text-muted-foreground leading-relaxed">
+                    <p className="text-sm text-muted-foreground leading-relaxed max-w-md">
                         The ultimate marketplace for high-quality 3D assets, textures, and creative tools. Empowering creators worldwide to build amazing digital experiences.
                     </p>
                     <div className="flex gap-4">
@@ -46,9 +46,9 @@ const Footer = () => {
                 </div>
 
                 {/* Marketplace Links */}
-                <div className="flex flex-col gap-6">
+                <div className="flex flex-col items-center text-center md:items-start md:text-left gap-6">
                     <h3 className="font-bold text-lg">Marketplace</h3>
-                    <ul className="flex flex-col gap-3 text-sm text-muted-foreground">
+                    <ul className="flex flex-col items-center md:items-start gap-3 text-sm text-muted-foreground">
                         <li><Link href="/product-listing" className="hover:text-primary transition-colors">All Assets</Link></li>
                         <li><Link href="/product-listing?category=3d" className="hover:text-primary transition-colors">3D Models</Link></li>
                         <li><Link href="/product-listing?category=textures" className="hover:text-primary transition-colors">Textures</Link></li>
@@ -58,9 +58,9 @@ const Footer = () => {
                 </div>
 
                 {/* Company Links */}
-                <div className="flex flex-col gap-6">
+                <div className="flex flex-col items-center text-center md:items-start md:text-left gap-6">
                     <h3 className="font-bold text-lg">Company</h3>
-                    <ul className="flex flex-col gap-3 text-sm text-muted-foreground">
+                    <ul className="flex flex-col items-center md:items-start gap-3 text-sm text-muted-foreground">
                         <li><Link href="/company/about" className="hover:text-primary transition-colors">About Pithos</Link></li>
                         <li><Link href="/company/become-seller" className="hover:text-primary transition-colors">Become a Seller</Link></li>
                         <li><Link href="/company/affiliate" className="hover:text-primary transition-colors">Affiliate Program</Link></li>
@@ -70,9 +70,9 @@ const Footer = () => {
                 </div>
 
                 {/* Support Section */}
-                <div className="flex flex-col gap-6">
+                <div className="flex flex-col items-center text-center md:items-start md:text-left gap-6">
                     <h3 className="font-bold text-lg">Contact & Support</h3>
-                    <ul className="flex flex-col gap-4 text-sm text-muted-foreground">
+                    <ul className="flex flex-col items-center md:items-start gap-4 text-sm text-muted-foreground">
                         <li className="flex items-center gap-3">
                             <Mail size={16} className="text-primary" />
                             <span>{config?.support_email || "support@pithos.com"}</span>

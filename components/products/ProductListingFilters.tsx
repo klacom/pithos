@@ -64,12 +64,12 @@ export default function ProductListingFilters(props: {
   }, [props.categories]);
 
   return (
-    <div className="flex flex-col gap-3">
-      <div className="grid grid-cols-2 md:grid-cols-7 gap-3 items-end">
-        <div className="col-span-2 md:col-span-2 flex flex-col gap-1">
-          <Label className="text-xs text-muted-foreground">Category</Label>
+    <div className="flex flex-col gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-7 gap-4 items-end">
+        <div className="col-span-1 sm:col-span-2 md:col-span-2 flex flex-col gap-1.5">
+          <Label className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground ml-1">Category</Label>
           <select
-            className="h-10 rounded-md border border-input bg-background px-3 text-sm focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+            className="h-11 rounded-xl border border-input bg-background px-4 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/20 transition-all"
             value={props.value.category}
             onChange={(e) => push([["category", e.currentTarget.value]])}
           >
@@ -81,46 +81,46 @@ export default function ProductListingFilters(props: {
           </select>
         </div>
 
-        <div className="flex flex-col gap-1">
-          <Label className="text-xs text-muted-foreground">Min price</Label>
+        <div className="flex flex-col gap-1.5">
+          <Label className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground ml-1">Min price</Label>
           <Input
             inputMode="decimal"
             placeholder="0"
-            className="h-10"
+            className="h-11 rounded-xl"
             value={minPrice}
             onChange={(e) => setMinPrice(e.currentTarget.value)}
             onBlur={() => push([["minPrice", minPrice.trim()]])}
           />
         </div>
 
-        <div className="flex flex-col gap-1">
-          <Label className="text-xs text-muted-foreground">Max price</Label>
+        <div className="flex flex-col gap-1.5">
+          <Label className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground ml-1">Max price</Label>
           <Input
             inputMode="decimal"
             placeholder="5000"
-            className="h-10"
+            className="h-11 rounded-xl"
             value={maxPrice}
             onChange={(e) => setMaxPrice(e.currentTarget.value)}
             onBlur={() => push([["maxPrice", maxPrice.trim()]])}
           />
         </div>
 
-        <div className="flex flex-col gap-1">
-          <Label className="text-xs text-muted-foreground">Min rating</Label>
+        <div className="flex flex-col gap-1.5">
+          <Label className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground ml-1">Min rating</Label>
           <Input
             inputMode="decimal"
             placeholder="0–5"
-            className="h-10"
+            className="h-11 rounded-xl"
             value={minRating}
             onChange={(e) => setMinRating(e.currentTarget.value)}
             onBlur={() => push([["minRating", minRating.trim()]])}
           />
         </div>
 
-        <div className="flex flex-col gap-1">
-          <Label className="text-xs text-muted-foreground">Sort</Label>
+        <div className="flex flex-col gap-1.5">
+          <Label className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground ml-1">Sort</Label>
           <select
-            className="h-10 rounded-md border border-input bg-background px-3 text-sm focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+            className="h-11 rounded-xl border border-input bg-background px-4 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/20 transition-all"
             value={props.value.sort}
             onChange={(e) => push([["sort", e.currentTarget.value]])}
           >
@@ -132,10 +132,10 @@ export default function ProductListingFilters(props: {
           </select>
         </div>
 
-        <div className="flex items-center h-10">
+        <div className="flex items-center">
           <Button
             type="button"
-            className="w-full h-10"
+            className="w-full h-11 rounded-xl font-bold"
             onClick={() => {
               push([
                 ["q", props.value.q],
@@ -145,19 +145,20 @@ export default function ProductListingFilters(props: {
               ]);
             }}
           >
-            Set Filter
+            Apply Filters
           </Button>
         </div>
 
-        <div className="col-span-2 md:col-span-7 flex flex-wrap items-center gap-3 pt-1">
-          <div className="flex items-center gap-2">
+        <div className="col-span-1 sm:col-span-2 md:col-span-7 flex flex-row items-center justify-between gap-3 pt-2">
+          <div className="flex items-center gap-2 px-1">
             <Checkbox
               id="onSale"
+              className="rounded-md"
               checked={props.value.onSale}
               onCheckedChange={(v) => push([["onSale", v ? "1" : null]])}
             />
-            <Label htmlFor="onSale" className="text-sm">
-              On sale
+            <Label htmlFor="onSale" className="text-sm font-medium cursor-pointer">
+              On sale only
             </Label>
           </div>
 
@@ -165,10 +166,10 @@ export default function ProductListingFilters(props: {
             type="button"
             variant="ghost"
             size="sm"
-            className="ml-auto"
+            className="text-xs h-8 hover:bg-transparent hover:text-primary transition-colors"
             onClick={() => router.push("/product-listing")}
           >
-            Clear filters
+            Reset all
           </Button>
         </div>
       </div>

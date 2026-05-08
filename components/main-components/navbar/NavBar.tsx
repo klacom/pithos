@@ -8,6 +8,7 @@ import BurgerBtn from "./BurgerBtn";
 import { NavbarActions } from "./NavbarActions";
 import { MobileNavbar } from "./MobileNavbar";
 import { NavbarLogo } from "./NavbarLogo";
+import ShoppingCartBtn from "./ShoppingCartBtn";
 
 type roleProps = {
     role: "buyer" | "seller" | "admin" | null;
@@ -45,7 +46,7 @@ export default function NavBar({ role }: roleProps) {
 
                     <NavbarLogo />
 
-                    <Suspense>
+                    <Suspense fallback={<div className="w-full max-w-md h-10 bg-muted animate-pulse rounded-full" />}>
                         {config.showSearch && <NavSearchBar />}
                     </Suspense>
 
@@ -53,8 +54,18 @@ export default function NavBar({ role }: roleProps) {
                 </div>
             </nav>
 
-            {/* Mobile trigger */}
-            <BurgerBtn open={open} setOpen={setOpen} />
+            {/* Mobile Header */}
+            <nav className="lg:hidden flex w-full justify-between items-center px-4 border-b h-14 bg-primary-foreground sticky top-0 z-50">
+                <NavbarLogo />
+                
+                <div className="flex items-center gap-2">
+                    {/* Minimal actions on mobile header to avoid crowding */}
+                    {(role === "buyer" || role === null) && (
+                        <ShoppingCartBtn />
+                    )}
+                    <BurgerBtn open={open} setOpen={setOpen} isHeader />
+                </div>
+            </nav>
 
             {/* Mobile navbar */}
             <MobileNavbar

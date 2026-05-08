@@ -23,7 +23,7 @@ export function BigBanner({ content }: Props) {
             <div className="max-w-7xl rounded-xl grid grid-cols-1 md:grid-cols-2 overflow-hidden min-h-[380px] w-full border border-muted">
 
                 {/* LEFT SIDE */}
-                <div className="bg-black text-white p-8 sm:p-10 flex flex-col justify-center gap-5">
+                <div className="bg-black text-white p-8 sm:p-10 flex flex-col justify-center items-center text-center md:items-start md:text-left gap-5">
 
                     <span className="text-xs tracking-widest text-white/70 uppercase">
                         {content.label}
@@ -39,7 +39,7 @@ export function BigBanner({ content }: Props) {
                     </p>
 
                     <Link href={content.cta_link || "#"}>
-                        <Button className="w-fit" variant={"red_default"}>
+                        <Button className="w-fit font-bold px-8 h-12 rounded-xl" variant={"red_default"}>
                             {content.cta_text}
                         </Button>
                     </Link>

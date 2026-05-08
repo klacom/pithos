@@ -12,7 +12,7 @@ import { Laptop, Moon, Sun } from "lucide-react";
 import { useTheme } from "next-themes";
 import { useEffect, useState } from "react";
 
-const ThemeSwitcher = () => {
+const ThemeSwitcher = ({ variant = "dropdown" }: { variant?: "dropdown" | "toggle" }) => {
   const [mounted, setMounted] = useState(false);
   const { theme, setTheme } = useTheme();
 
@@ -27,29 +27,26 @@ const ThemeSwitcher = () => {
 
   const ICON_SIZE = 16;
 
+  const toggleTheme = () => {
+    setTheme(theme === "light" ? "dark" : "light");
+  };
+
+  const Icon = theme === "light" ? Sun : theme === "dark" ? Moon : Laptop;
+
+  if (variant === "toggle") {
+    return (
+      <Button variant="ghost" size="sm" onClick={toggleTheme} className="flex gap-2">
+        <Icon size={ICON_SIZE} />
+        Theme
+      </Button>
+    );
+  }
+
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
         <Button variant="ghost" size={"sm"}>
-          {theme === "light" ? (
-            <Sun
-              key="light"
-              size={ICON_SIZE}
-              className={""}
-            />
-          ) : theme === "dark" ? (
-            <Moon
-              key="dark"
-              size={ICON_SIZE}
-              className={""}
-            />
-          ) : (
-            <Laptop
-              key="system"
-              size={ICON_SIZE}
-              className={""}
-            />
-          )}
+          <Icon size={ICON_SIZE} />
           Theme
         </Button>
       </DropdownMenuTrigger>

@@ -326,7 +326,7 @@ const page = async ({
   }
 
   return (
-    <main className="flex flex-col gap-8 px-4 md:px-20 lg:px-40 xl:px-60 2xl:px-80 w-full mb-4">
+    <main className="flex flex-col gap-8 px-4 pt-10 md:px-20 lg:px-40 xl:px-60 2xl:px-80 w-full mb-4">
 
       {/* HEADER */}
       <div className="flex flex-col gap-3">
@@ -413,8 +413,7 @@ const page = async ({
           No available items match your search.
         </div>
       ) : (
-        <div className="grid gap-4 grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-
+        <div className="grid gap-4 grid-cols-2 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
           {slots.map((item) => (
             <ProductCard
               key={item.id}

@@ -13,11 +13,32 @@ export function encrypt(text: string): string {
 }
 
 export function decrypt(text: string): string {
-    const textParts = text.split(':');
-    const iv = Buffer.from(textParts.shift()!, 'hex');
-    const encryptedText = Buffer.from(textParts.join(':'), 'hex');
-    const decipher = crypto.createDecipheriv(ALGORITHM, Buffer.from(ENCRYPTION_KEY), iv);
-    let decrypted = decipher.update(encryptedText);
-    decrypted = Buffer.concat([decrypted, decipher.final()]);
-    return decrypted.toString();
+    try {
+        if (!text || !text.includes(':')) {
+            return text;
+        }
+        const textParts = text.split(':');
+        const ivHex = textParts.shift()!;
+        const encryptedHex = textParts.join(':');
+        
+        // Basic validation that we have hex strings
+        if (!/^[0-9a-fA-F]+$/.test(ivHex) || !/^[0-9a-fA-F]+$/.test(encryptedHex)) {
+            return text;
+        }
+
+        const iv = Buffer.from(ivHex, 'hex');
+        const encryptedText = Buffer.from(encryptedHex, 'hex');
+        
+        if (iv.length !== IV_LENGTH) {
+            return text;
+        }
+
+        const decipher = crypto.createDecipheriv(ALGORITHM, Buffer.from(ENCRYPTION_KEY), iv);
+        let decrypted = decipher.update(encryptedText);
+        decrypted = Buffer.concat([decrypted, decipher.final()]);
+        return decrypted.toString();
+    } catch (e) {
+        console.error("Decryption failed, returning original text:", e);
+        return text;
+    }
 }
