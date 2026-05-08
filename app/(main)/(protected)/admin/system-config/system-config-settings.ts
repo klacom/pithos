@@ -1,6 +1,10 @@
 "use server";
 
 import { createAdminClient } from "@/lib/supabase/admin";
+import { createAudit } from "@/lib/supabase/create-audit";
+import { createClient } from "@/lib/supabase/server";
+import { encrypt, decrypt } from "@/lib/crypto";
+import { sanitizeText } from "@/lib/sanitization";
 
 export type SessionPolicy = {
     role: string;
@@ -68,6 +72,8 @@ export async function getSessionPolicies() {
  */
 export async function saveSessionPolicy(role: string, timeout_minutes: number) {
     const admin = createAdminClient();
+    const supabase = await createClient();
+
     const { error } = await admin
         .from('session_policies')
         .upsert({ role, timeout_minutes }, { onConflict: 'role' });
@@ -76,6 +82,20 @@ export async function saveSessionPolicy(role: string, timeout_minutes: number) {
         console.error("Error saving session policy:", error.message);
         return { success: false, error: error.message };
     }
+
+    // Audit Log
+    try {
+        const { data: claimsData } = await supabase.auth.getClaims();
+        await createAudit({
+            action_name: "SESSION_POLICY_UPDATED",
+            action_description: `Admin updated session timeout for ${role} to ${timeout_minutes} minutes`,
+            affected_resources: `session_policies:${role}`,
+            actor: claimsData?.claims?.sub
+        });
+    } catch (e) {
+        console.error("Audit failed for session policy update:", e);
+    }
+
     return { success: true };
 }
 
@@ -96,6 +116,24 @@ export async function getSystemConfig() {
         return { data: null, error: error.message };
     }
 
+    if (data) {
+        // Decrypt sensitive fields if they exist
+        try {
+            return {
+                data: {
+                    ...data,
+                    support_email: data.support_email ? decrypt(data.support_email) : data.support_email,
+                    support_phone: data.support_phone ? decrypt(data.support_phone) : data.support_phone,
+                    support_location: data.support_location ? decrypt(data.support_location) : data.support_location,
+                },
+                error: null
+            };
+        } catch (e) {
+            console.error("Decryption failed, data might be in plain text:", e);
+            return { data, error: null };
+        }
+    }
+
     return { data, error: null };
 }
 
@@ -105,9 +143,11 @@ export async function getSystemConfig() {
  */
 export async function saveSystemConfig(newConfig: SystemConfig) {
     const admin = createAdminClient();
+    const supabase = await createClient();
 
     // Sanitize the input to only include the specific columns
     // Enforce hard minimums on the server for security
+    // Encrypt sensitive fields and sanitize text inputs
     const sanitizedConfig = {
         max_login_attempts: Math.max(3, newConfig.max_login_attempts),
         min_char_length: Math.max(12, newConfig.min_char_length),
@@ -115,9 +155,9 @@ export async function saveSystemConfig(newConfig: SystemConfig) {
         min_lowercase: Math.max(1, newConfig.min_lowercase),
         min_numbers: Math.max(1, newConfig.min_numbers),
         min_spec_chars: Math.max(1, newConfig.min_spec_chars),
-        support_email: newConfig.support_email,
-        support_phone: newConfig.support_phone,
-        support_location: newConfig.support_location
+        support_email: newConfig.support_email ? encrypt(sanitizeText(newConfig.support_email)) : newConfig.support_email,
+        support_phone: newConfig.support_phone ? encrypt(sanitizeText(newConfig.support_phone)) : newConfig.support_phone,
+        support_location: newConfig.support_location ? encrypt(sanitizeText(newConfig.support_location)) : newConfig.support_location
     };
 
     const { error } = await admin
@@ -130,6 +170,19 @@ export async function saveSystemConfig(newConfig: SystemConfig) {
     if (error) {
         console.error("Save error:", error.message || error.details);
         return { success: false, error: error.message || "Unknown error occurred" };
+    }
+
+    // Audit Log
+    try {
+        const { data: claimsData } = await supabase.auth.getClaims();
+        await createAudit({
+            action_name: "SYSTEM_CONFIG_UPDATED",
+            action_description: `Admin updated global system configuration settings`,
+            affected_resources: `system_configs:1`,
+            actor: claimsData?.claims?.sub
+        });
+    } catch (e) {
+        console.error("Audit failed for system config update:", e);
     }
 
     return { success: true };

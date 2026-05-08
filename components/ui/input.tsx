@@ -1,9 +1,19 @@
 import * as React from "react";
-
 import { cn } from "@/lib/utils";
+import { sanitizeText } from "@/lib/sanitization";
 
 const Input = React.forwardRef<HTMLInputElement, React.ComponentProps<"input">>(
-  ({ className, type, ...props }, ref) => {
+  ({ className, type, onChange, ...props }, ref) => {
+    const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+      // Sanitize text-based inputs
+      if (type === "text" || type === "email" || !type) {
+        e.target.value = sanitizeText(e.target.value);
+      }
+      if (onChange) {
+        onChange(e);
+      }
+    };
+
     return (
       <input
         type={type}
@@ -12,6 +22,7 @@ const Input = React.forwardRef<HTMLInputElement, React.ComponentProps<"input">>(
           className,
         )}
         ref={ref}
+        onChange={handleChange}
         {...props}
       />
     );

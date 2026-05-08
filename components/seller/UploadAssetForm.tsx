@@ -110,6 +110,7 @@ export default function UploadAssetForm({
     );
     const [submitError, setSubmitError] = useState<string | null>(null);
     const [isSaving, setIsSaving] = useState(false);
+    const [mediaValidationErrors, setMediaValidationErrors] = useState(false);
     const packageInputRef = useRef<HTMLInputElement>(null);
 
     const isEditMode = Boolean(editingProductId);
@@ -163,6 +164,12 @@ export default function UploadAssetForm({
 
     const handleSubmit = async (isDraft: boolean) => {
         setSubmitError(null);
+
+        // Prevent submission if there are media validation errors
+        if (mediaValidationErrors) {
+            setSubmitError("Please fix the image validation errors before saving.");
+            return;
+        }
 
         if (!isDraft && !isEditMode && !packageFile) {
             setSubmitError(
@@ -455,6 +462,7 @@ export default function UploadAssetForm({
                             setDetailSlots((prev) => prev.filter((s) => s.id !== id))
                         }
                         disabled={disabled || isSaving}
+                        onValidationChange={setMediaValidationErrors}
                     />
                     {isEditMode && existingMediaSummary ? (
                         <p className="text-xs text-muted-foreground">
