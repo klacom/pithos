@@ -341,7 +341,7 @@ export function LoginForm({
                                     {showMfaSetup && (
                                         <div className="w-full flex justify-center">
                                             <Turnstile
-                                                siteKey={process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY!}
+                                                siteKey={process.env.TURNSTILE_SITE_KEY!}
                                                 onSuccess={(token) => setCaptchaToken(token)}
                                             />
                                         </div>
@@ -456,7 +456,7 @@ export function LoginForm({
                                 {showMfa && (
                                     <div className="w-full flex justify-center">
                                         <Turnstile
-                                            siteKey={process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY!}
+                                            siteKey={process.env.TURNSTILE_SITE_KEY!}
                                             onSuccess={(token) => setCaptchaToken(token)}
                                         />
                                     </div>

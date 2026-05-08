@@ -18,7 +18,7 @@ function serviceRoleKey(): string {
 }
 
 export function createAdminClient() {
-    return createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, serviceRoleKey(), {
+    return createClient(process.env.SUPABASE_URL!, serviceRoleKey(), {
         auth: { autoRefreshToken: false, persistSession: false },
     });
 }
