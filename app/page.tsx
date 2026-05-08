@@ -4,6 +4,7 @@ import NavBar from "@/components/main-components/navbar/NavBar";
 import NavBarLoader from "@/components/main-components/navbar/NavBarLoader";
 import Footer from "@/components/main-components/footer/Footer";
 import HomeBlocks from "@/components/banner-announcements/HomePageBlocks";
+import { HomePageSkeleton } from "@/components/homepage/HomePageSkeleton";
 
 export default function Home() {
     return (
@@ -13,7 +14,7 @@ export default function Home() {
             </Suspense>
 
             <div className="flex-1 w-full flex flex-col gap-5 items-center px-4 md:px-8 lg:px-16 max-w-7xl mx-auto">
-                <Suspense fallback={<div>Loading homepage...</div>}>
+                <Suspense fallback={<HomePageSkeleton />}>
                     <HomeBlocks />
                 </Suspense>
             </div>

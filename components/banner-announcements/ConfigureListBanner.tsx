@@ -1,15 +1,17 @@
 "use client"
 
-import { useState, useEffect, useCallback, useMemo } from "react"
+import { useState, useEffect, useCallback, useMemo, useImperativeHandle, forwardRef } from "react"
 import TitleInputForm from "./TitleInputForm"
 import { Button } from "../ui/button"
 import DeleteButton from "@/components/banner-announcements/DeleteButton"
 import { createClient } from "@/lib/supabase/client"
 import { ProductCard } from "../products/ProductCard"
-import { Search, ChevronLeft, ChevronRight, Star, Box, Plus, Trash2 } from "lucide-react"
+import { Search, ChevronLeft, ChevronRight, Star, Box, Plus, Trash2, Loader2 } from "lucide-react"
 import { Input } from "../ui/input"
 import { Card } from "../ui/card"
 import Image from "next/image"
+import { mapProductRows, MappedProduct } from "@/lib/products"
+import { ProductCardSkeleton } from "./BannerSkeletons"
 
 type ListType = "views" | "downloads" | "ratings" | "favorites" | "featured"
 
@@ -27,19 +29,7 @@ type Props = {
     }
 }
 
-type Product = {
-    id: string
-    title: string
-    subtitle: string
-    rating: number
-    reviews: number
-    author: string
-    price: string
-    imageSrc: string
-    link: string
-}
-
-const ConfigureListBanner = ({ block }: Props) => {
+const ConfigureListBanner = forwardRef(({ block }: Props, ref) => {
     const supabase = createClient()
 
     // Form State
@@ -55,36 +45,61 @@ const ConfigureListBanner = ({ block }: Props) => {
     const [sortBy, setSortBy] = useState("newest")
     const [filterBy, setFilterBy] = useState("all")
     const [addViaId, setAddViaId] = useState("")
-    const [searchedProducts, setSearchedProducts] = useState<Product[]>([])
+    const [searchedProducts, setSearchedProducts] = useState<MappedProduct[]>([])
     const [searchPage, setSearchPage] = useState(0)
-    const [previewProducts, setPreviewProducts] = useState<Product[]>([])
+    const [previewProducts, setPreviewProducts] = useState<MappedProduct[]>([])
     const [isLoadingPreview, setIsLoadingPreview] = useState(false)
     const [isLoadingSearch, setIsLoadingSearch] = useState(false)
 
     const ITEMS_PER_PAGE = 5
 
+    const [isSaving, setIsSaving] = useState(false)
+
+    const handleSave = async () => {
+        setIsSaving(true)
+        try {
+            const res = await fetch("/api/homepage-blocks/update", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                    id: block.id,
+                    content: form
+                })
+            })
+            if (!res.ok) throw new Error("Failed to save")
+            return true
+        } catch (err) {
+            console.error(err)
+            return false
+        } finally {
+            setIsSaving(false)
+        }
+    }
+
+    useImperativeHandle(ref, () => ({
+        save: handleSave
+    }))
+
     // Derived See More Link
     const seeMoreLink = useMemo(() => {
         if (form.listType === "featured") return ""
-        const baseUrl = "localhost:3000/product-listing"
+        const baseUrl = "/product-listing"
         const params = new URLSearchParams()
 
         switch (form.listType) {
             case "views":
-                params.set("sort", "views")
+                params.set("sort", "relevance")
                 break
             case "ratings":
                 params.set("sort", "rating_desc")
                 break
             case "favorites":
-                params.set("sort", "favorites")
+                params.set("sort", "relevance")
                 break
             default:
                 break
         }
-
-        const qs = params.toString()
-        return qs ? `${baseUrl}?${qs}` : baseUrl
+        return `${baseUrl}?${params.toString()}`
     }, [form.listType])
 
     const handleChange = (field: keyof ListBannerContent, value: any) => {
@@ -98,7 +113,7 @@ const ConfigureListBanner = ({ block }: Props) => {
     const fetchPreviewProducts = useCallback(async () => {
         setIsLoadingPreview(true)
         try {
-            let products: Product[] = []
+            let products: MappedProduct[] = []
 
             if (form.listType === "featured") {
                 if (form.selectedProductIds.length > 0) {
@@ -108,11 +123,11 @@ const ConfigureListBanner = ({ block }: Props) => {
                         .in("product_id", form.selectedProductIds)
 
                     if (data) {
-                        products = await mapProducts(data)
+                        const mapped = await mapProductRows(supabase, data)
                         // Maintain order of selectedProductIds
                         products = form.selectedProductIds
-                            .map(id => products.find(p => p.id === id))
-                            .filter(Boolean) as Product[]
+                            .map(id => mapped.find(p => p.id === id))
+                            .filter(Boolean) as MappedProduct[]
                     }
                 }
             } else {
@@ -124,21 +139,16 @@ const ConfigureListBanner = ({ block }: Props) => {
                     .limit(5)
 
                 if (form.listType === "views") {
-                    // Fallback to newest if views column doesn't exist or is empty
                     query = query.order("created_at", { ascending: false })
                 } else if (form.listType === "ratings") {
-                    // In a real scenario, we might need a more complex join or a view
-                    // For now, let's fetch products and their average ratings
-                    // This is simplified. Ideally, use a RPC or a more optimized query.
                     query = query.order("created_at", { ascending: false })
                 } else if (form.listType === "favorites") {
-                    // Simplified
                     query = query.order("created_at", { ascending: false })
                 }
 
                 const { data, error } = await query
                 if (data) {
-                    products = await mapProducts(data)
+                    products = await mapProductRows(supabase, data)
                 }
             }
 
@@ -148,7 +158,7 @@ const ConfigureListBanner = ({ block }: Props) => {
         } finally {
             setIsLoadingPreview(false)
         }
-    }, [form.listType, form.selectedProductIds])
+    }, [form.listType, form.selectedProductIds, supabase])
 
     // Fetch Search Products
     const fetchSearchProducts = useCallback(async () => {
@@ -171,9 +181,9 @@ const ConfigureListBanner = ({ block }: Props) => {
                 query = query.order("created_at", { ascending: true })
             }
 
-            const { data, error } = await query.limit(20) // Fetch more than needed for pagination simulation
+            const { data, error } = await query.limit(20)
             if (data) {
-                const mapped = await mapProducts(data)
+                const mapped = await mapProductRows(supabase, data)
                 setSearchedProducts(mapped)
             }
         } catch (err) {
@@ -181,55 +191,7 @@ const ConfigureListBanner = ({ block }: Props) => {
         } finally {
             setIsLoadingSearch(false)
         }
-    }, [searchQuery, sortBy, filterBy, form.listType])
-
-    // Helper to map Supabase products to Product type
-    const mapProducts = async (rows: any[]): Promise<Product[]> => {
-        return Promise.all(rows.map(async (row) => {
-            const pid = row.product_id
-
-            // Fetch rating stats
-            const { data: reviews } = await supabase
-                .from("reviews")
-                .select("rating")
-                .eq("product_id", pid)
-
-            const rating = reviews?.length
-                ? reviews.reduce((acc, r) => acc + (Number(r.rating) || 0), 0) / reviews.length
-                : 0
-
-            // Get thumbnail URL
-            const { data: files } = await supabase.storage
-                .from("asset_photos")
-                .list(`${pid}/photos/thumbnail`)
-
-            let imageSrc = "/pithos/PithosThumbnail.png"
-            if (files && files.length > 0) {
-                const { data: pubUrl } = supabase.storage
-                    .from("asset_photos")
-                    .getPublicUrl(`${pid}/photos/thumbnail/${files[0].name}`)
-                if (pubUrl.publicUrl) imageSrc = pubUrl.publicUrl
-            }
-
-            const { data: userData } = await supabase
-                .from("users")
-                .select("user_fullname")
-                .eq("id", row.seller_owner_id)
-                .single()
-
-            return {
-                id: pid,
-                title: row.product_name,
-                subtitle: row.product_name,
-                rating: parseFloat(rating.toFixed(1)),
-                reviews: reviews?.length || 0,
-                author: userData?.user_fullname || "Unknown seller",
-                price: row.price <= 0 ? "Free" : `₱${row.price}`,
-                imageSrc,
-                link: `/product-detail/${pid}`
-            }
-        }))
-    }
+    }, [searchQuery, sortBy, form.listType, supabase])
 
     useEffect(() => {
         fetchPreviewProducts()
@@ -280,10 +242,19 @@ const ConfigureListBanner = ({ block }: Props) => {
     )
 
     return (
-        <div className='p-8 flex flex-col gap-8 bg-card rounded-lg border border-muted'>
-
-            {/* Header */}
-            <h1 className="text-2xl font-bold">Configure List Banner</h1>
+        <div className='p-8 flex flex-col gap-8 bg-card rounded-xl border border-muted shadow-sm hover:shadow-md transition-shadow'>
+            <div className="flex items-center justify-between border-b pb-4">
+                <div className="flex items-center gap-2">
+                    <div className="p-2 bg-primary/10 rounded-lg">
+                        <Box className="h-5 w-5 text-primary" />
+                    </div>
+                    <div>
+                        <h1 className="text-xl font-bold">List Banner</h1>
+                        <p className="text-sm text-muted-foreground">Dynamic or curated product list</p>
+                    </div>
+                </div>
+                <DeleteButton />
+            </div>
 
             {/* Title Input Form */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -354,50 +325,36 @@ const ConfigureListBanner = ({ block }: Props) => {
                             <select
                                 value={sortBy}
                                 onChange={(e) => setSortBy(e.target.value)}
-                                className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+                                className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
                             >
                                 <option value="newest">Newest</option>
                                 <option value="oldest">Oldest</option>
                             </select>
                         </div>
 
-                        <div className="flex flex-col gap-2">
-                            <label className="text-xs font-medium uppercase tracking-wider text-muted-foreground">Filter By</label>
-                            <select
-                                value={filterBy}
-                                onChange={(e) => setFilterBy(e.target.value)}
-                                className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
-                            >
-                                <option value="all">All Categories</option>
-                            </select>
-                        </div>
-
-                        <div className="flex flex-col gap-2">
-                            <label className="text-xs font-medium uppercase tracking-wider text-muted-foreground">Add Via Id</label>
-                            <div className="flex gap-2">
+                        <div className="md:col-span-2 flex items-center gap-2">
+                            <div className="flex-1 flex flex-col gap-2">
+                                <label className="text-xs font-medium uppercase tracking-wider text-muted-foreground">Add by ID</label>
                                 <Input
-                                    placeholder="Paste UUID..."
+                                    placeholder="Paste product ID here..."
                                     value={addViaId}
                                     onChange={(e) => setAddViaId(e.target.value)}
                                 />
-                                <Button onClick={handleAddViaId} size="icon">
-                                    <Plus className="h-4 w-4" />
-                                </Button>
                             </div>
+                            <Button onClick={handleAddViaId} variant="red_default" className="mt-6">Add</Button>
                         </div>
                     </div>
 
-                    {/* Selection Section */}
-                    <div className="relative group">
-                        <div className="flex items-center gap-4 overflow-hidden py-4 px-2">
+                    <div className="relative">
+                        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4 mt-4">
                             {isLoadingSearch ? (
-                                <div className="w-full text-center py-10 text-muted-foreground">Searching...</div>
+                                Array.from({ length: 5 }).map((_, i) => <ProductCardSkeleton key={i} />)
                             ) : paginatedSearchProducts.length > 0 ? (
                                 paginatedSearchProducts.map((product) => (
-                                    <div
-                                        key={product.id}
+                                    <div 
+                                        key={product.id} 
+                                        className="relative group/card cursor-pointer"
                                         onClick={() => handleAddProduct(product.id)}
-                                        className="flex-shrink-0 w-[200px] cursor-pointer group/card relative"
                                     >
                                         <Card className={`overflow-hidden transition-all hover:ring-2 hover:ring-primary ${form.selectedProductIds.includes(product.id) ? 'ring-2 ring-primary bg-primary/5' : ''}`}>
                                             <div className="relative aspect-video w-full">
@@ -407,17 +364,14 @@ const ConfigureListBanner = ({ block }: Props) => {
                                                     fill
                                                     className="object-cover"
                                                 />
-                                                {form.selectedProductIds.includes(product.id) && (
-                                                    <div className="absolute inset-0 bg-primary/20 flex items-center justify-center">
-                                                        <div className="bg-primary text-primary-foreground px-2 py-1 rounded text-xs font-bold">ADDED</div>
-                                                    </div>
-                                                )}
+                                                <div className="absolute inset-0 bg-black/40 opacity-0 group-hover/card:opacity-100 transition-opacity flex items-center justify-center">
+                                                    <Plus className="h-8 w-8 text-white" />
+                                                </div>
                                             </div>
-                                            <div className="p-3 space-y-1">
-                                                <h3 className="text-sm font-bold truncate">{product.title}</h3>
-                                                <p className="text-xs text-muted-foreground truncate">{product.author}</p>
-                                                <div className="flex justify-between items-center">
-                                                    <span className="text-xs font-bold text-primary">{product.price}</span>
+                                            <div className="p-3">
+                                                <h3 className="text-xs font-bold truncate">{product.title}</h3>
+                                                <div className="flex items-center justify-between mt-1">
+                                                    <span className="text-[10px] text-primary font-bold">{product.price}</span>
                                                     <div className="flex items-center gap-0.5">
                                                         <Star className="h-3 w-3 fill-yellow-400 text-yellow-400" />
                                                         <span className="text-[10px] font-medium">{product.rating}</span>
@@ -425,48 +379,52 @@ const ConfigureListBanner = ({ block }: Props) => {
                                                 </div>
                                             </div>
                                         </Card>
-                                        <div className="absolute -top-2 -right-2 opacity-0 group-hover/card:opacity-100 transition-opacity">
-                                            <div className="bg-primary text-primary-foreground p-1 rounded-full shadow-lg">
-                                                <Plus className="h-4 w-4" />
+                                        {form.selectedProductIds.includes(product.id) && (
+                                            <div className="absolute -top-2 -right-2 bg-primary text-white p-1 rounded-full shadow-lg">
+                                                <Plus className="h-4 w-4 rotate-45" />
                                             </div>
-                                        </div>
+                                        )}
                                     </div>
                                 ))
                             ) : (
-                                <div className="w-full text-center py-10 text-muted-foreground">No products found.</div>
+                                <div className="w-full text-center py-10 text-muted-foreground col-span-full">No products found.</div>
                             )}
                         </div>
 
                         {/* Navigation Arrows */}
-                        {searchPage > 0 && (
-                            <button
-                                onClick={() => setSearchPage(p => p - 1)}
-                                className="absolute left-0 top-1/2 -translate-y-1/2 -translate-x-4 bg-background border border-muted p-2 rounded-full shadow-md hover:bg-muted transition-colors"
-                            >
-                                <ChevronLeft className="h-5 w-5" />
-                            </button>
-                        )}
-                        {(searchPage + 1) * ITEMS_PER_PAGE < searchedProducts.length && (
-                            <button
-                                onClick={() => setSearchPage(p => p + 1)}
-                                className="absolute right-0 top-1/2 -translate-y-1/2 translate-x-4 bg-background border border-muted p-2 rounded-full shadow-md hover:bg-muted transition-colors"
-                            >
-                                <ChevronRight className="h-5 w-5" />
-                            </button>
+                        {searchedProducts.length > ITEMS_PER_PAGE && (
+                            <div className="flex justify-center gap-4 mt-6">
+                                <Button
+                                    variant="outline"
+                                    size="icon"
+                                    disabled={searchPage === 0}
+                                    onClick={() => setSearchPage(prev => prev - 1)}
+                                >
+                                    <ChevronLeft className="h-4 w-4" />
+                                </Button>
+                                <Button
+                                    variant="outline"
+                                    size="icon"
+                                    disabled={(searchPage + 1) * ITEMS_PER_PAGE >= searchedProducts.length}
+                                    onClick={() => setSearchPage(prev => prev + 1)}
+                                >
+                                    <ChevronRight className="h-4 w-4" />
+                                </Button>
+                            </div>
                         )}
                     </div>
                 </div>
             )}
 
             {/* Preview Section */}
-            <div className="flex flex-col gap-6">
-                <div className="flex justify-between items-end border-b pb-4">
-                    <div className="flex flex-col gap-1">
-                        <h2 className="text-xl font-bold">Preview Section</h2>
-                        <p className="text-sm text-muted-foreground">Lively shows what users will see in the homepage.</p>
+            <div className="space-y-6">
+                <div className="flex items-center justify-between border-b border-dashed pb-4">
+                    <div className="space-y-1">
+                        <h2 className="text-xl font-bold">Lively Preview</h2>
+                        <p className="text-sm text-muted-foreground">Shows what users will see in the homepage.</p>
                     </div>
                     {form.listType === "featured" && (
-                        <span className="text-xs font-medium px-2 py-1 bg-primary/10 text-primary rounded-full">
+                        <span className="text-xs font-medium px-3 py-1 bg-primary/10 text-primary rounded-full">
                             {form.selectedProductIds.length}/5 Selected
                         </span>
                     )}
@@ -487,15 +445,11 @@ const ConfigureListBanner = ({ block }: Props) => {
 
                     <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
                         {isLoadingPreview ? (
-                            Array.from({ length: 5 }).map((_, i) => (
-                                <div key={i} className="aspect-[3/4] rounded-lg bg-muted animate-pulse" />
-                            ))
+                            Array.from({ length: 5 }).map((_, i) => <ProductCardSkeleton key={i} />)
                         ) : previewProducts.length > 0 ? (
                             previewProducts.map((product) => (
                                 <div key={product.id} className="relative group">
-                                    <ProductCard
-                                        {...product}
-                                    />
+                                    <ProductCard {...product} />
                                     {form.listType === "featured" && (
                                         <button
                                             onClick={() => handleRemoveProduct(product.id)}
@@ -515,42 +469,11 @@ const ConfigureListBanner = ({ block }: Props) => {
                 </div>
             </div>
 
-            {/* Save or Delete */}
-            <div className="flex justify-end gap-2 border-t pt-6">
-                <DeleteButton />
-
-                <Button
-                    onClick={async () => {
-                        try {
-                            const res = await fetch("/api/homepage-blocks/update", {
-                                method: "POST",
-                                headers: {
-                                    "Content-Type": "application/json"
-                                },
-                                body: JSON.stringify({
-                                    id: block.id,
-                                    content: form
-                                })
-                            })
-
-                            const data = await res.json()
-
-                            if (!res.ok) {
-                                throw new Error(data.error)
-                            }
-
-                            alert("Saved successfully!")
-                        } catch (err) {
-                            console.error("Save failed:", err)
-                            alert("Failed to save banner")
-                        }
-                    }}
-                >
-                    Save
-                </Button>
-            </div>
+            {/* Save or Delete Section Removed - now in sticky container */}
         </div>
     )
-}
+})
+
+ConfigureListBanner.displayName = "ConfigureListBanner"
 
 export default ConfigureListBanner

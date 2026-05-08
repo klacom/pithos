@@ -1,9 +1,9 @@
-// components/HomeBlocks.tsx
 import { createAdminClient } from "@/lib/supabase/admin";
 import { BigBanner } from "@/components/banner-announcements/BigBanner";
 import { SmallBanner } from "@/components/banner-announcements/SmallBanner";
 import { ListBanner } from "@/components/banner-announcements/ListBanner";
 import { HomeCategories } from "@/components/homepage/HomeCategories";
+import { InfiniteProductList } from "@/components/homepage/InfiniteProductList";
 
 export default async function HomeBlocks() {
     const supabase = createAdminClient();
@@ -37,6 +37,7 @@ export default async function HomeBlocks() {
                     listType: "views",
                     selectedProductIds: []
                 }} />
+                <InfiniteProductList />
             </>
         );
     }
@@ -57,6 +58,8 @@ export default async function HomeBlocks() {
             })}
 
             {!blocks.some(b => b.type === "list_banner") && <HomeCategories />}
+
+            <InfiniteProductList />
         </>
     );
 }
