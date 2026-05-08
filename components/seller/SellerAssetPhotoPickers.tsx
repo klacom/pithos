@@ -3,7 +3,8 @@
 import { useEffect, useId, useRef, useState } from "react";
 import Image from "next/image";
 import { Button } from "@/components/ui/button";
-import { ImageIcon, Images, Plus, Trash2 } from "lucide-react";
+import { ImageIcon, Images, Plus, Trash2, AlertCircle } from "lucide-react";
+import { validateImageFile, validateImageFiles, formatMaxImageSizeLabel } from "@/lib/upload-validation";
 
 export type DetailSlot = { id: string; file: File };
 
@@ -19,6 +20,8 @@ type Props = {
   savedDetailCount?: number;
   onDeleteSavedPhoto?: (objectPath: string) => void | Promise<void>;
   disabled?: boolean;
+  /** Callback to notify parent about validation errors */
+  onValidationChange?: (hasErrors: boolean) => void;
 };
 
 function isDetailMedia(file: File) {
@@ -37,11 +40,14 @@ export default function SellerAssetPhotoPickers({
   savedDetailCount = 0,
   onDeleteSavedPhoto,
   disabled,
+  onValidationChange,
 }: Props) {
   const coverInputRef = useRef<HTMLInputElement>(null);
   const detailInputRef = useRef<HTMLInputElement>(null);
   const coverPreviewId = useId();
   const [coverPreviewUrl, setCoverPreviewUrl] = useState<string | null>(null);
+  const [coverError, setCoverError] = useState<string | null>(null);
+  const [detailErrors, setDetailErrors] = useState<string[]>([]);
 
   useEffect(() => {
     if (!coverFile) {
@@ -53,6 +59,12 @@ export default function SellerAssetPhotoPickers({
     return () => URL.revokeObjectURL(url);
   }, [coverFile]);
 
+  // Notify parent whenever validation errors change
+  useEffect(() => {
+    const hasErrors = !!coverError || detailErrors.length > 0;
+    onValidationChange?.(hasErrors);
+  }, [coverError, detailErrors, onValidationChange]);
+
   const detailPreviewUrls = useDetailPreviewUrls(detailSlots);
 
   return (
@@ -63,7 +75,7 @@ export default function SellerAssetPhotoPickers({
           <h3 className="text-sm font-semibold tracking-tight">Cover image</h3>
           <p className="text-sm text-muted-foreground mt-1 max-w-2xl">
             This is the first thing buyers see in search and on your listing.
-            A wide 16:9 image works best.
+            A wide 16:9 image works best. (Max size: {formatMaxImageSizeLabel()}, formats: JPEG, PNG, WebP, GIF)
           </p>
         </div>
         {savedCoverUrl ? (
@@ -108,7 +120,26 @@ export default function SellerAssetPhotoPickers({
           disabled={disabled}
           onChange={(e) => {
             const f = e.target.files?.[0];
-            onCoverChange(f && f.type.startsWith("image/") ? f : null);
+            setCoverError(null);
+            if (!f) {
+              onCoverChange(null);
+              e.target.value = "";
+              return;
+            }
+
+            // Validate cover image
+            if (f.type.startsWith("image/")) {
+              const error = validateImageFile(f);
+              if (error) {
+                setCoverError(error);
+                onCoverChange(null);
+              } else {
+                onCoverChange(f);
+              }
+            } else {
+              setCoverError("Only image files are allowed for cover");
+              onCoverChange(null);
+            }
             e.target.value = "";
           }}
           aria-describedby={coverPreviewId}
@@ -164,6 +195,12 @@ export default function SellerAssetPhotoPickers({
             Remove cover
           </Button>
         )}
+        {coverError && (
+          <div className="flex items-start gap-2 p-3 rounded-lg bg-red-50 border border-red-200 dark:bg-red-950 dark:border-red-800">
+            <AlertCircle size={16} className="text-red-600 dark:text-red-400 mt-0.5 flex-shrink-0" />
+            <p className="text-sm text-red-700 dark:text-red-200">{coverError}</p>
+          </div>
+        )}
       </section>
 
       {/* Gallery */}
@@ -176,7 +213,7 @@ export default function SellerAssetPhotoPickers({
             </h3>
             <p className="text-sm text-muted-foreground mt-1 max-w-2xl">
               Show what buyers get—extra renders, wireframes, turntables, or a
-              short preview clip. You can add several files at once.
+              short preview clip. You can add several files at once. (Images: max {formatMaxImageSizeLabel()}, formats: JPEG, PNG, WebP, GIF)
             </p>
           </div>
         </div>
@@ -231,7 +268,18 @@ export default function SellerAssetPhotoPickers({
             const list = e.target.files;
             if (!list?.length) return;
             const next = Array.from(list).filter(isDetailMedia);
-            if (next.length) onDetailFilesAdd(next);
+
+            // Validate images only (videos are allowed without size validation)
+            const imageFiles = next.filter(f => f.type.startsWith("image/"));
+            const videoFiles = next.filter(f => f.type.startsWith("video/"));
+
+            const imageErrors = validateImageFiles(imageFiles);
+            setDetailErrors(imageErrors);
+
+            if (imageErrors.length === 0 && (imageFiles.length > 0 || videoFiles.length > 0)) {
+              onDetailFilesAdd(next);
+            }
+
             e.target.value = "";
           }}
         />
@@ -250,6 +298,20 @@ export default function SellerAssetPhotoPickers({
           </div>
         ) : null}
 
+        {detailErrors.length > 0 && (
+          <div className="flex flex-col gap-2 p-3 rounded-lg bg-red-50 border border-red-200 dark:bg-red-950 dark:border-red-800">
+            <div className="flex items-center gap-2">
+              <AlertCircle size={16} className="text-red-600 dark:text-red-400 flex-shrink-0" />
+              <p className="text-sm font-medium text-red-700 dark:text-red-200">Image validation errors:</p>
+            </div>
+            <ul className="text-sm text-red-700 dark:text-red-200 list-disc list-inside ml-4">
+              {detailErrors.map((error, idx) => (
+                <li key={idx}>{error}</li>
+              ))}
+            </ul>
+          </div>
+        )}
+
         <button
           type="button"
           disabled={disabled}
@@ -262,7 +324,17 @@ export default function SellerAssetPhotoPickers({
             e.preventDefault();
             e.stopPropagation();
             const files = Array.from(e.dataTransfer.files).filter(isDetailMedia);
-            if (files.length) onDetailFilesAdd(files);
+
+            // Validate images
+            const imageFiles = files.filter(f => f.type.startsWith("image/"));
+            const videoFiles = files.filter(f => f.type.startsWith("video/"));
+
+            const imageErrors = validateImageFiles(imageFiles);
+            setDetailErrors(imageErrors);
+
+            if (imageErrors.length === 0 && files.length) {
+              onDetailFilesAdd(files);
+            }
           }}
           className="w-full min-h-[128px] md:min-h-[144px] rounded-xl border-2 border-dashed border-muted-foreground/25 bg-background/50 flex flex-col items-center justify-center gap-2 px-4 py-6 hover:border-accent/55 hover:bg-muted/25 transition-all"
         >

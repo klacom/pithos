@@ -6,6 +6,7 @@ import { AuthProvider } from "@/components/auth/AuthProvider";
 import { Inter } from "next/font/google";
 import { Toaster } from "sonner";
 import ActivityTrackerWrapper from "@/components/session_time/ActivityTrackerWrapper";
+import CookieConsent from "@/components/main-components/CookieConsent";
 
 const inter = Inter({
     subsets: ["latin"],
@@ -45,6 +46,7 @@ export default function RootLayout({
                     <AuthProvider>
                         <ActivityTrackerWrapper />
                         {children}
+                        <CookieConsent />
                         <Toaster />
                     </AuthProvider>
                 </ThemeProvider>

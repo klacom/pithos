@@ -15,6 +15,12 @@ import {
   isAllowedPackageFile,
   MAX_PACKAGE_FILE_BYTES,
 } from "@/lib/seller/package-upload-rules";
+import {
+  validateImageFile,
+  validateImageFiles,
+  formatMaxImageSizeLabel,
+} from "@/lib/upload-validation";
+import { sanitizeText, sanitizeHtml } from "@/lib/sanitization";
 
 export type CreateSellerProductInput = {
   title: string;
@@ -64,12 +70,12 @@ export async function createSellerProduct(
   const { data, error } = await supabase
     .from("products")
     .insert({
-      product_name: input.title.trim(),
+      product_name: sanitizeText(input.title.trim()),
       product_description: buildStoredDescription({
         isDraft: input.isDraft,
         category: input.category,
-        tags: input.tags ?? [],
-        description: input.description,
+        tags: (input.tags ?? []).map(tag => sanitizeText(tag)),
+        description: sanitizeHtml(input.description),
       }),
       product_status: input.isDraft ? "draft" : "published",
       price: input.price,
@@ -81,6 +87,19 @@ export async function createSellerProduct(
     return { error: error.message, productId: null };
   }
   const productId = data?.product_id != null ? String(data.product_id) : null;
+
+  // Audit log for product creation
+  try {
+    await createAudit({
+      action_name: "PRODUCT_CREATED",
+      action_description: `Seller created product: ${input.title.trim()} (Status: ${input.isDraft ? 'draft' : 'published'}, Price: ${input.price})`,
+      affected_resources: `product:${productId}`,
+      actor: uid,
+    });
+  } catch (auditError) {
+    console.error("Audit log failed for product creation:", auditError);
+  }
+
   revalidatePath("/seller/assets");
   revalidatePath("/seller/view-assets");
   return { error: null, productId };
@@ -130,12 +149,12 @@ export async function updateSellerProduct(
   const { error } = await supabase
     .from("products")
     .update({
-      product_name: input.title.trim(),
+      product_name: sanitizeText(input.title.trim()),
       product_description: buildStoredDescription({
         isDraft: input.isDraft,
         category: input.category,
-        tags: input.tags ?? [],
-        description: input.description,
+        tags: (input.tags ?? []).map(tag => sanitizeText(tag)),
+        description: sanitizeHtml(input.description),
       }),
       product_status: targetStatus,
       price: input.price,
@@ -143,6 +162,18 @@ export async function updateSellerProduct(
     .eq("product_id", input.productId);
   if (error) {
     return { error: error.message };
+  }
+
+  // Audit log for product update
+  try {
+    await createAudit({
+      action_name: "PRODUCT_UPDATED",
+      action_description: `Seller updated product ID ${input.productId}: ${input.title.trim()} (Status: ${targetStatus}, Price: ${input.price})`,
+      affected_resources: `product:${input.productId}`,
+      actor: uid,
+    });
+  } catch (auditError) {
+    console.error("Audit log failed for product update:", auditError);
   }
 
   revalidatePath("/seller/assets");
@@ -192,6 +223,22 @@ export async function uploadSellerProductMedia(
   const packageFile =
     packageRaw instanceof File && packageRaw.size > 0 ? packageRaw : null;
 
+  // Validate cover image
+  if (cover) {
+    const coverError = validateImageFile(cover);
+    if (coverError) {
+      return { error: `Cover image validation failed: ${coverError}` };
+    }
+  }
+
+  // Validate detail images
+  if (detailFiles.length > 0) {
+    const detailErrors = validateImageFiles(detailFiles);
+    if (detailErrors.length > 0) {
+      return { error: `Detail image validation failed: ${detailErrors.join("; ")}` };
+    }
+  }
+
   if (packageFile) {
     if (!isAllowedPackageFile(packageFile)) {
       return {
@@ -224,6 +271,22 @@ export async function uploadSellerProductMedia(
       cover,
       detailFiles,
     });
+
+    // Audit log for media upload (only if successful)
+    if (!result.error) {
+      try {
+        const fileCount = (cover ? 1 : 0) + detailFiles.length + (packageFile ? 1 : 0);
+        await createAudit({
+          action_name: "PRODUCT_MEDIA_UPLOADED",
+          action_description: `Seller uploaded ${fileCount} file(s) to product ID ${productId} (${cover ? 'cover, ' : ''}${detailFiles.length} detail image(s)${packageFile ? ', package file' : ''})`,
+          affected_resources: `product:${productId}`,
+          actor: uid,
+        });
+      } catch (auditError) {
+        console.error("Audit log failed for media upload:", auditError);
+      }
+    }
+    return result;
   } catch (e) {
     const message =
       e instanceof Error ? e.message : "Server upload configuration error";
@@ -262,6 +325,18 @@ export async function archiveSellerProduct(
       .eq("product_id", productId);
     if (error) {
       return { error: error.message };
+    }
+
+    // Audit log for product deletion
+    try {
+      await createAudit({
+        action_name: "PRODUCT_DELETED",
+        action_description: `Seller deleted product ID ${productId}`,
+        affected_resources: `product:${productId}`,
+        actor: uid,
+      });
+    } catch (auditError) {
+      console.error("Audit log failed for product deletion:", auditError);
     }
   } catch (e) {
     const message =

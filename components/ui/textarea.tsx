@@ -1,12 +1,19 @@
 import * as React from "react"
-
 import { cn } from "@/lib/utils"
+import { sanitizeText } from "@/lib/sanitization"
 
 export interface TextareaProps
   extends React.TextareaHTMLAttributes<HTMLTextAreaElement> {}
 
 const Textarea = React.forwardRef<HTMLTextAreaElement, TextareaProps>(
-  ({ className, ...props }, ref) => {
+  ({ className, onChange, ...props }, ref) => {
+    const handleChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
+      e.target.value = sanitizeText(e.target.value);
+      if (onChange) {
+        onChange(e);
+      }
+    };
+
     return (
       <textarea
         className={cn(
@@ -14,6 +21,7 @@ const Textarea = React.forwardRef<HTMLTextAreaElement, TextareaProps>(
           className
         )}
         ref={ref}
+        onChange={handleChange}
         {...props}
       />
     )
