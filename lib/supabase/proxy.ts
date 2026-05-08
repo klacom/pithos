@@ -73,7 +73,7 @@ export async function updateSession(request: NextRequest) {
                 .eq("role", role)
                 .single();
 
-            const timeoutMinutes = policy?.timeout_minutes || 30; // Default to 30 mins safe default
+            const timeoutMinutes = Math.min(policy?.timeout_minutes || 30, 1440); // Enforce 24 hour maximum (1440 mins)
             
             const now = new Date();
             const lastActivity = new Date(session.last_activity);

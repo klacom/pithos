@@ -119,8 +119,12 @@ export default function ActivityTracker() {
                 setShowWarning(true);
                 hasWarnedRef.current = true;
             }
+        }, 1000); // Check every second for maximum responsiveness
 
-            // 3. Heartbeat sync
+        // 3. Separate Heartbeat sync (less frequent)
+        const syncInterval = setInterval(async () => {
+            if (isInactive) return;
+            
             if (document.visibilityState === "visible") {
                 try {
                     const response = await fetch("/api/heartbeat", { method: "POST" });
@@ -138,9 +142,12 @@ export default function ActivityTracker() {
                     // Silently fail
                 }
             }
-        }, 20000);
+        }, 30000); // Sync with server every 30 seconds
 
-        return () => clearInterval(heartbeatInterval);
+        return () => {
+            clearInterval(heartbeatInterval);
+            clearInterval(syncInterval);
+        };
     }, [isCheckingInitial, isInactive, timeoutMinutes, warningMinutes, router]);
 
     return (

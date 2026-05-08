@@ -269,20 +269,30 @@ const Page = () => {
                                                     <InputTextField
                                                             type="number"
                                                             min={1}
-                                                            max={30}
+                                                            max={1440}
                                                             value={policy.timeout_minutes}
                                                             onChange={(e) => handlePolicyChange(policy.role, e.target.value)}
                                                             placeholder={`Enter minutes for ${policy.role}`}
                                                         />
                                                     </div>
                                                     <p className="text-sm text-accent">
-                                                        Note: User will be warned at {
-                                                            policy.timeout_minutes === 1 ? "30 seconds" :
-                                                            (policy.timeout_minutes >= 2 && policy.timeout_minutes <= 5) ? "1 minute" :
-                                                            (policy.timeout_minutes >= 6 && policy.timeout_minutes <= 15) ? "5 minutes" :
-                                                            (policy.timeout_minutes >= 16 && policy.timeout_minutes <= 25) ? "15 minutes" :
-                                                            "25 minutes"
-                                                        }.
+                                                        Note: User will be warned when {
+                                                            policy.timeout_minutes <= 1 ? "30 seconds" :
+                                                            policy.timeout_minutes <= 5 ? "1 minute" :
+                                                            policy.timeout_minutes <= 10 ? "5 minutes" :
+                                                            policy.timeout_minutes <= 20 ? "10 minutes" :
+                                                            policy.timeout_minutes <= 25 ? "20 minutes" :
+                                                            policy.timeout_minutes <= 30 ? "25 minutes" :
+                                                            "5 minutes"
+                                                        } remains (at {
+                                                            policy.timeout_minutes <= 1 ? "30 seconds" :
+                                                            policy.timeout_minutes <= 5 ? `${policy.timeout_minutes - 1} ${policy.timeout_minutes - 1 === 1 ? 'minute' : 'minutes'}` :
+                                                            policy.timeout_minutes <= 10 ? `${policy.timeout_minutes - 5} minutes` :
+                                                            policy.timeout_minutes <= 20 ? `${policy.timeout_minutes - 10} minutes` :
+                                                            policy.timeout_minutes <= 25 ? `${policy.timeout_minutes - 20} minutes` :
+                                                            policy.timeout_minutes <= 30 ? `${policy.timeout_minutes - 25} minutes` :
+                                                            `${policy.timeout_minutes - 5} minutes`
+                                                        } of inactivity).
                                                     </p>
                                                 </div>
                                         </Card>

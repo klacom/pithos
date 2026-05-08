@@ -28,21 +28,28 @@ export async function POST() {
         .single();
 
     const dbTimeout = policy?.timeout_minutes || 30;
-    const timeoutMinutes = Math.min(dbTimeout, 30); // Enforce 30 min maximum
+    const timeoutMinutes = Math.min(dbTimeout, 1440); // Enforce 24 hour maximum (1440 mins)
 
-    // 3. Calculate warning threshold based on custom scale
-    let warningMinutes = 1;
-    if (timeoutMinutes === 1) {
-        warningMinutes = 0.5; // 30 seconds
+    // 3. Calculate warning threshold (idle time before warning)
+    // The scale provided refers to the WARNING DURATION (time remaining when warning appears)
+    let warningDuration = 1;
+    if (timeoutMinutes <= 1) {
+        warningDuration = 0.5; // 30s remaining
     } else if (timeoutMinutes >= 2 && timeoutMinutes <= 5) {
-        warningMinutes = 1;
-    } else if (timeoutMinutes >= 6 && timeoutMinutes <= 15) {
-        warningMinutes = 5;
-    } else if (timeoutMinutes >= 16 && timeoutMinutes <= 25) {
-        warningMinutes = 15;
+        warningDuration = 1; // 1m remaining
+    } else if (timeoutMinutes >= 6 && timeoutMinutes <= 10) {
+        warningDuration = 5; // 5m remaining
+    } else if (timeoutMinutes >= 11 && timeoutMinutes <= 20) {
+        warningDuration = 10; // 10m remaining
+    } else if (timeoutMinutes >= 21 && timeoutMinutes <= 25) {
+        warningDuration = 20; // 20m remaining
     } else if (timeoutMinutes >= 26 && timeoutMinutes <= 30) {
-        warningMinutes = 25;
+        warningDuration = 25; // 25m remaining
+    } else {
+        warningDuration = 5; // Default 5m remaining for > 30m
     }
+
+    const warningMinutes = Math.max(0.1, timeoutMinutes - warningDuration);
 
     const { data: session } = await supabaseAdmin
         .from("user_sessions")
