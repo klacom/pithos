@@ -1,6 +1,6 @@
 import { ReactNode } from "react";
 import SideBar from "../main-components/sidebar/SideBar";
-import { Home, PackagePlus, Notebook, Settings, WalletCards } from "lucide-react";
+import { Home, PackagePlus, Notebook, WalletCards } from "lucide-react";
 import { createAudit } from "@/lib/supabase/create-audit";
 
 const SellerMainLayout = ({ children }: { children: ReactNode }) => {
@@ -29,15 +29,9 @@ const SellerMainLayout = ({ children }: { children: ReactNode }) => {
         },
     ];
 
-    const settingLink = {
-        href: "/seller/account",
-        label: "Settings",
-        icon: <Settings size={iconSize} />,
-    };
-
     return (
         <main className="flex w-full h-full min-h-0 overflow-hidden">
-            <SideBar links={links} settingLink={settingLink} createAudit={createAudit} />
+            <SideBar links={links} createAudit={createAudit} />
 
             <section className="flex-1 min-w-0 h-full overflow-y-auto">
                 {children}

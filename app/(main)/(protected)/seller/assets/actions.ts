@@ -2,8 +2,6 @@
 
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
-import { createAdminClient } from "@/lib/supabase/admin";
-import { createAudit } from "@/lib/supabase/create-audit";
 import { buildStoredDescription } from "@/lib/seller/products";
 import {
   ASSET_PHOTOS_BUCKET,
@@ -39,7 +37,9 @@ export type SellerProductMediaSummary = {
   hasPackage: boolean;
   packageFileNames: string[];
   coverUrl: string | null;
+  coverPath: string | null;
   detailUrls: string[];
+  detailPaths: string[];
 };
 
 export async function createSellerProduct(
@@ -145,9 +145,8 @@ export async function updateSellerProduct(
     }
   }
 
-  const admin = createAdminClient();
   const targetStatus = input.isDraft ? "draft" : "published";
-  const { error } = await admin
+  const { error } = await supabase
     .from("products")
     .update({
       product_name: sanitizeText(input.title.trim()),
@@ -183,8 +182,8 @@ export async function updateSellerProduct(
 }
 
 /**
- * Uploads to Storage with the service role after verifying the seller owns the product.
- * Browser uploads use the anon key and are blocked by Storage RLS unless policies match every path.
+ * Uploads to Storage using the signed-in seller client after verifying ownership.
+ * This ensures Storage RLS is enforced instead of bypassed with the service role.
  */
 export async function uploadSellerProductMedia(
   productId: string,
@@ -259,18 +258,16 @@ export async function uploadSellerProductMedia(
   }
 
   try {
-    const admin = createAdminClient();
-
     if (packageFile) {
       const pkgErr = await uploadSellerPackageFile(
-        admin,
+        supabase,
         productId,
         packageFile,
       );
       if (pkgErr.error) return pkgErr;
     }
 
-    const result = await uploadSellerAssetPhotos(admin, productId, {
+    return uploadSellerAssetPhotos(supabase, productId, {
       cover,
       detailFiles,
     });
@@ -297,7 +294,7 @@ export async function uploadSellerProductMedia(
   }
 }
 
-export async function deleteSellerProduct(
+export async function archiveSellerProduct(
   productId: string,
 ): Promise<{ error: string | null }> {
   const supabase = await createClient();
@@ -322,10 +319,9 @@ export async function deleteSellerProduct(
   }
 
   try {
-    const admin = createAdminClient();
-    const { error } = await admin
+    const { error } = await supabase
       .from("products")
-      .delete()
+      .update({ product_status: "archived" })
       .eq("product_id", productId);
     if (error) {
       return { error: error.message };
@@ -346,6 +342,48 @@ export async function deleteSellerProduct(
     const message =
       e instanceof Error ? e.message : "Server configuration error";
     return { error: message };
+  }
+
+  revalidatePath("/seller/assets");
+  revalidatePath("/seller/view-assets");
+  return { error: null };
+}
+
+export async function deleteSellerProductPhoto(
+  productId: string,
+  objectPath: string,
+): Promise<{ error: string | null }> {
+  const supabase = await createClient();
+  const { data: claimsData } = await supabase.auth.getClaims();
+  const uid = claimsData?.claims?.sub;
+  if (!uid) {
+    return { error: "Not signed in" };
+  }
+
+  const { data: owned, error: ownershipError } = await supabase
+    .from("products")
+    .select("product_id")
+    .eq("product_id", productId)
+    .eq("seller_owner_id", uid)
+    .maybeSingle();
+
+  if (ownershipError) {
+    return { error: ownershipError.message };
+  }
+  if (!owned) {
+    return { error: "Product not found or access denied" };
+  }
+
+  const expectedPrefix = `${productId}/photos/`;
+  if (!objectPath.startsWith(expectedPrefix)) {
+    return { error: "Invalid photo path" };
+  }
+
+  const { error } = await supabase.storage
+    .from(ASSET_PHOTOS_BUCKET)
+    .remove([objectPath]);
+  if (error) {
+    return { error: error.message };
   }
 
   revalidatePath("/seller/assets");
@@ -378,24 +416,23 @@ export async function getSellerProductMediaSummary(
   }
 
   try {
-    const admin = createAdminClient();
     const [
       { data: photoRows, error: photoError },
       { data: thumbnailRows, error: thumbnailError },
       { data: packageRows, error: packageError },
     ] =
       await Promise.all([
-        admin.storage.from(ASSET_PHOTOS_BUCKET).list(`${productId}/photos`, {
+        supabase.storage.from(ASSET_PHOTOS_BUCKET).list(`${productId}/photos`, {
           limit: 200,
           sortBy: { column: "name", order: "asc" },
         }),
-        admin
+        supabase
           .storage.from(ASSET_PHOTOS_BUCKET)
           .list(`${productId}/photos/thumbnail`, {
             limit: 20,
             sortBy: { column: "name", order: "asc" },
           }),
-        admin.storage.from(ASSETS_STORAGE_BUCKET).list(productId, {
+        supabase.storage.from(ASSETS_STORAGE_BUCKET).list(productId, {
           limit: 100,
           sortBy: { column: "name", order: "asc" },
         }),
@@ -415,25 +452,30 @@ export async function getSellerProductMediaSummary(
     const thumbnailFiles = thumbnailRows ?? [];
     const hasCover = thumbnailFiles.length > 0;
     const detailCount = rows.filter((r) => r.name !== "thumbnail").length;
-    const detailUrls = rows
+    const detailFileNames = rows
       .filter((r) => r.name !== "thumbnail")
       .map((r) => r.name)
-      .filter((name) => /\.(png|jpe?g|webp|gif|avif)$/i.test(name))
+      .filter((name) => /\.(png|jpe?g|webp|gif|avif)$/i.test(name));
+    const detailPaths = detailFileNames
       .slice(0, 12)
-      .map((name) => {
-        const { data } = admin.storage
+      .map((name) => `${productId}/photos/${name}`);
+    const detailUrls = detailPaths.map((path) => {
+        const { data } = supabase.storage
           .from(ASSET_PHOTOS_BUCKET)
-          .getPublicUrl(`${productId}/photos/${name}`);
+          .getPublicUrl(path);
         return data.publicUrl;
       });
     const packageFileNames = (packageRows ?? []).map((r) => r.name);
-    const coverUrl =
+    const coverPath =
       thumbnailFiles.length > 0
-        ? admin.storage
-          .from(ASSET_PHOTOS_BUCKET)
-          .getPublicUrl(`${productId}/photos/thumbnail/${thumbnailFiles[0].name}`)
-          .data.publicUrl
+        ? `${productId}/photos/thumbnail/${thumbnailFiles[0].name}`
         : null;
+    const coverUrl = coverPath
+      ? supabase.storage
+        .from(ASSET_PHOTOS_BUCKET)
+        .getPublicUrl(coverPath)
+        .data.publicUrl
+      : null;
 
     return {
       data: {
@@ -442,7 +484,9 @@ export async function getSellerProductMediaSummary(
         hasPackage: packageFileNames.length > 0,
         packageFileNames,
         coverUrl,
+        coverPath,
         detailUrls,
+        detailPaths,
       },
       error: null,
     };
@@ -478,8 +522,7 @@ export async function getSellerPackageDownloadUrl(
   }
 
   try {
-    const admin = createAdminClient();
-    const { data: packageRows, error: packageError } = await admin.storage
+    const { data: packageRows, error: packageError } = await supabase.storage
       .from(ASSETS_STORAGE_BUCKET)
       .list(productId, { limit: 100, sortBy: { column: "name", order: "asc" } });
 
@@ -491,7 +534,7 @@ export async function getSellerPackageDownloadUrl(
       return { url: null, fileName: null, error: null };
     }
 
-    const { data: signed, error: signErr } = await admin.storage
+    const { data: signed, error: signErr } = await supabase.storage
       .from(ASSETS_STORAGE_BUCKET)
       .createSignedUrl(`${productId}/${fileName}`, 60 * 10);
 

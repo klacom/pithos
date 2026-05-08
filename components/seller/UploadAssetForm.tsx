@@ -60,6 +60,7 @@ type Props = {
     editingProductId?: string | null;
     initialValues?: UploadFormInitialValues | null;
     existingMediaSummary?: ExistingMediaSummary | null;
+    onDeleteSavedPhoto?: (objectPath: string) => void | Promise<void>;
     onCancelEdit?: () => void;
 };
 
@@ -69,7 +70,9 @@ type ExistingMediaSummary = {
     hasPackage: boolean;
     packageFileNames: string[];
     coverUrl: string | null;
+    coverPath: string | null;
     detailUrls: string[];
+    detailPaths: string[];
 };
 
 function emptyForm(categories: string[]): AssetFormState {
@@ -89,6 +92,7 @@ export default function UploadAssetForm({
     editingProductId = null,
     initialValues = null,
     existingMediaSummary = null,
+    onDeleteSavedPhoto,
     onCancelEdit,
 }: Props) {
     const [formData, setFormData] = useState<AssetFormState>(() =>
@@ -214,6 +218,24 @@ export default function UploadAssetForm({
 
     const allowedHint = ALLOWED_PACKAGE_EXTENSIONS.join(", ");
     const savedMedia = isEditMode ? existingMediaSummary : null;
+    const savedDetailItems = savedMedia
+        ? savedMedia.detailUrls.map((url, index) => ({
+            url,
+            path: savedMedia.detailPaths?.[index] ?? null,
+        }))
+        : [];
+
+    const handleDeleteSavedPhoto = async (objectPath: string) => {
+        if (!onDeleteSavedPhoto) return;
+        setSubmitError(null);
+        try {
+            await onDeleteSavedPhoto(objectPath);
+        } catch (e) {
+            setSubmitError(
+                e instanceof Error ? e.message : "Failed to delete saved photo",
+            );
+        }
+    };
 
     return (
         <div className="w-full max-w-4xl mx-auto p-6 md:p-8 rounded-2xl border border-muted/80 bg-card shadow-sm h-full overflow-y-auto">
@@ -414,45 +436,13 @@ export default function UploadAssetForm({
                     />
                 </div>
 
-                <div className="space-y-3">
-                    <h3 className="text-sm font-semibold">Preview images</h3>
-                    <p className="text-sm text-muted-foreground -mt-1 leading-relaxed">
-                        Cover and gallery shots sell the work—add them before you publish if you can.
-                    </p>
-                    {savedMedia?.coverUrl ? (
-                        <div className="rounded-xl border border-muted/60 bg-muted/10 p-3">
-                            <p className="text-xs text-muted-foreground mb-2">Current saved cover</p>
-                            <div className="relative aspect-video w-full max-w-md rounded-lg overflow-hidden border border-muted">
-                                <Image
-                                    src={savedMedia.coverUrl}
-                                    alt="Saved cover"
-                                    fill
-                                    className="object-cover"
-                                    unoptimized
-                                />
-                            </div>
-                        </div>
-                    ) : null}
-                    {savedMedia && savedMedia.detailUrls.length > 0 ? (
-                        <div className="rounded-xl border border-muted/60 bg-muted/10 p-3">
-                            <p className="text-xs text-muted-foreground mb-2">
-                                Current saved gallery ({savedMedia.detailCount})
-                            </p>
-                            <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
-                                {savedMedia.detailUrls.slice(0, 6).map((url) => (
-                                    <div key={url} className="relative aspect-video rounded overflow-hidden border border-muted">
-                                        <Image
-                                            src={url}
-                                            alt="Saved gallery item"
-                                            fill
-                                            className="object-cover"
-                                            unoptimized
-                                        />
-                                    </div>
-                                ))}
-                            </div>
-                        </div>
-                    ) : null}
+                <div className="space-y-4 rounded-2xl border border-muted/60 bg-gradient-to-b from-muted/10 to-transparent p-4 md:p-5">
+                    <div className="space-y-1">
+                        <h3 className="text-base font-semibold tracking-tight">Preview images</h3>
+                        <p className="text-sm text-muted-foreground leading-relaxed">
+                            Show buyers your best visuals first: one clear cover, then supporting gallery shots.
+                        </p>
+                    </div>
                     <SellerAssetPhotoPickers
                         coverFile={coverFile}
                         onCoverChange={setCoverFile}
@@ -461,6 +451,11 @@ export default function UploadAssetForm({
                         onDetailRemove={(id) =>
                             setDetailSlots((prev) => prev.filter((s) => s.id !== id))
                         }
+                        savedCoverUrl={savedMedia?.coverUrl ?? null}
+                        savedCoverPath={savedMedia?.coverPath ?? null}
+                        savedDetailItems={savedDetailItems}
+                        savedDetailCount={savedMedia?.detailCount ?? 0}
+                        onDeleteSavedPhoto={onDeleteSavedPhoto ? handleDeleteSavedPhoto : undefined}
                         disabled={disabled || isSaving}
                         onValidationChange={setMediaValidationErrors}
                     />

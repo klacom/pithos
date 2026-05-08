@@ -10,7 +10,8 @@ import { sellerAssetCategories } from "@/components/seller/seller-assets";
 import type { AssetItem } from "@/components/seller/seller-assets";
 import {
     createSellerProduct,
-    deleteSellerProduct,
+    archiveSellerProduct,
+    deleteSellerProductPhoto,
     updateSellerProduct,
     uploadSellerProductMedia,
     getSellerProductMediaSummary,
@@ -32,7 +33,9 @@ type SellerProductMediaSummary = {
     hasPackage: boolean;
     packageFileNames: string[];
     coverUrl: string | null;
+    coverPath: string | null;
     detailUrls: string[];
+    detailPaths: string[];
 };
 
 export default function AssetsPageClient({
@@ -147,6 +150,19 @@ export default function AssetsPageClient({
                             setActiveTab("grid");
                         }}
                         existingMediaSummary={isEditMode(editingProductId) ? editingMediaSummary : null}
+                        onDeleteSavedPhoto={async (objectPath) => {
+                            if (!editingProductId) return;
+                            const { error } = await deleteSellerProductPhoto(editingProductId, objectPath);
+                            if (error) {
+                                throw new Error(error);
+                            }
+                            const { data, error: summaryError } =
+                                await getSellerProductMediaSummary(editingProductId);
+                            if (summaryError) {
+                                throw new Error(summaryError);
+                            }
+                            setEditingMediaSummary(data);
+                        }}
                         onSave={async (
                             payload: UploadAssetSavePayload,
                             isDraft,
@@ -241,13 +257,13 @@ export default function AssetsPageClient({
                     onDelete={(id) => {
                         if (
                             !confirm(
-                                "Delete this asset? The listing will be removed. Storage files may remain until cleaned up.",
+                                "Archive this asset? The listing will be hidden from active assets and can be restored later.",
                             )
                         ) {
                             return;
                         }
                         startTransition(async () => {
-                            const { error } = await deleteSellerProduct(id);
+                            const { error } = await archiveSellerProduct(id);
                             if (error) {
                                 console.error(error);
                                 alert(error);
