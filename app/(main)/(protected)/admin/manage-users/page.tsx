@@ -339,22 +339,22 @@ const Page = () => {
                                                     columns={[
                                                         {
                                                             key: "transaction_id", label: "TX ID", sortable: true, render: (_: any, row: any) => (
-                                                                <p className="font-mono text-xs">{row.transaction_id}</p>
+                                                                <p className="font-mono text-[10px] truncate max-w-[100px]">{row.transaction_id}</p>
                                                             )
                                                         },
                                                         {
                                                             key: "buyer_id", label: "Buyer ID", sortable: true, render: (_: any, row: any) => (
-                                                                <p className="font-mono text-xs">{row.buyer_id}</p>
+                                                                <p className="font-mono text-[10px] truncate max-w-[100px]">{row.buyer_id}</p>
                                                             )
                                                         },
                                                         {
                                                             key: "seller_id", label: "Seller ID", sortable: true, render: (_: any, row: any) => (
-                                                                <p className="font-mono text-xs">{row.seller_id}</p>
+                                                                <p className="font-mono text-[10px] truncate max-w-[100px]">{row.seller_id}</p>
                                                             )
                                                         },
                                                         {
                                                             key: "product_id", label: "Product ID", sortable: true, render: (_: any, row: any) => (
-                                                                <p className="font-mono text-xs">{row.product_id}</p>
+                                                                <p className="font-mono text-[10px] truncate max-w-[100px]">{row.product_id}</p>
                                                             )
                                                         },
                                                         {
@@ -389,7 +389,7 @@ const Page = () => {
                                                     columns={[
                                                         {
                                                             key: "review_id", label: "Rvw ID", sortable: true, render: (_: any, row: any) => (
-                                                                <p className="font-mono text-xs">{row.review_id}</p>
+                                                                <p className="font-mono text-[10px] truncate max-w-[100px]">{row.review_id}</p>
                                                             )
                                                         },
                                                         {
@@ -397,17 +397,17 @@ const Page = () => {
                                                         },
                                                         {
                                                             key: "reviewer_id", label: "Reviewer", sortable: true, render: (_: any, row: any) => (
-                                                                <p className="font-mono text-xs">{row.reviewer_id}</p>
+                                                                <p className="font-mono text-[10px] truncate max-w-[100px]">{row.reviewer_id}</p>
                                                             )
                                                         },
                                                         {
                                                             key: "created_at", label: "Date", sortable: true, render: (_: any, row: any) => (
-                                                                <p>{formatDate(row.created_at)}</p>
+                                                                <p className="text-xs">{formatDate(row.created_at)}</p>
                                                             )
                                                         },
                                                         {
                                                             key: "product_id", label: "Product", sortable: true, render: (_: any, row: any) => (
-                                                                <p className="font-mono text-xs">{row.product_id}</p>
+                                                                <p className="font-mono text-[10px] truncate max-w-[100px]">{row.product_id}</p>
                                                             )
                                                         },
                                                         {
@@ -438,7 +438,7 @@ const Page = () => {
                                                             label: "Product ID",
                                                             sortable: true,
                                                             render: (_: any, row: any) => (
-                                                                <p className="font-mono text-xs">{row.product_id}</p>
+                                                                <p className="font-mono text-[10px] truncate max-w-[100px]">{row.product_id}</p>
                                                             )
                                                         },
                                                         {
@@ -446,18 +446,24 @@ const Page = () => {
                                                             label: "Name",
                                                             sortable: true,
                                                             searchable: true,
+                                                            render: (_: any, row: any) => (
+                                                                <p className="text-xs truncate max-w-[150px]">{row.product_name}</p>
+                                                            )
                                                         },
                                                         {
                                                             key: "product_description",
                                                             label: "Description",
                                                             searchable: true,
+                                                            render: (_: any, row: any) => (
+                                                                <p className="text-xs truncate max-w-[200px]">{row.product_description}</p>
+                                                            )
                                                         },
                                                         {
                                                             key: "price",
                                                             label: "Price",
                                                             sortable: true,
                                                             render: (_: any, row: any) => (
-                                                                <p>₱{row.price.toLocaleString()}</p>
+                                                                <p className="text-xs">₱{row.price.toLocaleString()}</p>
                                                             )
                                                         },
                                                         {
@@ -465,7 +471,7 @@ const Page = () => {
                                                             label: "Seller ID",
                                                             sortable: true,
                                                             render: (_: any, row: any) => (
-                                                                <p className="font-mono text-xs">{row.seller_owner_id}</p>
+                                                                <p className="font-mono text-[10px] truncate max-w-[100px]">{row.seller_owner_id}</p>
                                                             )
                                                         },
                                                         {
@@ -473,7 +479,7 @@ const Page = () => {
                                                             label: "Created At",
                                                             sortable: true,
                                                             render: (_: any, row: any) => (
-                                                                <p>{formatDate(row.created_at)}</p>
+                                                                <p className="text-xs">{formatDate(row.created_at)}</p>
                                                             )
                                                         },
                                                     ]}

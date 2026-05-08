@@ -1,5 +1,7 @@
 import { NextResponse } from "next/server"
 import { createAdminClient } from "@/lib/supabase/admin"
+import { createAudit } from "@/lib/supabase/create-audit"
+import { createClient } from "@/lib/supabase/server"
 
 export async function GET() {
     const supabase = createAdminClient();
@@ -18,7 +20,8 @@ export async function GET() {
 }
 
 export async function POST(req: Request) {
-    const supabase = createAdminClient();
+    const supabaseAdmin = createAdminClient();
+    const supabase = await createClient();
     const { type } = await req.json();
 
     // Get current max order_index
@@ -52,7 +55,7 @@ export async function POST(req: Request) {
         };
     }
 
-    const { data, error } = await supabase
+    const { data, error } = await supabaseAdmin
         .from("homepage_blocks")
         .insert({
             type,
@@ -65,6 +68,18 @@ export async function POST(req: Request) {
 
     if (error) {
         return NextResponse.json({ error: error.message }, { status: 500 });
+    }
+
+    // Audit Log
+    const { data: claimsData } = await supabase.auth.getClaims();
+    const uid = claimsData?.claims?.sub;
+    if (uid) {
+        await createAudit({
+            action_name: "SITE_CONTENT_CREATED",
+            action_description: `Admin created new homepage block: ${type}`,
+            affected_resources: `homepage_blocks:${data.id}`,
+            actor: uid,
+        });
     }
 
     return NextResponse.json(data);

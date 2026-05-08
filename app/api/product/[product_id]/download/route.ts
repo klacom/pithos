@@ -4,9 +4,9 @@ import { NextRequest, NextResponse } from 'next/server';
 
 export async function GET(
     request: NextRequest,
-    { params }: { params: { product_id: string } }
+    { params }: { params: Promise<{ product_id: string }> }
 ) {
-    const productId = (await params).product_id;
+    const { product_id: productId } = await params;
 
     const supabaseAdmin = createAdminClient();
     const supabaseServer = await createClient();

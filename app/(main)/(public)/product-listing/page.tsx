@@ -259,10 +259,10 @@ const page = async ({
     minRating: parseNumber(params.minRating),
     sort:
       params.sort === "newest" ||
-        params.sort === "price_asc" ||
-        params.sort === "price_desc" ||
-        params.sort === "rating_desc"
-        ? params.sort
+      params.sort === "price_asc" ||
+      params.sort === "price_desc" ||
+      params.sort === "rating_desc"
+        ? (params.sort as ProductFilters["sort"])
         : "relevance",
   };
 
