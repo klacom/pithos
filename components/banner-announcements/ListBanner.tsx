@@ -112,14 +112,9 @@ export function ListBanner({ content }: Props) {
         return Promise.all(rows.map(async (row) => {
             const pid = row.product_id;
             
-            const { data: reviews } = await supabase
-                .from("reviews")
-                .select("rating")
-                .eq("product_id", pid);
-            
-            const rating = reviews?.length 
-                ? reviews.reduce((acc, r) => acc + (Number(r.rating) || 0), 0) / reviews.length 
-                : 0;
+            // Use the same API endpoint as product detail page for consistency
+            const reviewsRes = await fetch(`/api/product/${pid}/reviews`);
+            const reviewsData = reviewsRes.ok ? await reviewsRes.json() : { avgRating: 0, reviewCount: 0 };
             
             const { data: files } = await supabase.storage
                 .from("asset_photos")
@@ -145,8 +140,8 @@ export function ListBanner({ content }: Props) {
                 id: pid,
                 title: row.product_name,
                 subtitle: row.product_name,
-                rating: parseFloat(rating.toFixed(1)),
-                reviews: reviews?.length || 0,
+                rating: Number(reviewsData?.avgRating ?? 0),
+                reviews: Number(reviewsData?.reviewCount ?? 0),
                 author,
                 price: row.price <= 0 ? "Free" : `₱${row.price}`,
                 imageSrc,
