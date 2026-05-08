@@ -147,7 +147,7 @@ export default function CookieConsent() {
                 )}
 
                 <p className="text-[10px] text-muted-foreground text-center">
-                    By saving, you agree to our <Link href="/privacy" className="underline">Privacy Policy</Link>.
+                    By saving, you agree to our <Link href="/company/privacy" className="underline">Privacy Policy</Link>.
                 </p>
             </div>
         </div>
