@@ -245,7 +245,7 @@ export default function SellerAssetPhotoPickers({
                       disabled={disabled}
                       onClick={() => {
                         if (!confirm("Delete this saved gallery image?")) return;
-                        void onDeleteSavedPhoto(item.path);
+                        void onDeleteSavedPhoto(item.path as string);
                       }}
                     >
                       <Trash2 size={14} />
