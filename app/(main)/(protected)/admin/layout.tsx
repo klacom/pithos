@@ -1,6 +1,6 @@
 import { ReactNode } from 'react'
-import NavBarLoader from '@/components/navbar/NavBarLoader'
-import NavBar from '@/components/navbar/NavBar'
+import NavBarLoader from '@/components/main-components/navbar/NavBarLoader'
+import NavBar from '@/components/main-components/navbar/NavBar'
 import AdminMainLayout from '@/components/admin/AdminMainLayout'
 import { Suspense } from 'react'
 

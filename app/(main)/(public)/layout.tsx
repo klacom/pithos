@@ -1,7 +1,7 @@
 import { ReactNode } from 'react'
 import { Suspense } from 'react'
-import NavBarLoader from '@/components/navbar/NavBarLoader'
-import NavBar from '@/components/navbar/NavBar'
+import NavBarLoader from '@/components/main-components/navbar/NavBarLoader'
+import NavBar from '@/components/main-components/navbar/NavBar'
 
 const layout = ({ children }: { children: ReactNode }) => {
     return (

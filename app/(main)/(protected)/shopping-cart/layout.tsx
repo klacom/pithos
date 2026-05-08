@@ -1,8 +1,8 @@
-import NavBarLoader from '@/components/navbar/NavBarLoader'
-import NavBar from '@/components/navbar/NavBar'
+import NavBarLoader from '@/components/main-components/navbar/NavBarLoader'
+import NavBar from '@/components/main-components/navbar/NavBar'
 import { ReactNode } from 'react'
 import { Suspense } from 'react'
-import Footer from '@/components/Footer'
+import Footer from "@/components/main-components/footer/Footer";
 
 const layout = ({ children }: { children: ReactNode }) => {
     return (

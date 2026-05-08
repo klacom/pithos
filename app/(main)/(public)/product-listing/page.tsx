@@ -1,7 +1,7 @@
-import { ProductCard } from "@/components/ProductCard"
+import { ProductCard } from "@/components/products/ProductCard";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { ASSET_PHOTOS_BUCKET } from "@/lib/seller/asset-storage";
-import ProductListingFilters from "@/components/product-listing/ProductListingFilters";
+import ProductListingFilters from "@/components/products/ProductListingFilters";
 
 type ListingProduct = {
   id: string;

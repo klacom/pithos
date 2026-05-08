@@ -186,7 +186,8 @@ const AdminDashboardPage = () => {
 
                 {/* Secondary Info Area */}
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    <Card className="p-6 border-muted/60 bg-muted/5">
+
+                    <Card className="p-6 border-muted/60">
                         <div className="flex items-center gap-4">
                             <div className="p-3 bg-primary/10 rounded-2xl text-primary">
                                 <TrendingUp className="w-6 h-6" />
@@ -199,9 +200,9 @@ const AdminDashboardPage = () => {
                         </div>
                     </Card>
 
-                    <Card className="p-6 border-muted/60 bg-muted/5">
+                    <Card className="p-6 border-muted/60">
                         <div className="flex items-center gap-4">
-                            <div className="p-3 bg-blue-500/10 rounded-2xl text-blue-600">
+                            <div className="p-3 rounded-2xl">
                                 <Users className="w-6 h-6" />
                             </div>
                             <div>

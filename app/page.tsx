@@ -1,8 +1,8 @@
 // app/page.tsx
 import { Suspense } from "react";
-import NavBar from "@/components/navbar/NavBar";
-import NavBarLoader from "@/components/navbar/NavBarLoader";
-import Footer from "@/components/Footer";
+import NavBar from "@/components/main-components/navbar/NavBar";
+import NavBarLoader from "@/components/main-components/navbar/NavBarLoader";
+import Footer from "@/components/main-components/footer/Footer";
 import HomeBlocks from "@/components/banner-announcements/HomePageBlocks";
 
 export default function Home() {

@@ -26,7 +26,7 @@ import {
 import Image from "next/image";
 import { useParams, useRouter } from "next/navigation";
 import { toast } from "sonner";
-import { ProductCard } from "@/components/ProductCard";
+import { ProductCard } from "@/components/products/ProductCard";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import {

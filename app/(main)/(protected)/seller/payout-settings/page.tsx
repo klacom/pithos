@@ -97,7 +97,7 @@ export default function PayoutSettingsPage() {
     }
 
     return (
-        <div className="p-8 flex flex-col gap-8 max-w-4xl mx-auto">
+        <div className="p-8 flex flex-col gap-8 mx-auto">
             <div className="flex justify-between items-center">
                 <div className="flex flex-col gap-1">
                     <h1 className="text-3xl font-bold tracking-tight">Payout Settings</h1>
@@ -186,7 +186,8 @@ export default function PayoutSettingsPage() {
             <div className="flex flex-col gap-4">
                 {methods.length > 0 ? (
                     methods.map((method) => (
-                        <Card key={method.id} className={`p-6 transition-all ${method.is_primary ? 'border-primary shadow-md' : 'hover:border-muted-foreground/20'}`}>
+
+                        <Card key={method.id} className={`p-6 transition-all ${method.is_primary ? 'border-muted' : 'hover:border-muted-foreground/20'}`}>
                             <div className="flex items-center justify-between">
                                 <div className="flex items-center gap-4">
                                     <div className={`p-3 rounded-full ${method.is_primary ? 'bg-primary/10 text-primary' : 'bg-muted text-muted-foreground'}`}>
@@ -212,7 +213,7 @@ export default function PayoutSettingsPage() {
                                             Set as Primary
                                         </Button>
                                     )}
-                                    <Button variant="ghost" size="icon" className="text-muted-foreground hover:text-red-500" onClick={() => handleDelete(method.id!)}>
+                                    <Button variant="red_ghost" size="icon" onClick={() => handleDelete(method.id!)}>
                                         <Trash2 className="w-4 h-4" />
                                     </Button>
                                 </div>
@@ -235,11 +236,11 @@ export default function PayoutSettingsPage() {
                 )}
             </div>
 
-            <div className="p-4 bg-blue-50 border border-blue-100 rounded-lg flex gap-3 items-start">
-                <AlertCircle className="w-5 h-5 text-blue-500 mt-0.5" />
+            <div className="p-4 bg-red-50 border border-red-100 rounded-lg flex gap-3 items-start">
+                <AlertCircle className="w-5 h-5 text-accent mt-0.5" />
                 <div className="flex flex-col gap-1">
-                    <p className="text-sm font-semibold text-blue-900">About Seller Shares</p>
-                    <p className="text-xs text-blue-700">
+                    <p className="text-sm font-semibold text-accent">About Seller Shares</p>
+                    <p className="text-xs text-accent">
                         Pithos collects 100% of the payment and splits it automatically. Your 80% share will be sent to your primary payout method after the transaction is fully processed by PayMongo.
                     </p>
                 </div>

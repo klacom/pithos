@@ -2,10 +2,10 @@ import type { Metadata } from "next";
 import { Geist } from "next/font/google";
 import { ThemeProvider } from "next-themes";
 import "./globals.css";
-import { AuthProvider } from "@/components/AuthProvider";
+import { AuthProvider } from "@/components/auth/AuthProvider";
 import { Inter } from "next/font/google";
 import { Toaster } from "sonner";
-import ActivityTrackerWrapper from "@/components/ActivityTrackerWrapper";
+import ActivityTrackerWrapper from "@/components/session_time/ActivityTrackerWrapper";
 
 const inter = Inter({
     subsets: ["latin"],

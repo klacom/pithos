@@ -137,7 +137,7 @@ const Page = () => {
 
             {/* Content Container */}
             <div className="flex flex-col gap-6 min-h-0 overflow-y-auto">
-                <div className="flex flex-col gap-20 pt-4">
+                <div className="flex flex-col gap-4 pt-4">
                     {/* Login and Password Section */}
                     <div className='flex gap-4 items-start'>
                         <div className='flex flex-col gap-4 w-1/4 sticky top-0 bg-primary-foreground border border-muted rounded-lg p-4'>
@@ -248,7 +248,7 @@ const Page = () => {
                                 <h1 className='font-bold text-2xl'>Session Timeout</h1>
                             <p className="text-sm">Set the inactivity timeout (in minutes) for each user role. A warning will be shown efore expiration depending on the timeout duration (e.g 25 minutes if session timeout is 30 minutes).</p>
                             <Button className='w-fit' onClick={handleSaveAllPolicies} disabled={saving}>
-                                {saving ? "Saving..." : "Save All Policies"}
+                                {saving ? "Saving..." : "Save"}
                             </Button>
                         </div>
 

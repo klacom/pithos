@@ -1,4 +1,4 @@
-import { LoginForm } from "@/components/login-form";
+import { LoginForm } from "@/components/auth/login-form";
 import { createAudit } from "@/lib/supabase/create-audit";
 
 export default function Page() {

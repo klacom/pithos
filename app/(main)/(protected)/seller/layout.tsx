@@ -1,8 +1,8 @@
 import { ReactNode } from 'react'
-import NavBarLoader from '@/components/navbar/NavBarLoader'
-import NavBar from '@/components/navbar/NavBar'
+import NavBarLoader from '@/components/main-components/navbar/NavBarLoader'
+import NavBar from '@/components/main-components/navbar/NavBar'
 import { Suspense } from 'react'
-import SellerMainLayout from '@/components/SellerMainLayout'
+import SellerMainLayout from '@/components/seller/SellerMainLayout'
 type Props = { children: ReactNode }
 
 export default function Layout({ children }: Props) {

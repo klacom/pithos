@@ -7,7 +7,7 @@ import { Badge } from "@/components/ui/badge";
 import { ArrowLeft, Download, Package } from "lucide-react";
 import Link from "next/link";
 import { getTransactionById } from "../../actions";
-import { useAuth } from "@/components/AuthProvider";
+import { useAuth } from "@/components/auth/AuthProvider";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
 

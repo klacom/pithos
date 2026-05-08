@@ -1,5 +1,5 @@
 import { ReactNode } from "react";
-import SideBar from "../SideBar";
+import SideBar from "../main-components/sidebar/SideBar";
 import { FaUsers, FaWrench } from "react-icons/fa";
 import { HiDocument } from "react-icons/hi2";
 import { RiComputerFill } from "react-icons/ri";
@@ -32,7 +32,7 @@ const AdminMainLayout = ({ children }: { children: ReactNode }) => {
         },
         {
             href: "/admin/payment-gateways",
-            label: "Payment Gateways",
+            label: "Payment Gateway",
             icon: <MdPayments size={iconSize} />,
         },
         {

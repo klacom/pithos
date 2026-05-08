@@ -99,10 +99,10 @@ export default function PayMongoAdminDashboard() {
 
     const getStatusColor = (status: string) => {
         switch (status) {
-            case 'Completed': return 'bg-green-100 text-green-800';
-            case 'Pending': return 'bg-yellow-100 text-yellow-800';
-            case 'Failed': return 'bg-red-100 text-red-800';
-            default: return 'bg-gray-100 text-gray-800';
+            case 'Completed': return 'text-green-800';
+            case 'Pending': return 'text-yellow-800';
+            case 'Failed': return 'text-red-800';
+            default: return 'text-gray-800';
         }
     };
 
@@ -141,7 +141,7 @@ export default function PayMongoAdminDashboard() {
                     <div>
                         <h2 className="text-2xl font-bold">Gateway Health</h2>
                         <div className="flex items-center gap-3 mt-2">
-                            <span className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-green-500/10 text-green-600 text-sm font-semibold">
+                            <span className="inline-flex items-center gap-2 px-3 py-1 rounded-full text-green-600 text-sm font-semibold">
                                 <span className="w-2 h-2 bg-green-600 rounded-full animate-pulse"></span>
                                 Live Test Mode
                             </span>
@@ -152,24 +152,24 @@ export default function PayMongoAdminDashboard() {
 
                 {/* Mini Stats Cards */}
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                    <div className="bg-blue-500/5 rounded-xl p-6 border border-blue-500/10">
-                        <p className="text-sm text-blue-500 font-bold uppercase tracking-wider">Account Balance</p>
-                        <p className="text-3xl font-black text-blue-600 dark:text-blue-400 mt-2">{stats?.balance || '₱0.00'}</p>
-                        <p className="text-xs text-blue-500 mt-3 flex items-center gap-1">
+                    <div className="rounded-xl p-6 border bg-background">
+                        <p className="text-sm font-bold uppercase tracking-wider">Account Balance</p>
+                        <p className="text-3xl text-accent font-black mt-2">{stats?.balance || '₱0.00'}</p>
+                        <p className="text-xs text-muted-foreground mt-3 flex items-center gap-1">
                             <RefreshCw className="w-3 h-3" /> Updated just now
                         </p>
                     </div>
 
-                    <div className="bg-green-500/5 rounded-xl p-6 border border-green-500/10">
-                        <p className="text-sm text-green-500 font-bold uppercase tracking-wider">Success Rate</p>
-                        <p className="text-3xl font-black text-green-600 dark:text-green-400 mt-2">{stats?.successRate || '0.00%'}</p>
-                        <p className="text-xs text-green-500 mt-3">Out of {stats?.totalTransactions} attempts</p>
+                    <div className="rounded-xl p-6 border bg-background">
+                        <p className="text-sm font-bold uppercase tracking-wider">Success Rate</p>
+                        <p className="text-3xl font-black text-accent mt-2">{stats?.successRate || '0.00%'}</p>
+                        <p className="text-xs text-muted-foreground mt-3">Out of {stats?.totalTransactions} attempts</p>
                     </div>
 
-                    <div className="bg-purple-500/5 rounded-xl p-6 border border-purple-500/10">
-                        <p className="text-sm text-purple-500 font-bold uppercase tracking-wider">Total Sales</p>
-                        <p className="text-3xl font-black text-purple-600 dark:text-purple-400 mt-2">{stats?.totalTransactions || 0}</p>
-                        <p className="text-xs text-purple-500 mt-3 flex items-center gap-1">
+                    <div className="rounded-xl p-6 border bg-background">
+                        <p className="text-sm font-bold uppercase tracking-wider">Total Sales</p>
+                        <p className="text-3xl font-black text-accent mt-2">{stats?.totalTransactions || 0}</p>
+                        <p className="text-xs text-muted-foreground mt-3 flex items-center gap-1">
                             <AlertCircle className="w-3 h-3" /> {stats?.failedCount} failed attempts
                         </p>
                     </div>
@@ -250,14 +250,14 @@ export default function PayMongoAdminDashboard() {
                             {transactions.length > 0 ? (
                                 transactions.map((tx) => (
                                     <tr key={tx.id} className="hover:bg-muted/30 transition">
-                                        <td className="px-6 py-4 font-mono font-medium text-blue-600">{tx.txnId}</td>
+                                        <td className="px-6 py-4 font-mono font-medium text-xs">{tx.txnId}</td>
                                         <td className="px-6 py-4 text-muted-foreground">
                                             {new Date(tx.created_at * 1000).toLocaleDateString()}
                                         </td>
                                         <td className="px-6 py-4 font-medium">{tx.description}</td>
                                         <td className="px-6 py-4 text-right font-bold">₱{parseFloat(tx.amount).toLocaleString()}</td>
                                         <td className="px-6 py-4 text-center">
-                                            <span className={`px-3 py-1 rounded-full text-xs font-bold ${getStatusColor(tx.status)}`}>
+                                            <span className={`px-3 py-1 text-xs font-bold ${getStatusColor(tx.status)}`}>
                                                 {tx.status.toUpperCase()}
                                             </span>
                                         </td>

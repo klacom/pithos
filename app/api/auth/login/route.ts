@@ -89,8 +89,9 @@ export async function POST(request: NextRequest) {
         if (mfaCode && factorId) {
             console.log(`[${traceId}] MFA Code detected. Verifying Turnstile...`);
 
+            // 3.1. Check for captcha first when mfa before login
             if (!captchaToken) {
-                console.warn(`[${traceId}] MFA attempted without Captcha Token.`);
+                // console.warn(`[${traceId}] MFA attempted without Captcha Token.`);
                 return NextResponse.json({ status: "error", message: "Captcha required." }, { status: 400 });
             }
 
@@ -109,7 +110,8 @@ export async function POST(request: NextRequest) {
                 return NextResponse.json({ status: "error", message: "Captcha failed." }, { status: 400 });
             }
 
-            // console.log(`[${traceId}] Captcha valid. Challenging MFA factor...`);
+            console.log(`[${traceId}] Captcha valid. Challenging MFA factor...`);
+
             const challenge = await supabase.auth.mfa.challenge({ factorId });
 
             if (!challenge.data?.id) {

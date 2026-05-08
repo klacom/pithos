@@ -1,9 +1,9 @@
 // components/HomeBlocks.tsx
 import { createAdminClient } from "@/lib/supabase/admin";
-import { BigBanner } from "@/components/BigBanner";
-import { SmallBanner } from "@/components/SmallBanner";
-import { ListBanner } from "@/components/ListBanner";
-import { HomeCategories } from "@/components/HomeCategories";
+import { BigBanner } from "@/components/banner-announcements/BigBanner";
+import { SmallBanner } from "@/components/banner-announcements/SmallBanner";
+import { ListBanner } from "@/components/banner-announcements/ListBanner";
+import { HomeCategories } from "@/components/homepage/HomeCategories";
 
 export default async function HomeBlocks() {
     const supabase = createAdminClient();

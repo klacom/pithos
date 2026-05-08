@@ -1,6 +1,6 @@
 import React, { ReactNode, Suspense } from 'react'
-import BuyerMainLayout from '@/components/BuyerMainLayout'
-import NavBarLoader from '@/components/navbar/NavBarLoader'
+import BuyerMainLayout from '@/components/buyer/BuyerMainLayout'
+import NavBarLoader from '@/components/main-components/navbar/NavBarLoader'
 
 const layout = ({ children }: { children: ReactNode }) => {
     return (

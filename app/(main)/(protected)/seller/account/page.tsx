@@ -2,8 +2,6 @@
 
 import { useState, useEffect } from "react";
 import { Card } from '@/components/ui/card'
-import OnboardingBtn from '@/components/OnboardingBtn'
-import { PayPal } from '@deemlol/next-icons'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Textarea } from '@/components/ui/textarea'
@@ -123,44 +121,6 @@ const page = () => {
             </div>
 
             <hr />
-
-            {/* Payment Methods Section */}
-            <div className='flex flex-col lg:flex-row gap-8'>
-                <div className='flex flex-col gap-4 w-full lg:w-1/4'>
-                    <h1 className='font-bold text-2xl'>Payment Methods</h1>
-                    <p className='text-muted-foreground'>Provide a better customer service by setting up a hassle-free online payment method.</p>
-                </div>
-                <div className='flex flex-col gap-6 w-full lg:w-3/4'>
-
-                    <Card className='w-full p-6 bg-primary-foreground border border-muted rounded-lg flex flex-col gap-4'>
-                        <h2 className='font-semibold flex gap-2 text-xl items-center'><PayPal />PayPal</h2>
-                        <ul className='list-disc p-4 px-8 text-muted-foreground'>
-                            <li>Help drive conversion by offering customers a seamless checkout experience with no setup monthly fees.</li>
-                            <li>A single integrated payment system ensures you stay updated with the latest payment methods.</li>
-                            <li>Accept major credit/debit cards and alternative local payment methods through the PayPal wallet.</li>
-                        </ul>
-                        <div>
-                            <OnboardingBtn content='Connect With PayPal' />
-                        </div>
-                    </Card>
-
-                    <Card className='w-full p-6 bg-primary-foreground border border-muted rounded-lg flex flex-col gap-4'>
-                        <h2 className='font-semibold flex gap-2 text-xl items-center'>GCash</h2>
-                        <ul className='list-disc p-4 px-8 text-muted-foreground'>
-                            <li>Enable local buyers to pay securely through GCash, the leading mobile wallet in the Philippines.</li>
-                            <li>Fast and real-time reflection of successful payments to your seller account.</li>
-                            <li>Provide a seamless QR or mobile number checkout experience for mobile users.</li>
-                        </ul>
-                        <div>
-                            <Button variant={'outline'} disabled>
-                                Connect With GCash (Coming Soon)
-                            </Button>
-                        </div>
-                    </Card>
-
-                </div>
-            </div>
-
 
 
             {/* Change Password Section */}
