@@ -83,16 +83,17 @@ export async function GET(
 
             console.log("Purchase: ", purchase);
 
-            // User owns product if:
-            // - they created it
-            // OR
-            // - they purchased it
-            const isOwner = !!ownedProduct || !!purchase;
+            // User is actual owner if they created the product (seller)
+            const isOwner = !!ownedProduct;
+
+            // User has purchased the product (buyer)
+            const hasPurchased = !!purchase;
 
             return NextResponse.json({
                 isInCart: !!cartItem,
                 isFavorite: !!favorite,
                 isOwner,
+                hasPurchased,
                 isLoggedIn: true
             });
         } catch (error) {

@@ -29,11 +29,13 @@ import { toast } from "sonner";
 import { ProductCard } from "@/components/products/ProductCard";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
+import { Textarea } from "@/components/ui/textarea";
 import {
     addToCart,
     removeCartItem,
     toggleFavorite,
 } from "@/app/shop-actions";
+import { useAuth } from "@/components/auth/AuthProvider";
 
 type Review = {
     id: string;
@@ -42,6 +44,7 @@ type Review = {
     created_at: string;
     buyer_id?: string;
     buyer_name?: string;
+    buyer_avatar?: string | null;
 };
 
 type RelatedProduct = {
@@ -122,6 +125,7 @@ export default function ProductDetailPage() {
     const params = useParams<{ product_id: string }>();
     const product_id = params?.product_id;
     const router = useRouter();
+    const { user, session } = useAuth();
 
     const [product, setProduct] = useState<ProductData | null>(null);
     const [images, setImages] = useState<string[]>([]);
@@ -139,9 +143,15 @@ export default function ProductDetailPage() {
     const [isInCart, setIsInCart] = useState(false);
     const [isFavorite, setIsFavorite] = useState(false);
     const [isOwner, setIsOwner] = useState(false);
+    const [hasPurchased, setHasPurchased] = useState(false);
     const [isBusy, setIsBusy] = useState<"cart" | "favorite" | "buy" | "download" | null>(null);
     const [isLoading, setIsLoading] = useState(true);
     const [isZoomed, setIsZoomed] = useState(false);
+    const [reviewForm, setReviewForm] = useState({
+        rating: 5,
+        review_description: "",
+    });
+    const [isSubmittingReview, setIsSubmittingReview] = useState(false);
 
     const currentImage = images[currentImageIndex] || "/pithos/PithosThumbnail.png";
 
@@ -219,6 +229,7 @@ export default function ProductDetailPage() {
 
                 const productData = (await productRes.json()) as ProductPayload;
                 const reviewsData = reviewsRes.ok ? await reviewsRes.json() : null;
+                console.log("Reviews data received:", reviewsData);
                 const viewerState = viewerStateRes.ok ? await viewerStateRes.json() : null;
 
                 const [sellerProductsRes, suggestedRes] = await Promise.all([
@@ -250,6 +261,7 @@ export default function ProductDetailPage() {
                 setIsInCart(Boolean(viewerState?.isInCart));
                 setIsFavorite(Boolean(viewerState?.isFavorite));
                 setIsOwner(Boolean(viewerState?.isOwner));
+                setHasPurchased(Boolean(viewerState?.hasPurchased));
             } catch (error) {
                 console.error(error);
                 if (!ignore) {
@@ -381,6 +393,55 @@ export default function ProductDetailPage() {
             toast.error(error.message || "Failed to download asset.");
         } finally {
             setIsBusy(null);
+        }
+    };
+
+    const handleReviewSubmit = async () => {
+        if (!product_id || !session) {
+            toast.error("You must be logged in to submit a review.");
+            return;
+        }
+
+        setIsSubmittingReview(true);
+        try {
+            const res = await fetch(`/api/product/${product_id}/reviews`, {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json",
+                    "Authorization": `Bearer ${session.access_token}`,
+                },
+                body: JSON.stringify(reviewForm),
+            });
+
+            const data = await res.json();
+
+            if (!res.ok) {
+                throw new Error(data.error || "Failed to submit review");
+            }
+
+            // Add the new review to the existing reviews
+            const newReview = {
+                ...data.review,
+                review_text: data.review.review_description,
+                created_at: new Date().toISOString(),
+            };
+
+            setReviews(prev => [newReview, ...prev]);
+            setReviewCount(prev => prev + 1);
+            
+            // Recalculate average rating
+            const newAvgRating = (avgRating * reviewCount + reviewForm.rating) / (reviewCount + 1);
+            setAvgRating(newAvgRating);
+
+            // Reset form
+            setReviewForm({ rating: 5, review_description: "" });
+            
+            toast.success("Review submitted successfully!");
+        } catch (error: any) {
+            console.error("Review submission failed:", error);
+            toast.error(error.message || "Failed to submit review.");
+        } finally {
+            setIsSubmittingReview(false);
         }
     };
 
@@ -538,6 +599,66 @@ export default function ProductDetailPage() {
                 return (
                     <div className="grid gap-6 lg:grid-cols-[1.6fr_1fr]">
                         <div className="space-y-6">
+                            {/* Review Submission Form */}
+                            {user && !isOwner && hasPurchased && (
+                                <Card className="p-6">
+                                    <div className="mb-4">
+                                        <h3 className="text-lg font-semibold">Leave a Review</h3>
+                                        <p className="text-sm text-foreground/70">Share your experience with this product</p>
+                                    </div>
+                                    <div className="space-y-4">
+                                        <div>
+                                            <label className="text-sm font-medium text-foreground/90 mb-2 block">Rating</label>
+                                            <div className="flex gap-2">
+                                                {[1, 2, 3, 4, 5].map((star) => (
+                                                    <button
+                                                        key={star}
+                                                        type="button"
+                                                        onClick={() => setReviewForm(prev => ({ ...prev, rating: star }))}
+                                                        className="transition-colors"
+                                                    >
+                                                        <Star
+                                                            size={24}
+                                                            className={
+                                                                star <= reviewForm.rating
+                                                                    ? "fill-yellow-400 text-yellow-400 hover:text-yellow-500"
+                                                                    : "text-muted-foreground/40 hover:text-yellow-400"
+                                                            }
+                                                        />
+                                                    </button>
+                                                ))}
+                                            </div>
+                                        </div>
+                                        <div>
+                                            <label className="text-sm font-medium text-foreground/90 mb-2 block">
+                                                Review (optional)
+                                            </label>
+                                            <Textarea
+                                                value={reviewForm.review_description}
+                                                onChange={(e) => setReviewForm(prev => ({ 
+                                                    ...prev, 
+                                                    review_description: e.target.value 
+                                                }))}
+                                                placeholder="Share your thoughts about this product..."
+                                                className="min-h-[100px] resize-none"
+                                                maxLength={1000}
+                                            />
+                                            <p className="text-xs text-foreground/50 mt-1">
+                                                {reviewForm.review_description.length}/1000 characters
+                                            </p>
+                                        </div>
+                                        <Button
+                                            onClick={handleReviewSubmit}
+                                            disabled={isSubmittingReview || !reviewForm.rating}
+                                            className="w-full"
+                                        >
+                                            {isSubmittingReview ? "Submitting..." : "Submit Review"}
+                                        </Button>
+                                    </div>
+                                </Card>
+                            )}
+
+                            {/* Rating Summary */}
                             <Card className="p-6">
                                 <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
                                     <div>
@@ -557,14 +678,27 @@ export default function ProductDetailPage() {
                                 </div>
                             </Card>
 
+                            {/* Reviews List */}
                             <div className="grid gap-4">
                                 {reviews.length > 0 ? (
                                     reviews.map((review, index) => (
                                         <Card key={review.id || `review-${index}`} className="p-6">
                                             <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
                                                 <div className="flex gap-4">
-                                                    <div className="flex h-12 w-12 items-center justify-center rounded-full bg-accent/10 font-semibold text-accent">
-                                                        {(review.buyer_name || "VB").slice(0, 2).toUpperCase()}
+                                                    <div className="relative">
+                                                        {review.buyer_avatar ? (
+                                                            <Image
+                                                                src={review.buyer_avatar}
+                                                                alt={review.buyer_name || "Verified buyer"}
+                                                                width={48}
+                                                                height={48}
+                                                                className="h-12 w-12 rounded-full object-cover"
+                                                            />
+                                                        ) : (
+                                                            <div className="flex h-12 w-12 items-center justify-center rounded-full bg-accent/10 font-semibold text-accent">
+                                                                {(review.buyer_name || "VB").slice(0, 2).toUpperCase()}
+                                                            </div>
+                                                        )}
                                                     </div>
                                                     <div>
                                                         <p className="font-semibold">
@@ -595,15 +729,40 @@ export default function ProductDetailPage() {
                                     ))
                                 ) : (
                                     <Card className="p-6 text-foreground/70 text-center">
-                                        No reviews yet for this item.
+                                        <div className="space-y-3">
+                                            <p className="text-lg font-medium">No reviews yet</p>
+                                            <p className="text-sm">Be the first to share your experience with this product!</p>
+                                        </div>
                                     </Card>
                                 )}
                             </div>
                         </div>
 
+                        {/* Sidebar */}
                         <Card className="p-6 h-fit">
-                            <div className="rounded-2xl border bg-muted/50 px-4 py-3 text-sm text-foreground/70">
-                                Sample reviews are auto-seeded when an asset has no feedback yet.
+                            <div className="space-y-4">
+                                {!user && (
+                                    <div className="rounded-2xl border bg-muted/50 px-4 py-3 text-sm text-foreground/70">
+                                        <p className="font-medium mb-1">Sign in to review</p>
+                                        <p>Log in to share your experience with this product.</p>
+                                    </div>
+                                )}
+                                {user && !hasPurchased && !isOwner && (
+                                    <div className="rounded-2xl border bg-muted/50 px-4 py-3 text-sm text-foreground/70">
+                                        <p className="font-medium mb-1">Purchase required</p>
+                                        <p>You need to purchase this product before you can review it.</p>
+                                    </div>
+                                )}
+                                {isOwner && (
+                                    <div className="rounded-2xl border bg-muted/50 px-4 py-3 text-sm text-foreground/70">
+                                        <p className="font-medium mb-1">Product owner</p>
+                                        <p>You cannot review your own product.</p>
+                                    </div>
+                                )}
+                                <div className="rounded-2xl border bg-muted/50 px-4 py-3 text-sm text-foreground/70">
+                                    <p className="font-medium mb-1">Review guidelines</p>
+                                    <p>Share your honest experience to help others make informed decisions.</p>
+                                </div>
                             </div>
                         </Card>
                     </div>
@@ -944,7 +1103,7 @@ export default function ProductDetailPage() {
                             </div>
 
                             <div className="grid gap-3">
-                                {isOwner ? (
+                                {isOwner || hasPurchased ? (
                                     <Button
                                         className="h-12 w-full bg-emerald-600 hover:bg-emerald-700 text-white"
                                         onClick={handleDownload}
