@@ -20,7 +20,7 @@ import {
   validateImageFiles,
   formatMaxImageSizeLabel,
 } from "@/lib/upload-validation";
-import { sanitizeText, sanitizeHtml } from "@/lib/sanitization";
+import { sanitizeText, sanitizeHtmlServer } from "@/lib/sanitization-server";
 
 export type CreateSellerProductInput = {
   title: string;
@@ -75,7 +75,7 @@ export async function createSellerProduct(
         isDraft: input.isDraft,
         category: input.category,
         tags: (input.tags ?? []).map(tag => sanitizeText(tag)),
-        description: sanitizeHtml(input.description),
+        description: sanitizeHtmlServer(input.description),
       }),
       product_status: input.isDraft ? "draft" : "published",
       price: input.price,
@@ -154,7 +154,7 @@ export async function updateSellerProduct(
         isDraft: input.isDraft,
         category: input.category,
         tags: (input.tags ?? []).map(tag => sanitizeText(tag)),
-        description: sanitizeHtml(input.description),
+        description: sanitizeHtmlServer(input.description),
       }),
       product_status: targetStatus,
       price: input.price,

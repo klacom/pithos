@@ -1,22 +1,19 @@
-import DOMPurify from "dompurify";
-import { JSDOM } from "jsdom";
+function escapeHtml(value: string): string {
+    return value
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;")
+        .replace(/'/g, "&#39;");
+}
 
 /**
  * Sanitizes HTML content to prevent XSS attacks.
- * Uses DOMPurify for robust protection on both client and server.
+ * Client-safe sanitizer (no server-only imports).
  */
 export function sanitizeHtml(html: string): string {
     if (!html) return "";
-
-    if (typeof window === "undefined") {
-        // Server-side: Use JSDOM to provide a window object for DOMPurify
-        const window = new JSDOM("").window;
-        const purify = DOMPurify(window as any);
-        return purify.sanitize(html);
-    }
-
-    // Client-side: Use global DOMPurify
-    return DOMPurify.sanitize(html);
+    return escapeHtml(html);
 }
 
 /**
@@ -29,6 +26,6 @@ export function sanitizeText(text: string): string {
     // First strip all HTML tags using regex
     const stripped = text.replace(/<[^>]*>?/gm, "");
 
-    // Then run through sanitizeHtml to catch any leftover encoding tricks
+    // Then escape remaining dangerous characters
     return sanitizeHtml(stripped);
 }
