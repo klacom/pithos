@@ -28,18 +28,11 @@ export async function mapProductRows(
     rows.map(async (row) => {
       const pid = row.product_id;
 
-      // Fetch rating stats
-      const { data: reviews } = await supabase
-        .from("reviews")
-        .select("rating")
-        .eq("product_id", pid);
-
-      const rawRating = reviews?.length
-        ? reviews.reduce((acc, r) => acc + (Number(r.rating) || 0), 0) / reviews.length
-        : 0;
+      // Use the same API endpoint as product detail page for consistency
+      const reviewsRes = await fetch(`/api/product/${pid}/reviews`);
+      const reviewsData = reviewsRes.ok ? await reviewsRes.json() : { avgRating: 0, reviewCount: 0 };
       
-      // Round to 1 decimal place
-      const rating = Math.round(rawRating * 10) / 10;
+      const rating = Number(reviewsData?.avgRating ?? 0);
 
       // Get thumbnail URL
       const { data: files } = await supabase.storage
@@ -76,7 +69,7 @@ export async function mapProductRows(
         title: row.product_name,
         subtitle: row.product_name,
         rating,
-        reviews: reviews?.length || 0,
+        reviews: Number(reviewsData?.reviewCount ?? 0),
         author,
         price: row.price <= 0 ? "Free" : `₱${row.price.toLocaleString()}`,
         imageSrc,
