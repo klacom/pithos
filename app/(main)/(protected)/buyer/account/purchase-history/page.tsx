@@ -46,6 +46,7 @@ const page = () => {
         created_at,
         status,
         products!inner(
+            product_id,
             product_name,
             price,
             seller: seller_owner_id(

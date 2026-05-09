@@ -74,7 +74,9 @@ export default function PayoutSettingsPage() {
             toast.success('Payout method deleted')
             loadMethods()
         } catch (error) {
-            toast.error('Failed to delete payout method')
+            const message =
+                error instanceof Error ? error.message : 'Failed to delete payout method'
+            toast.error(message)
         }
     }
 
