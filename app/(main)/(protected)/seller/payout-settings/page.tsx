@@ -6,14 +6,42 @@ import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
+import {
+    AlertDialog,
+    AlertDialogAction,
+    AlertDialogCancel,
+    AlertDialogContent,
+    AlertDialogDescription,
+    AlertDialogFooter,
+    AlertDialogHeader,
+    AlertDialogTitle,
+} from '@/components/ui/alert-dialog'
 import { toast } from 'sonner'
 import { getPayoutMethods, savePayoutMethod, deletePayoutMethod, PayoutMethod } from '@/app/seller/payout-actions'
+
+function payoutDeleteBlockedMessage(raw: string): string {
+    const m = raw.toLowerCase()
+    if (
+        m.includes('row-level security') ||
+        m.includes('rls') ||
+        m.includes('permission denied') ||
+        m.includes('42501')
+    ) {
+        return 'This payout method cannot be removed under your current account rules. If you use primary GCash, you may need to archive or remove draft and published product listings first, or set another payout method as primary before removing this one.'
+    }
+    return raw
+}
 
 export default function PayoutSettingsPage() {
     const [methods, setMethods] = useState<PayoutMethod[]>([])
     const [loading, setLoading] = useState(true)
     const [isSaving, setIsSaving] = useState(false)
     const [showAddForm, setShowAddForm] = useState(false)
+    const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false)
+    const [deleteTargetId, setDeleteTargetId] = useState<string | null>(null)
+    const [isDeleting, setIsDeleting] = useState(false)
+    const [removeBlockedOpen, setRemoveBlockedOpen] = useState(false)
+    const [removeBlockedDetail, setRemoveBlockedDetail] = useState('')
     const [newMethod, setNewMethod] = useState<PayoutMethod>({
         method_type: 'gcash',
         account_name: '',
@@ -66,17 +94,30 @@ export default function PayoutSettingsPage() {
         }
     }
 
-    async function handleDelete(id: string) {
-        if (!confirm('Are you sure you want to delete this payout method?')) return
+    function requestDelete(id: string) {
+        setDeleteTargetId(id)
+        setDeleteConfirmOpen(true)
+    }
 
+    async function handleDeleteConfirmed() {
+        if (!deleteTargetId) return
+        const targetId = deleteTargetId
+        setIsDeleting(true)
         try {
-            await deletePayoutMethod(id)
+            const result = await deletePayoutMethod(targetId)
+            if (!result.success) {
+                setRemoveBlockedDetail(result.error || 'This payout method could not be removed.')
+                setRemoveBlockedOpen(true)
+                setDeleteConfirmOpen(false)
+                setDeleteTargetId(null)
+                return
+            }
+            setDeleteConfirmOpen(false)
+            setDeleteTargetId(null)
             toast.success('Payout method deleted')
             loadMethods()
-        } catch (error) {
-            const message =
-                error instanceof Error ? error.message : 'Failed to delete payout method'
-            toast.error(message)
+        } finally {
+            setIsDeleting(false)
         }
     }
 
@@ -100,6 +141,37 @@ export default function PayoutSettingsPage() {
 
     return (
         <div className="p-8 flex flex-col gap-8 mx-auto">
+            <AlertDialog open={deleteConfirmOpen} onOpenChange={setDeleteConfirmOpen}>
+                <AlertDialogContent>
+                    <AlertDialogHeader>
+                        <AlertDialogTitle>Delete payout method?</AlertDialogTitle>
+                        <AlertDialogDescription className="text-left">
+                            This action cannot be undone. If this payout method is blocked by account rules, deletion will be refused.
+                        </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                        <AlertDialogCancel disabled={isDeleting}>Cancel</AlertDialogCancel>
+                        <AlertDialogAction onClick={handleDeleteConfirmed} disabled={isDeleting}>
+                            {isDeleting ? 'Deleting...' : 'Delete'}
+                        </AlertDialogAction>
+                    </AlertDialogFooter>
+                </AlertDialogContent>
+            </AlertDialog>
+
+            <AlertDialog open={removeBlockedOpen} onOpenChange={setRemoveBlockedOpen}>
+                <AlertDialogContent>
+                    <AlertDialogHeader>
+                        <AlertDialogTitle>Cannot remove payout method</AlertDialogTitle>
+                        <AlertDialogDescription className="text-left whitespace-pre-wrap">
+                            {payoutDeleteBlockedMessage(removeBlockedDetail)}
+                        </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                        <AlertDialogAction>OK</AlertDialogAction>
+                    </AlertDialogFooter>
+                </AlertDialogContent>
+            </AlertDialog>
+
             <div className="flex justify-between items-center">
                 <div className="flex flex-col gap-1">
                     <h1 className="text-3xl font-bold tracking-tight">Payout Settings</h1>
@@ -215,7 +287,7 @@ export default function PayoutSettingsPage() {
                                             Set as Primary
                                         </Button>
                                     )}
-                                    <Button variant="red_ghost" size="icon" onClick={() => handleDelete(method.id!)}>
+                                    <Button variant="red_ghost" size="icon" onClick={() => requestDelete(method.id!)}>
                                         <Trash2 className="w-4 h-4" />
                                     </Button>
                                 </div>

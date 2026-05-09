@@ -1,7 +1,6 @@
 'use server'
 
 import { createClient } from '@/lib/supabase/server'
-import { createAdminClient } from '@/lib/supabase/admin'
 import { encrypt, decrypt } from '@/lib/crypto'
 import { revalidatePath } from 'next/cache'
 import { createAudit } from '@/lib/supabase/create-audit'
@@ -102,56 +101,51 @@ export async function savePayoutMethod(method: PayoutMethod) {
     return { success: true }
 }
 
-export async function deletePayoutMethod(id: string) {
+export type DeletePayoutMethodResult =
+    | { success: true }
+    | { success: false; error: string }
+
+export async function deletePayoutMethod(id: string): Promise<DeletePayoutMethodResult> {
     const supabase = await createClient()
     const { data: { user } } = await supabase.auth.getUser()
 
-    if (!user) throw new Error('Not authenticated')
+    if (!user) {
+        return { success: false, error: 'Not authenticated' }
+    }
 
     const { data: methodToDelete, error: loadErr } = await supabase
         .from('seller_payout_methods')
-        .select('is_primary, method_type')
+        .select('is_primary')
         .eq('id', id)
         .eq('seller_id', user.id)
         .maybeSingle()
 
-    if (loadErr) throw loadErr
+    if (loadErr) {
+        return { success: false, error: loadErr.message }
+    }
     if (!methodToDelete) {
-        throw new Error('Payout method not found.')
+        return { success: false, error: 'Payout method not found.' }
     }
 
-    const payoutType = String(methodToDelete.method_type ?? '')
-        .trim()
-        .toLowerCase()
-    // Only the primary GCash method is payout-critical for this rule; extra (non-primary)
-    // GCash rows can be removed even when the seller still has listings.
-    const isPrimary = methodToDelete.is_primary === true
-    if (payoutType === 'gcash' && isPrimary) {
-        // Use service role so the count is not hidden by RLS on `products` (user-scoped
-        // queries can return 0 rows even when the seller owns listings).
-        // Archived-only catalog does not block removal (matches "archive first" copy).
-        const admin = createAdminClient()
-        const { count, error: countErr } = await admin
-            .from('products')
-            .select('*', { count: 'exact', head: true })
-            .eq('seller_owner_id', user.id)
-            .or('product_status.eq.draft,product_status.eq.published,product_status.is.null')
-
-        if (countErr) throw countErr
-        if (count != null && count > 0) {
-            throw new Error(
-                'You cannot remove your primary GCash payout while you have draft or published listings. Set another method as primary, or archive or delete those assets first.',
-            )
-        }
-    }
-
-    const { error } = await supabase
+    // GCash + active listings guard: Supabase RLS DELETE policy on seller_payout_methods (Option A).
+    // RLS can block the row without setting `error`; `.select()` returns deleted rows so we detect 0-row deletes.
+    const { data: deletedRows, error } = await supabase
         .from('seller_payout_methods')
         .delete()
         .eq('id', id)
         .eq('seller_id', user.id)
+        .select('id')
 
-    if (error) throw error
+    if (error) {
+        return { success: false, error: error.message }
+    }
+    if (!deletedRows || deletedRows.length === 0) {
+        return {
+            success: false,
+            error:
+                'This payout method could not be removed. Your database rules may block removing primary GCash while you have active product listings—archive those listings or set another payout method as primary, then try again.',
+        }
+    }
 
     // If we deleted the primary method, set another one as primary if available
     if (methodToDelete?.is_primary) {
@@ -160,7 +154,7 @@ export async function deletePayoutMethod(id: string) {
             .select('id')
             .eq('seller_id', user.id)
             .limit(1)
-            .single()
+            .maybeSingle()
 
         if (nextMethod) {
             await supabase
