@@ -84,33 +84,8 @@ export function UpdatePasswordForm({
             const { error } = await supabase.auth.updateUser({ password });
             if (error) throw error;
             
-            // Get user role to determine correct redirect
-            const { data: { user } } = await supabase.auth.getUser();
-            if (user) {
-                // Try to get user role from database
-                const { data: userData } = await supabase
-                    .from("users")
-                    .select("user_role")
-                    .eq("id", user.id)
-                    .single();
-                
-                const role = userData?.user_role;
-                
-                // Redirect based on role
-                if (role === "buyer") {
-                    router.push("/buyer");
-                } else if (role === "seller") {
-                    router.push("/seller");
-                } else if (role === "admin") {
-                    router.push("/admin");
-                } else {
-                    // Fallback to account page if role is unknown
-                    router.push("/account");
-                }
-            } else {
-                // Fallback to account page
-                router.push("/account");
-            }
+            // Redirect to login page after successful password reset
+            router.push("/auth/login");
         } catch (error: unknown) {
             setError(error instanceof Error ? error.message : "An error occurred");
         } finally {
