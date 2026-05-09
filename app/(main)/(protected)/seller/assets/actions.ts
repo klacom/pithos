@@ -16,8 +16,7 @@ import {
     MAX_PACKAGE_FILE_BYTES,
 } from "@/lib/seller/package-upload-rules";
 import {
-    validateImageFile,
-    validateImageFiles,
+    validateMediaFile,
     formatMaxImageSizeLabel,
 } from "@/lib/upload-validation";
 import { sanitizeText, sanitizeHtmlServer } from "@/lib/sanitization-server";
@@ -224,19 +223,19 @@ export async function uploadSellerProductMedia(
     const packageFile =
         packageRaw instanceof File && packageRaw.size > 0 ? packageRaw : null;
 
-    // Validate cover image
+    // Validate cover media
     if (cover) {
-        const coverError = validateImageFile(cover);
+        const coverError = validateMediaFile(cover);
         if (coverError) {
-            return { error: `Cover image validation failed: ${coverError}` };
+            return { error: `Cover media validation failed: ${coverError}` };
         }
     }
 
-    // Validate detail images
+    // Validate detail media
     if (detailFiles.length > 0) {
-        const detailErrors = validateImageFiles(detailFiles);
+        const detailErrors = detailFiles.map(f => validateMediaFile(f)).filter(Boolean);
         if (detailErrors.length > 0) {
-            return { error: `Detail image validation failed: ${detailErrors.join("; ")}` };
+            return { error: `Detail media validation failed: ${detailErrors.join("; ")}` };
         }
     }
 
@@ -440,7 +439,7 @@ export async function getSellerProductMediaSummary(
         const detailFileNames = rows
             .filter((r) => r.name !== "thumbnail")
             .map((r) => r.name)
-            .filter((name) => /\.(png|jpe?g|webp|gif|avif)$/i.test(name));
+            .filter((name) => /\.(png|jpe?g|webp|gif|avif|mp4)$/i.test(name));
         const detailPaths = detailFileNames
             .slice(0, 12)
             .map((name) => `${productId}/photos/${name}`);

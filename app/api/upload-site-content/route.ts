@@ -52,7 +52,7 @@ export async function POST(req: Request) {
             if (uid) {
                 await createAudit({
                     action_name: "SITE_CONTENT_UPLOADED",
-                    action_description: `Admin uploaded site content image: ${file.name} (${(file.size / 1024).toFixed(2)}KB) to folder ${folder}`,
+                    action_description: `Admin uploaded site content media: ${file.name} (${(file.size / 1024).toFixed(2)}KB) to folder ${folder}`,
                     affected_resources: `site_content:${blockId}`,
                     actor: uid,
                 });

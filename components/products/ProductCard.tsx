@@ -30,16 +30,27 @@ export function ProductCard({
     return (
         <Link href={link} className="w-full">
             <Card className="group relative w-full overflow-hidden shadow-sm transition-all hover:shadow-md hover:-translate-y-0.5 hover:cursor-pointer h-full">
-                {/* Image container with overlay badge at bottom */}
+                {/* Media container with overlay badge at bottom */}
                 <div className="relative aspect-[4/3] w-full">
-                    <Image
-                        src={imageSrc}
-                        alt={title}
-                        fill
-                        className="object-cover transition-transform duration-300 group-hover:scale-105"
-                        sizes="(max-width: 768px) 100vw, 320px"
-                        priority={false} // set to true if above the fold
-                    />
+                    {imageSrc.toLowerCase().endsWith(".mp4") ? (
+                        <video
+                            src={imageSrc}
+                            className="absolute inset-0 w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
+                            muted
+                            autoPlay
+                            loop
+                            playsInline
+                        />
+                    ) : (
+                        <Image
+                            src={imageSrc}
+                            alt={title}
+                            fill
+                            className="object-cover transition-transform duration-300 group-hover:scale-105"
+                            sizes="(max-width: 768px) 100vw, 320px"
+                            priority={false} // set to true if above the fold
+                        />
+                    )}
                 </div>
 
                 {/* Metadata / content below image */}

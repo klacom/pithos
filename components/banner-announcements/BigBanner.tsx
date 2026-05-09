@@ -56,14 +56,25 @@ export function BigBanner({ content }: Props) {
                     </Link>
                 </div>
 
-                {/* RIGHT SIDE - IMAGE */}
+                {/* RIGHT SIDE - MEDIA */}
                 <div className="relative w-full h-full min-h-[350px] md:min-h-full overflow-hidden">
-                    <img
-                        src={content.image_url || "/sample-pics/SinSpire Girl.png"}
-                        alt={content.title}
-                        className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110"
-                        loading="eager"
-                    />
+                    {(content.image_url && content.image_url.toLowerCase().endsWith(".mp4")) ? (
+                        <video
+                            src={content.image_url}
+                            className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110"
+                            autoPlay
+                            muted
+                            loop
+                            playsInline
+                        />
+                    ) : (
+                        <img
+                            src={content.image_url || "/sample-pics/SinSpire Girl.png"}
+                            alt={content.title}
+                            className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110"
+                            loading="eager"
+                        />
+                    )}
 
                     {/* Gradient Overlays */}
                     <div className="absolute inset-0 bg-gradient-to-r from-black via-black/40 to-transparent md:block hidden" />

@@ -4,7 +4,7 @@ import { useEffect, useId, useRef, useState } from "react";
 import Image from "next/image";
 import { Button } from "@/components/ui/button";
 import { ImageIcon, Images, Plus, Trash2, AlertCircle } from "lucide-react";
-import { validateImageFile, validateImageFiles, formatMaxImageSizeLabel } from "@/lib/upload-validation";
+import { validateMediaFile, formatMaxImageSizeLabel } from "@/lib/upload-validation";
 
 export type DetailSlot = { id: string; file: File };
 
@@ -25,7 +25,7 @@ type Props = {
 };
 
 function isDetailMedia(file: File) {
-  return file.type.startsWith("image/") || file.type.startsWith("video/");
+  return file.type.startsWith("image/") || file.type === "video/mp4";
 }
 
 export default function SellerAssetPhotoPickers({
@@ -75,7 +75,7 @@ export default function SellerAssetPhotoPickers({
           <h3 className="text-sm font-semibold tracking-tight">Cover image</h3>
           <p className="text-sm text-muted-foreground mt-1 max-w-2xl">
             This is the first thing buyers see in search and on your listing.
-            A wide 16:9 image works best. (Max size: {formatMaxImageSizeLabel()}, formats: JPEG, PNG, WebP, GIF)
+            A wide 16:9 aspect works best. (Max size: {formatMaxImageSizeLabel()}, formats: JPEG, PNG, WebP, GIF, MP4)
           </p>
         </div>
         {savedCoverUrl ? (
@@ -93,6 +93,7 @@ export default function SellerAssetPhotoPickers({
                   className="h-8 w-8 p-0"
                   disabled={disabled}
                   onClick={() => {
+                    if (!savedCoverPath || !onDeleteSavedPhoto) return;
                     if (!confirm("Delete this saved cover image?")) return;
                     void onDeleteSavedPhoto(savedCoverPath);
                   }}
@@ -102,20 +103,31 @@ export default function SellerAssetPhotoPickers({
               ) : null}
             </div>
             <div className="relative mx-auto aspect-video w-full max-w-md rounded-xl overflow-hidden border border-muted bg-muted/20">
-              <Image
-                src={savedCoverUrl}
-                alt="Saved cover"
-                fill
-                className="object-cover"
-                unoptimized
-              />
+              {savedCoverUrl.toLowerCase().endsWith(".mp4") ? (
+                <video
+                  src={savedCoverUrl}
+                  className="w-full h-full object-cover"
+                  autoPlay
+                  muted
+                  loop
+                  playsInline
+                />
+              ) : (
+                <Image
+                  src={savedCoverUrl}
+                  alt="Saved cover"
+                  fill
+                  className="object-cover"
+                  unoptimized
+                />
+              )}
             </div>
           </div>
         ) : null}
         <input
           ref={coverInputRef}
           type="file"
-          accept="image/*"
+          accept="image/*,video/mp4"
           className="sr-only"
           disabled={disabled}
           onChange={(e) => {
@@ -127,9 +139,8 @@ export default function SellerAssetPhotoPickers({
               return;
             }
 
-            // Validate cover image
-            if (f.type.startsWith("image/")) {
-              const error = validateImageFile(f);
+            if (isDetailMedia(f)) {
+              const error = validateMediaFile(f);
               if (error) {
                 setCoverError(error);
                 onCoverChange(null);
@@ -137,7 +148,7 @@ export default function SellerAssetPhotoPickers({
                 onCoverChange(f);
               }
             } else {
-              setCoverError("Only image files are allowed for cover");
+              setCoverError("Only image or MP4 files are allowed for cover");
               onCoverChange(null);
             }
             e.target.value = "";
@@ -152,13 +163,24 @@ export default function SellerAssetPhotoPickers({
         >
           {coverPreviewUrl ? (
             <div className="relative w-full max-h-[280px] aspect-video rounded-xl overflow-hidden bg-muted shadow-inner">
-              <Image
-                src={coverPreviewUrl}
-                alt="Cover preview"
-                fill
-                className="object-contain"
-                unoptimized
-              />
+              {coverFile?.type === "video/mp4" || (savedCoverUrl && savedCoverUrl.toLowerCase().endsWith(".mp4")) ? (
+                <video
+                  src={coverPreviewUrl}
+                  className="w-full h-full object-contain"
+                  autoPlay
+                  muted
+                  loop
+                  playsInline
+                />
+              ) : (
+                <Image
+                  src={coverPreviewUrl}
+                  alt="Cover preview"
+                  fill
+                  className="object-contain"
+                  unoptimized
+                />
+              )}
             </div>
           ) : (
             <>
@@ -213,7 +235,7 @@ export default function SellerAssetPhotoPickers({
             </h3>
             <p className="text-sm text-muted-foreground mt-1 max-w-2xl">
               Show what buyers get—extra renders, wireframes, turntables, or a
-              short preview clip. You can add several files at once. (Images: max {formatMaxImageSizeLabel()}, formats: JPEG, PNG, WebP, GIF)
+              short preview clip. You can add several files at once. (Media: max {formatMaxImageSizeLabel()}, formats: JPEG, PNG, WebP, GIF, MP4)
             </p>
           </div>
         </div>
@@ -228,13 +250,21 @@ export default function SellerAssetPhotoPickers({
                   key={item.url}
                   className="group relative aspect-video rounded-xl overflow-hidden border border-muted bg-muted/20 shadow-sm"
                 >
-                  <Image
-                    src={item.url}
-                    alt="Saved gallery item"
-                    fill
-                    className="object-cover"
-                    unoptimized
-                  />
+                  {item.url.toLowerCase().endsWith(".mp4") ? (
+                    <video
+                      src={item.url}
+                      className="absolute inset-0 w-full h-full object-cover"
+                      muted
+                    />
+                  ) : (
+                    <Image
+                      src={item.url}
+                      alt="Saved gallery item"
+                      fill
+                      className="object-cover"
+                      unoptimized
+                    />
+                  )}
                   {item.path && onDeleteSavedPhoto ? (
                     <Button
                       type="button"
@@ -244,6 +274,7 @@ export default function SellerAssetPhotoPickers({
                       className="absolute right-2 top-2 h-7 w-7 p-0 opacity-95 group-hover:opacity-100"
                       disabled={disabled}
                       onClick={() => {
+                        if (!item.path || !onDeleteSavedPhoto) return;
                         if (!confirm("Delete this saved gallery image?")) return;
                         void onDeleteSavedPhoto(item.path);
                       }}
@@ -269,14 +300,10 @@ export default function SellerAssetPhotoPickers({
             if (!list?.length) return;
             const next = Array.from(list).filter(isDetailMedia);
 
-            // Validate images only (videos are allowed without size validation)
-            const imageFiles = next.filter(f => f.type.startsWith("image/"));
-            const videoFiles = next.filter(f => f.type.startsWith("video/"));
+            const mediaErrors = next.map(f => validateMediaFile(f)).filter(Boolean) as string[];
+            setDetailErrors(mediaErrors);
 
-            const imageErrors = validateImageFiles(imageFiles);
-            setDetailErrors(imageErrors);
-
-            if (imageErrors.length === 0 && (imageFiles.length > 0 || videoFiles.length > 0)) {
+            if (mediaErrors.length === 0 && next.length > 0) {
               onDetailFilesAdd(next);
             }
 
@@ -325,14 +352,10 @@ export default function SellerAssetPhotoPickers({
             e.stopPropagation();
             const files = Array.from(e.dataTransfer.files).filter(isDetailMedia);
 
-            // Validate images
-            const imageFiles = files.filter(f => f.type.startsWith("image/"));
-            const videoFiles = files.filter(f => f.type.startsWith("video/"));
+            const mediaErrors = files.map(f => validateMediaFile(f)).filter(Boolean) as string[];
+            setDetailErrors(mediaErrors);
 
-            const imageErrors = validateImageFiles(imageFiles);
-            setDetailErrors(imageErrors);
-
-            if (imageErrors.length === 0 && files.length) {
+            if (mediaErrors.length === 0 && files.length > 0) {
               onDetailFilesAdd(files);
             }
           }}

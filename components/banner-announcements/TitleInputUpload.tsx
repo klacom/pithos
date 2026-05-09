@@ -69,24 +69,39 @@ const TitleInputUpload = ({ title, placeholder, blockId, onUploaded, fetchedLink
         <div className="flex flex-col md:flex-row gap-4 w-full">
 
             {/* Preview */}
-            <div className="w-full md:w-2/4">
-                {fileUrl ? (
-                    <Image
-                        src={fileUrl}
-                        alt="Uploaded"
-                        width={600}
-                        height={200}
-                        className="w-full h-full object-cover rounded-md border border-muted"
-                    />
-                ) : (
-                    <Image
-                        src={fetchedLink || ""}
-                        alt={fetchedLink || ""}
-                        width={600}
-                        height={200}
-                        className="w-full h-full object-cover rounded-md border border-muted"
-                    />
-                )}
+            <div className="w-full md:w-2/4 aspect-video relative">
+                {(() => {
+                    const mediaUrl = fileUrl || fetchedLink;
+                    if (!mediaUrl) return (
+                        <div className="w-full h-full flex items-center justify-center bg-muted rounded-md text-muted-foreground text-xs italic">
+                            No media selected
+                        </div>
+                    );
+
+                    const isVideo = mediaUrl.toLowerCase().endsWith(".mp4");
+                    if (isVideo) {
+                        return (
+                            <video
+                                src={mediaUrl}
+                                className="w-full h-full object-cover rounded-md border border-muted"
+                                autoPlay
+                                muted
+                                loop
+                                playsInline
+                            />
+                        );
+                    }
+
+                    return (
+                        <Image
+                            src={mediaUrl}
+                            alt="Uploaded"
+                            fill
+                            className="object-cover rounded-md border border-muted"
+                            unoptimized
+                        />
+                    );
+                })()}
             </div>
 
             {/* Upload UI */}
@@ -118,12 +133,13 @@ const TitleInputUpload = ({ title, placeholder, blockId, onUploaded, fetchedLink
                             {uploading ? "Uploading..." : "Choose or drag and drop"}
                         </h2>
                         <p className="font-light opacity-50 text-md text-center">
-                            JPEG, PNG, WebP, GIF (max {formatMaxSiteContentImageSizeLabel()})
+                            JPEG, PNG, WebP, GIF, MP4 (max {formatMaxSiteContentImageSizeLabel()})
                         </p>
                     </div>
 
                     <input
                         type="file"
+                        accept="image/*,video/mp4"
                         className="hidden"
                         onChange={(e) => {
                             if (!e.target.files?.[0]) return

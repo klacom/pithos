@@ -6,7 +6,7 @@ import {
   isAllowedPackageFile,
   MAX_PACKAGE_FILE_BYTES,
 } from "@/lib/seller/package-upload-rules";
-import { validateImageFile, validateImageFiles } from "@/lib/upload-validation";
+import { validateMediaFile } from "@/lib/upload-validation";
 
 export async function POST(req: Request) {
   const supabase = await createClient();
@@ -54,20 +54,20 @@ export async function POST(req: Request) {
       packageRaw instanceof File && packageRaw.size > 0 ? packageRaw : null;
 
     if (cover) {
-      const coverError = validateImageFile(cover);
+      const coverError = validateMediaFile(cover);
       if (coverError) {
         return NextResponse.json(
-          { error: `Cover image validation failed: ${coverError}` },
+          { error: `Cover media validation failed: ${coverError}` },
           { status: 400 },
         );
       }
     }
 
     if (detailFiles.length > 0) {
-      const detailErrors = validateImageFiles(detailFiles);
+      const detailErrors = detailFiles.map(f => validateMediaFile(f)).filter(Boolean);
       if (detailErrors.length > 0) {
         return NextResponse.json(
-          { error: `Detail image validation failed: ${detailErrors.join("; ")}` },
+          { error: `Detail media validation failed: ${detailErrors.join("; ")}` },
           { status: 400 },
         );
       }

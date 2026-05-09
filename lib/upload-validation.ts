@@ -10,42 +10,50 @@
 /** Max image file size: 10 MB */
 export const MAX_IMAGE_FILE_BYTES = 10 * 1024 * 1024;
 
-/** Allowed image MIME types */
-export const ALLOWED_IMAGE_TYPES = [
+/** Allowed image and video MIME types */
+export const ALLOWED_MEDIA_TYPES = [
   "image/jpeg",
   "image/png",
   "image/webp",
   "image/gif",
+  "video/mp4",
 ] as const;
 
-/** Allowed image file extensions (lowercase, with dot) */
-export const ALLOWED_IMAGE_EXTENSIONS = [".jpg", ".jpeg", ".png", ".webp", ".gif"] as const;
+/** Allowed media file extensions (lowercase, with dot) */
+export const ALLOWED_MEDIA_EXTENSIONS = [".jpg", ".jpeg", ".png", ".webp", ".gif", ".mp4"] as const;
 
 /**
- * Validate image file
+ * Validate media file (image or video)
  * @param file - File to validate
  * @returns Error message if invalid, null if valid
  */
-export function validateImageFile(file: File): string | null {
+export function validateMediaFile(file: File, maxSize: number = MAX_IMAGE_FILE_BYTES): string | null {
   // Check file size
-  if (file.size > MAX_IMAGE_FILE_BYTES) {
-    const maxMB = (MAX_IMAGE_FILE_BYTES / (1024 * 1024)).toFixed(0);
-    return `Image size exceeds maximum of ${maxMB} MB (current: ${(file.size / (1024 * 1024)).toFixed(2)} MB)`;
+  if (file.size > maxSize) {
+    const maxMB = (maxSize / (1024 * 1024)).toFixed(0);
+    return `File size exceeds maximum of ${maxMB} MB (current: ${(file.size / (1024 * 1024)).toFixed(2)} MB)`;
   }
 
   // Check MIME type
-  if (!ALLOWED_IMAGE_TYPES.includes(file.type as any)) {
-    return `Invalid image type. Allowed types: JPEG, PNG, WebP, GIF (received: ${file.type || "unknown"})`;
+  if (!ALLOWED_MEDIA_TYPES.includes(file.type as any)) {
+    return `Invalid file type. Allowed types: JPEG, PNG, WebP, GIF, MP4 (received: ${file.type || "unknown"})`;
   }
 
   // Check file extension
   const fileName = file.name.toLowerCase();
-  const hasValidExtension = ALLOWED_IMAGE_EXTENSIONS.some((ext) => fileName.endsWith(ext));
+  const hasValidExtension = ALLOWED_MEDIA_EXTENSIONS.some((ext) => fileName.endsWith(ext));
   if (!hasValidExtension) {
-    return `Invalid image extension. Allowed: ${ALLOWED_IMAGE_EXTENSIONS.join(", ")}`;
+    return `Invalid file extension. Allowed: ${ALLOWED_MEDIA_EXTENSIONS.join(", ")}`;
   }
 
   return null;
+}
+
+/**
+ * Validate image file (Legacy wrapper for backward compatibility)
+ */
+export function validateImageFile(file: File): string | null {
+  return validateMediaFile(file, MAX_IMAGE_FILE_BYTES);
 }
 
 /**
@@ -80,30 +88,12 @@ export function formatMaxImageSizeLabel(): string {
 export const MAX_SITE_CONTENT_IMAGE_BYTES = 15 * 1024 * 1024;
 
 /**
- * Validate site content image (same as image validation but different size limit)
+ * Validate site content media (same as media validation but different size limit)
  * @param file - File to validate
  * @returns Error message if invalid, null if valid
  */
 export function validateSiteContentImage(file: File): string | null {
-  // Check file size
-  if (file.size > MAX_SITE_CONTENT_IMAGE_BYTES) {
-    const maxMB = (MAX_SITE_CONTENT_IMAGE_BYTES / (1024 * 1024)).toFixed(0);
-    return `Image size exceeds maximum of ${maxMB} MB (current: ${(file.size / (1024 * 1024)).toFixed(2)} MB)`;
-  }
-
-  // Check MIME type
-  if (!ALLOWED_IMAGE_TYPES.includes(file.type as any)) {
-    return `Invalid image type. Allowed types: JPEG, PNG, WebP, GIF (received: ${file.type || "unknown"})`;
-  }
-
-  // Check file extension
-  const fileName = file.name.toLowerCase();
-  const hasValidExtension = ALLOWED_IMAGE_EXTENSIONS.some((ext) => fileName.endsWith(ext));
-  if (!hasValidExtension) {
-    return `Invalid image extension. Allowed: ${ALLOWED_IMAGE_EXTENSIONS.join(", ")}`;
-  }
-
-  return null;
+  return validateMediaFile(file, MAX_SITE_CONTENT_IMAGE_BYTES);
 }
 
 export function formatMaxSiteContentImageSizeLabel(): string {

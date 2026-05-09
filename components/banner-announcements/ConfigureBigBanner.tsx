@@ -191,10 +191,21 @@ const ConfigureBigBanner = forwardRef(({ block }: Props, ref) => {
                         <span className="text-xs font-medium text-muted-foreground uppercase tracking-widest">Live Preview</span>
                         <div className="relative aspect-[21/9] rounded-lg overflow-hidden border bg-muted group">
                             {form.image_url ? (
-                                <Image src={form.image_url} alt="Preview" fill className="object-cover" />
+                                form.image_url.toLowerCase().endsWith(".mp4") ? (
+                                    <video
+                                        src={form.image_url}
+                                        className="w-full h-full object-cover"
+                                        autoPlay
+                                        muted
+                                        loop
+                                        playsInline
+                                    />
+                                ) : (
+                                    <Image src={form.image_url} alt="Preview" fill className="object-cover" />
+                                )
                             ) : (
                                 <div className="w-full h-full flex items-center justify-center text-muted-foreground text-xs italic">
-                                    No image selected
+                                    No media selected
                                 </div>
                             )}
                             <div className="absolute inset-0 bg-black/20 flex flex-col justify-center p-4">
