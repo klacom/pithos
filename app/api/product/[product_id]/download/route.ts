@@ -1,6 +1,24 @@
 import { createAdminClient } from '@/lib/supabase/admin';
 import { createClient } from '@/lib/supabase/server';
+import { ASSETS_STORAGE_BUCKET } from '@/lib/seller/asset-package-storage';
 import { NextRequest, NextResponse } from 'next/server';
+
+function pickMainPackageFile(
+    files: { name: string; metadata?: Record<string, unknown> | null }[],
+): string | null {
+    const real = files.filter((f) => f.name?.trim());
+    if (real.length === 0) return null;
+    const archiveRe = /\.(zip|rar|7z|tar\.gz|tgz|blend|fbx|obj|glb|gltf|usd|usdz)(\.|$)/i;
+    const scored = [...real].sort((a, b) => {
+        const sa = Number(a.metadata?.size ?? 0);
+        const sb = Number(b.metadata?.size ?? 0);
+        if (sb !== sa) return sb - sa;
+        const ba = archiveRe.test(a.name) ? 1 : 0;
+        const bb = archiveRe.test(b.name) ? 1 : 0;
+        return bb - ba;
+    });
+    return scored[0]?.name ?? null;
+}
 
 export async function GET(
     request: NextRequest,
@@ -51,10 +69,12 @@ export async function GET(
             );
         }
 
-        // Get files from storage
         const { data: files, error: filesErr } = await supabaseAdmin.storage
-            .from('assets_storage')
-            .list(productId);
+            .from(ASSETS_STORAGE_BUCKET)
+            .list(productId, {
+                limit: 100,
+                sortBy: { column: 'name', order: 'asc' },
+            });
 
         if (filesErr || !files || files.length === 0) {
             return NextResponse.json(
@@ -63,11 +83,16 @@ export async function GET(
             );
         }
 
-        // Download first file
-        const fileName = files[0].name;
+        const fileName = pickMainPackageFile(files);
+        if (!fileName) {
+            return NextResponse.json(
+                { error: 'No files found for this product' },
+                { status: 404 }
+            );
+        }
 
         const { data, error } = await supabaseAdmin.storage
-            .from('assets_storage')
+            .from(ASSETS_STORAGE_BUCKET)
             .createSignedUrl(`${productId}/${fileName}`, 60);
 
         if (error) throw error;

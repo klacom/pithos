@@ -1,6 +1,7 @@
 'use server'
 
 import { createClient } from '@/lib/supabase/server'
+import { createAdminClient } from '@/lib/supabase/admin'
 import { encrypt, decrypt } from '@/lib/crypto'
 import { revalidatePath } from 'next/cache'
 import { createAudit } from '@/lib/supabase/create-audit'
@@ -107,12 +108,37 @@ export async function deletePayoutMethod(id: string) {
 
     if (!user) throw new Error('Not authenticated')
 
-    // Check if the method being deleted is primary
-    const { data: methodToDelete } = await supabase
+    const { data: methodToDelete, error: loadErr } = await supabase
         .from('seller_payout_methods')
-        .select('is_primary')
+        .select('is_primary, method_type')
         .eq('id', id)
-        .single()
+        .eq('seller_id', user.id)
+        .maybeSingle()
+
+    if (loadErr) throw loadErr
+    if (!methodToDelete) {
+        throw new Error('Payout method not found.')
+    }
+
+    const payoutType = String(methodToDelete.method_type ?? '')
+        .trim()
+        .toLowerCase()
+    if (payoutType === 'gcash') {
+        // Use service role so the count is not hidden by RLS on `products` (user-scoped
+        // queries can return 0 rows even when the seller owns listings).
+        const admin = createAdminClient()
+        const { count, error: countErr } = await admin
+            .from('products')
+            .select('*', { count: 'exact', head: true })
+            .eq('seller_owner_id', user.id)
+
+        if (countErr) throw countErr
+        if (count != null && count > 0) {
+            throw new Error(
+                'You cannot remove GCash while you have product listings. Remove or archive your assets first.',
+            )
+        }
+    }
 
     const { error } = await supabase
         .from('seller_payout_methods')
