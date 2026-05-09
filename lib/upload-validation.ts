@@ -19,7 +19,7 @@ export const ALLOWED_IMAGE_TYPES = [
 ] as const;
 
 /** Allowed image file extensions (lowercase, with dot) */
-export const ALLOWED_IMAGE_EXTENSIONS = [".jpg", ".jpeg", ".png", ".webp", ".gif"] as const;
+export const ALLOWED_IMAGE_EXTENSIONS = [".jpg", ".jpeg", ".png", ".webp", ".gif", ".mp4"] as const;
 
 /**
  * Validate image file
