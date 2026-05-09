@@ -168,7 +168,7 @@ const Page = () => {
                             <div className="grid gap-3">
                                 <Button
                                     variant="outline"
-                                    className="h-auto py-4 px-4 justify-start gap-4 rounded-2xl border-2 hover:border-primary hover:bg-primary transition-all group"
+                                    className="h-auto py-4 px-4 justify-start gap-4 rounded-2xl border-2 hover:border-primary transition-all group"
                                     onClick={() => handleCreateBanner("small_banner")}
                                     disabled={!!isCreating}
                                 >
@@ -184,7 +184,7 @@ const Page = () => {
 
                                 <Button
                                     variant="outline"
-                                    className="h-auto py-4 px-4 justify-start gap-4 rounded-2xl border-2 hover:border-primary hover:bg-primary transition-all group"
+                                    className="h-auto py-4 px-4 justify-start gap-4 rounded-2xl border-2 hover:border-primary transition-all group"
                                     onClick={() => handleCreateBanner("big_banner")}
                                     disabled={!!isCreating}
                                 >
@@ -200,7 +200,7 @@ const Page = () => {
 
                                 <Button
                                     variant="outline"
-                                    className="h-auto py-4 px-4 justify-start gap-4 rounded-2xl border-2 hover:border-primary hover:bg-primary transition-all group"
+                                    className="h-auto py-4 px-4 justify-start gap-4 rounded-2xl border-2 hover:border-primary transition-all group"
                                     onClick={() => handleCreateBanner("list_banner")}
                                     disabled={!!isCreating}
                                 >
