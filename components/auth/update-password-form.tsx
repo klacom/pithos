@@ -13,7 +13,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useRouter } from "next/navigation";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 
 
 
@@ -24,10 +24,58 @@ export function UpdatePasswordForm({
     const [password, setPassword] = useState("");
     const [error, setError] = useState<string | null>(null);
     const [isLoading, setIsLoading] = useState(false);
+    const [mfaCode, setMfaCode] = useState("");
+    const [showMfa, setShowMfa] = useState(false);
+    const [factorId, setFactorId] = useState<string | null>(null);
+    const [timeRemaining, setTimeRemaining] = useState(30);
     const router = useRouter();
     const supabase = createClient();
 
-    const handleForgotPassword = async (e: React.FormEvent) => {
+    useEffect(() => {
+        checkMfaStatus();
+    }, []);
+
+    // Handle TOTP timer countdown
+    useEffect(() => {
+        if (!showMfa) return;
+        
+        const updateTimer = () => {
+            const now = Date.now();
+            const remaining = 30 - Math.floor((now / 1000) % 30);
+            setTimeRemaining(remaining);
+        };
+        updateTimer();
+        const interval = setInterval(updateTimer, 100);
+        return () => clearInterval(interval);
+    }, [showMfa]);
+
+    const checkMfaStatus = async () => {
+        const { data, error } = await supabase.auth.mfa.getAuthenticatorAssuranceLevel();
+        console.log("AAL levels:", data);
+        if (error) {
+            console.error("Error checking AAL:", error);
+            return;
+        }
+
+        // If current level is aal1 but next level is aal2, MFA is required
+        if (data.currentLevel === 'aal1' && data.nextLevel === 'aal2') {
+            console.log("MFA required for password change");
+            const { data: factors } = await supabase.auth.mfa.listFactors();
+            console.log("Available factors:", factors);
+            if (factors?.totp && factors.totp.length > 0) {
+                const verifiedFactor = factors.totp.find(factor => factor.status === 'verified');
+                console.log("Verified factor:", verifiedFactor);
+                if (verifiedFactor) {
+                    setFactorId(verifiedFactor.id);
+                    setShowMfa(true);
+                }
+            }
+        } else {
+            console.log("MFA not required for password change");
+        }
+    };
+
+    const handlePasswordUpdate = async (e: React.FormEvent) => {
         e.preventDefault();
         setIsLoading(true);
         setError(null);
@@ -35,8 +83,41 @@ export function UpdatePasswordForm({
         try {
             const { error } = await supabase.auth.updateUser({ password });
             if (error) throw error;
-            // Update this route to redirect to an authenticated route. The user already has an active session.
             router.push("/protected");
+        } catch (error: unknown) {
+            setError(error instanceof Error ? error.message : "An error occurred");
+        } finally {
+            setIsLoading(false);
+        }
+    };
+
+    const handleMfaVerification = async (e: React.FormEvent) => {
+        e.preventDefault();
+        if (!factorId) return;
+        
+        setIsLoading(true);
+        setError(null);
+
+        try {
+            // Challenge the MFA factor
+            const challenge = await supabase.auth.mfa.challenge({ factorId });
+            if (challenge.error || !challenge.data?.id) {
+                throw new Error(challenge.error?.message || "MFA challenge failed");
+            }
+
+            // Verify the MFA code
+            const verify = await supabase.auth.mfa.verify({
+                factorId,
+                challengeId: challenge.data.id,
+                code: mfaCode,
+            });
+
+            if (verify.error) {
+                throw new Error(verify.error?.message || "Invalid MFA code");
+            }
+
+            // MFA verified, now update password
+            await handlePasswordUpdate(e);
         } catch (error: unknown) {
             setError(error instanceof Error ? error.message : "An error occurred");
         } finally {
@@ -50,12 +131,32 @@ export function UpdatePasswordForm({
                 <CardHeader>
                     <CardTitle className="text-2xl">Reset Your Password</CardTitle>
                     <CardDescription>
-                        Please enter your new password below.
+                        {showMfa 
+                            ? "Please enter your MFA code and new password below."
+                            : "Please enter your new password below."
+                        }
                     </CardDescription>
                 </CardHeader>
                 <CardContent>
-                    <form onSubmit={handleForgotPassword}>
+                    <form onSubmit={showMfa ? handleMfaVerification : handlePasswordUpdate}>
                         <div className="flex flex-col gap-6">
+                            {showMfa && (
+                                <div className="grid gap-2">
+                                    <Label htmlFor="mfaCode">MFA Code</Label>
+                                    <Input
+                                        id="mfaCode"
+                                        type="text"
+                                        placeholder="Enter 6-digit code"
+                                        maxLength={6}
+                                        value={mfaCode}
+                                        onChange={(e) => setMfaCode(e.target.value)}
+                                        required
+                                    />
+                                    <p className="text-xs text-muted-foreground">
+                                        Code expires in {timeRemaining}s
+                                    </p>
+                                </div>
+                            )}
                             <div className="grid gap-2">
                                 <Label htmlFor="password">New password</Label>
                                 <Input
@@ -69,7 +170,12 @@ export function UpdatePasswordForm({
                             </div>
                             {error && <p className="text-sm text-red-500">{error}</p>}
                             <Button type="submit" className="w-full" disabled={isLoading}>
-                                {isLoading ? "Saving..." : "Save new password"}
+                                {isLoading 
+                                    ? "Processing..." 
+                                    : showMfa 
+                                        ? "Verify MFA & Update Password" 
+                                        : "Save new password"
+                                }
                             </Button>
                         </div>
                     </form>

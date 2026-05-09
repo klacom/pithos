@@ -5,7 +5,6 @@ import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
-import { changePassword } from "../actions";
 import { toast } from "sonner";
 import { validatePassword } from "@/lib/auth/password-rules";
 import { getSystemConfig } from "@/app/(main)/(protected)/admin/system-config/system-config-settings";
@@ -32,6 +31,11 @@ export default function SecurityPage() {
     const [newFactorId, setNewFactorId] = useState<string | null>(null);
     const [totpVerificationCode, setTotpVerificationCode] = useState("");
     const [isTotpLoading, setIsTotpLoading] = useState(false);
+    const [showMfaForPasswordChange, setShowMfaForPasswordChange] = useState(false);
+    const [passwordMfaCode, setPasswordMfaCode] = useState("");
+    const [passwordMfaFactorId, setPasswordMfaFactorId] = useState<string | null>(null);
+    const [isPasswordMfaLoading, setIsPasswordMfaLoading] = useState(false);
+    const [passwordTimeRemaining, setPasswordTimeRemaining] = useState(30);
 
     useEffect(() => {
         const fetchRules = async () => {
@@ -57,6 +61,12 @@ export default function SecurityPage() {
             }
         };
         fetchTotpSecret();
+        
+        // Check MFA status for password change
+        checkMfaForPasswordChange();
+        
+        // Setup timer for MFA if needed
+        setupPasswordMfaTimer();
     }, []);
 
     const handlePasswordChange = (value: string) => {
@@ -65,7 +75,56 @@ export default function SecurityPage() {
         setPasswordErrors(errors);
     };
 
-    const handleSubmit = async (e: React.FormEvent) => {
+    const checkMfaForPasswordChange = async () => {
+        const supabase = createClient();
+        try {
+            const { data, error } = await supabase.auth.mfa.getAuthenticatorAssuranceLevel();
+            console.log("Security page AAL levels:", data);
+            if (error) {
+                console.error("Error checking AAL:", error);
+                return;
+            }
+
+            // If current level is aal1 but next level is aal2, MFA is required for password change
+            if (data.currentLevel === 'aal1' && data.nextLevel === 'aal2') {
+                console.log("MFA required for password change in security page");
+                const { data: factors } = await supabase.auth.mfa.listFactors();
+                console.log("Security page available factors:", factors);
+                if (factors?.totp && factors.totp.length > 0) {
+                    const verifiedFactor = factors.totp.find(factor => factor.status === 'verified');
+                    console.log("Security page verified factor:", verifiedFactor);
+                    if (verifiedFactor) {
+                        setPasswordMfaFactorId(verifiedFactor.id);
+                        setShowMfaForPasswordChange(true);
+                    }
+                }
+            } else {
+                console.log("MFA not required for password change in security page");
+            }
+        } catch (error) {
+            console.error('Error checking MFA status:', error);
+        }
+    };
+
+    const setupPasswordMfaTimer = () => {
+        if (!showMfaForPasswordChange) return;
+        
+        const updateTimer = () => {
+            const now = Date.now();
+            const remaining = 30 - Math.floor((now / 1000) % 30);
+            setPasswordTimeRemaining(remaining);
+        };
+        updateTimer();
+        const interval = setInterval(updateTimer, 100);
+        return () => clearInterval(interval);
+    };
+
+    useEffect(() => {
+        const cleanup = setupPasswordMfaTimer();
+        return cleanup;
+    }, [showMfaForPasswordChange]);
+
+    const handlePasswordSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
 
         if (!currentPassword || !newPassword || !confirmPassword) {
@@ -84,21 +143,114 @@ export default function SecurityPage() {
             return;
         }
 
+        if (showMfaForPasswordChange) {
+            await handlePasswordMfaVerification(e);
+        } else {
+            await handlePasswordChangeDirect(e);
+        }
+    };
+
+    const handlePasswordChangeDirect = async (e: React.FormEvent) => {
+        e.preventDefault();
         setIsLoading(true);
+        const supabase = createClient();
+        
         try {
-            const result = await changePassword(currentPassword, newPassword);
-            if (result.success) {
-                toast.success("Password changed successfully");
-                setCurrentPassword("");
-                setNewPassword("");
-                setConfirmPassword("");
-            } else {
-                toast.error(result.error || "Failed to change password");
+            // First verify current password
+            const { data: { user } } = await supabase.auth.getUser();
+            if (!user?.email) {
+                toast.error("User email not found");
+                return;
             }
-        } catch (error) {
-            toast.error("An error occurred while changing your password");
+
+            const { error: signInError } = await supabase.auth.signInWithPassword({
+                email: user.email,
+                password: currentPassword
+            });
+
+            if (signInError) {
+                toast.error("Current password is incorrect");
+                return;
+            }
+
+            // Update password
+            const { error: updateError } = await supabase.auth.updateUser({
+                password: newPassword
+            });
+
+            if (updateError) throw updateError;
+
+            toast.success("Password changed successfully");
+            setCurrentPassword("");
+            setNewPassword("");
+            setConfirmPassword("");
+            
+        } catch (error: any) {
+            toast.error(error.message || "Failed to change password");
         } finally {
             setIsLoading(false);
+        }
+    };
+
+    const handlePasswordMfaVerification = async (e: React.FormEvent) => {
+        e.preventDefault();
+        if (!passwordMfaFactorId) return;
+        
+        setIsPasswordMfaLoading(true);
+        const supabase = createClient();
+        
+        try {
+            // First verify current password
+            const { data: { user } } = await supabase.auth.getUser();
+            if (!user?.email) {
+                toast.error("User email not found");
+                return;
+            }
+
+            const { error: signInError } = await supabase.auth.signInWithPassword({
+                email: user.email,
+                password: currentPassword
+            });
+
+            if (signInError) {
+                toast.error("Current password is incorrect");
+                return;
+            }
+
+            // Challenge MFA factor
+            const challenge = await supabase.auth.mfa.challenge({ factorId: passwordMfaFactorId });
+            if (challenge.error || !challenge.data?.id) {
+                throw new Error(challenge.error?.message || "MFA challenge failed");
+            }
+
+            // Verify MFA code
+            const verify = await supabase.auth.mfa.verify({
+                factorId: passwordMfaFactorId,
+                challengeId: challenge.data.id,
+                code: passwordMfaCode,
+            });
+
+            if (verify.error) {
+                throw new Error(verify.error?.message || "Invalid MFA code");
+            }
+
+            // MFA verified, now update password
+            const { error: updateError } = await supabase.auth.updateUser({
+                password: newPassword
+            });
+
+            if (updateError) throw updateError;
+
+            toast.success("Password changed successfully");
+            setCurrentPassword("");
+            setNewPassword("");
+            setConfirmPassword("");
+            setPasswordMfaCode("");
+            
+        } catch (error: any) {
+            toast.error(error.message || "Failed to verify MFA or update password");
+        } finally {
+            setIsPasswordMfaLoading(false);
         }
     };
 
@@ -161,7 +313,7 @@ export default function SecurityPage() {
                 </div>
                 <div className='flex flex-col gap-4 w-full lg:w-3/4'>
                     <Card className='w-full p-6 flex flex-col gap-6 bg-primary-foreground border-muted'>
-                        <form onSubmit={handleSubmit} className="flex flex-col gap-4">
+                        <form onSubmit={handlePasswordSubmit} className="flex flex-col gap-4">
                             <div className='flex flex-col gap-2'>
                                 <Label htmlFor='current-password'>Current Password</Label>
                                 <Input
@@ -217,9 +369,32 @@ export default function SecurityPage() {
                                 />
                             </div>
 
+                            {showMfaForPasswordChange && (
+                                <div className='flex flex-col gap-2'>
+                                    <Label htmlFor='password-mfa-code'>MFA Code</Label>
+                                    <Input
+                                        id='password-mfa-code'
+                                        type='text'
+                                        placeholder='Enter 6-digit code'
+                                        value={passwordMfaCode}
+                                        onChange={(e) => setPasswordMfaCode(e.target.value)}
+                                        maxLength={6}
+                                        required
+                                    />
+                                    <p className="text-xs text-muted-foreground">
+                                        Code expires in {passwordTimeRemaining}s
+                                    </p>
+                                </div>
+                            )}
+
                             <div className='flex justify-end'>
-                                <Button type='submit' variant='red_default' disabled={isLoading}>
-                                    {isLoading ? "Updating..." : "Change Password"}
+                                <Button type='submit' variant='red_default' disabled={isLoading || isPasswordMfaLoading}>
+                                    {(isLoading || isPasswordMfaLoading) 
+                                        ? "Processing..." 
+                                        : showMfaForPasswordChange 
+                                            ? "Verify MFA & Change Password" 
+                                            : "Change Password"
+                                    }
                                 </Button>
                             </div>
                         </form>
