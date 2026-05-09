@@ -7,12 +7,22 @@ import { DataTable } from "@/components/technical-components/DataTable";
 import { formatDate, capitalizeFirstLetter, formatPrice, getStatusColor } from "@/lib/functions";
 import { createClient } from "@/lib/supabase/client";
 import { useState, useEffect, Suspense } from "react";
+import { Loader2 } from "lucide-react";
+import { toast } from "sonner";
+import {
+    AlertDialog,
+    AlertDialogContent,
+    AlertDialogDescription,
+    AlertDialogHeader,
+    AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 
 const page = () => {
 
     const supabase = createClient();
 
     const [userId, setUserId] = useState<string | null>(null);
+    const [isDownloading, setIsDownloading] = useState(false);
 
     useEffect(() => {
         const getUser = async () => {
@@ -128,6 +138,7 @@ const page = () => {
                     if (!productId) return;
 
                     try {
+                        setIsDownloading(true);
                         const res = await fetch(`/api/product/${productId}/download`);
                         const data = await res.json();
 
@@ -139,9 +150,12 @@ const page = () => {
                         document.body.appendChild(a);
                         a.click();
                         document.body.removeChild(a);
+                        toast.success("Download started!");
                     } catch (err: any) {
                         console.error("Download failed:", err);
-                        alert(err.message || "Failed to download asset.");
+                        toast.error(err?.message || "Download failed. Please try again.");
+                    } finally {
+                        setIsDownloading(false);
                     }
                 };
 
@@ -169,6 +183,19 @@ const page = () => {
 
     return (
         <div className='flex flex-col p-4 bg-background w-full gap-4 h-full justify-between overflow-y-auto'>
+            <AlertDialog open={isDownloading}>
+                <AlertDialogContent className="max-w-sm">
+                    <AlertDialogHeader>
+                        <AlertDialogTitle className="flex items-center gap-2">
+                            <Loader2 className="h-4 w-4 animate-spin" />
+                            Preparing download
+                        </AlertDialogTitle>
+                        <AlertDialogDescription>
+                            Please wait while we securely prepare your file.
+                        </AlertDialogDescription>
+                    </AlertDialogHeader>
+                </AlertDialogContent>
+            </AlertDialog>
 
             <div className="flex flex-col bg-background w-full gap-4 h-full">
 
