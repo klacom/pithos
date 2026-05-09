@@ -123,19 +123,24 @@ export async function deletePayoutMethod(id: string) {
     const payoutType = String(methodToDelete.method_type ?? '')
         .trim()
         .toLowerCase()
-    if (payoutType === 'gcash') {
+    // Only the primary GCash method is payout-critical for this rule; extra (non-primary)
+    // GCash rows can be removed even when the seller still has listings.
+    const isPrimary = methodToDelete.is_primary === true
+    if (payoutType === 'gcash' && isPrimary) {
         // Use service role so the count is not hidden by RLS on `products` (user-scoped
         // queries can return 0 rows even when the seller owns listings).
+        // Archived-only catalog does not block removal (matches "archive first" copy).
         const admin = createAdminClient()
         const { count, error: countErr } = await admin
             .from('products')
             .select('*', { count: 'exact', head: true })
             .eq('seller_owner_id', user.id)
+            .or('product_status.eq.draft,product_status.eq.published,product_status.is.null')
 
         if (countErr) throw countErr
         if (count != null && count > 0) {
             throw new Error(
-                'You cannot remove GCash while you have product listings. Remove or archive your assets first.',
+                'You cannot remove your primary GCash payout while you have draft or published listings. Set another method as primary, or archive or delete those assets first.',
             )
         }
     }
