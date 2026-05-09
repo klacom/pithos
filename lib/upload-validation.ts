@@ -16,6 +16,7 @@ export const ALLOWED_IMAGE_TYPES = [
   "image/png",
   "image/webp",
   "image/gif",
+  "video/mp4",
 ] as const;
 
 /** Allowed image file extensions (lowercase, with dot) */
